@@ -33,7 +33,9 @@ export default function Login({ canResetPassword, status }: LoginProps) {
             login_mode: activeTab,
             email: activeTab === 'email' ? data.email : '',
             telephone: activeTab === 'telephone' ? data.telephone : '',
-        })).post(route('login'), {
+        }));
+
+        form.post(route('login'), {
             onFinish: () => {
                 form.reset('password');
                 form.setData('login_mode', activeTab);
