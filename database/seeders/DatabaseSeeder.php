@@ -37,6 +37,9 @@ class DatabaseSeeder extends Seeder
         $this->command?->info('✓ Seeder lancé: ParentTuteurSeeder');
         $this->call(ParentTuteurSeeder::class);
 
+        $this->command?->info('✓ Seeder lancé: EleveParentSeeder');
+        $this->call(EleveParentSeeder::class);
+
         $this->command?->info('✓ Seeder lancé: InscriptionSeeder');
         $this->call(InscriptionSeeder::class);
 
