@@ -62,14 +62,9 @@ class ParentTuteurSeeder extends Seeder
                     )->syncRoles(['parent']);
                 }
 
-                $eleve->parentsTuteurs()->attach($principal->id, [
-                    'est_principal' => true,
-                    'peut_recuperer' => true,
-                ]);
-
                 // Création du parent secondaire dans 70% des cas
                 if (fake()->boolean(70)) {
-                    $secondaire = ParentTuteur::query()->create([
+                    ParentTuteur::query()->create([
                         'nom' => fake()->randomElement(EleveFactoryNames::NOMS),
                         'prenoms' => fake()->randomElement(EleveFactoryNames::PRENOMS_MIXTES),
                         'lien' => $lienPrincipal === 'pere' ? 'mere' : 'pere',
@@ -82,15 +77,10 @@ class ParentTuteurSeeder extends Seeder
                         'est_payeur' => false,
                         'can_portal_access' => false,
                     ]);
-
-                    $eleve->parentsTuteurs()->attach($secondaire->id, [
-                        'est_principal' => false,
-                        'peut_recuperer' => true,
-                    ]);
                 }
             });
 
-            $this->command?->info('✓ Parents/tuteurs et liaisons élève-parent créés.');
+            $this->command?->info('✓ Parents/tuteurs créés.');
         });
     }
 
