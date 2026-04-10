@@ -6,6 +6,7 @@ namespace Database\Seeders;
 
 use App\Models\Eleve;
 use App\Models\ParentTuteur;
+use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -47,6 +48,18 @@ class ParentTuteurSeeder extends Seeder
                         'portal_login' => $principal->telephone_1,
                         'portal_password' => Hash::make('Parent@123'),
                     ]);
+
+                    User::query()->updateOrCreate(
+                        ['parent_id' => $principal->id],
+                        [
+                            'name' => trim($principal->prenoms . ' ' . $principal->nom),
+                            'email' => sprintf('parent.%s@portal.ci', $principal->portal_login),
+                            'password' => Hash::make('Parent@123'),
+                            'etablissement_id' => $eleve->etablissement_id,
+                            'type' => 'parent',
+                            'statut' => 'actif',
+                        ]
+                    )->syncRoles(['parent']);
                 }
 
                 $eleve->parentsTuteurs()->attach($principal->id, [
