@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('types_frais', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('etablissement_id')->constrained()->cascadeOnDelete()->index();
-            $table->foreignId('annee_scolaire_id')->constrained()->cascadeOnDelete()->index();
+            $table->foreignId('etablissement_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('annee_scolaire_id')->constrained()->cascadeOnDelete();
             $table->foreignId('niveau_id')->nullable()->constrained()->nullOnDelete();
             $table->string('libelle');
             $table->unsignedInteger('montant');
