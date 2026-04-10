@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('inscription_id')->constrained()->cascadeOnDelete();
             $table->foreignId('matiere_id')->constrained()->restrictOnDelete();
-            $table->foreignId('annee_scolaire_id')->constrained()->restrictOnDelete();
+            $table->foreignId('annee_scolaire_id')->constrained('annees_scolaires')->restrictOnDelete();
             $table->tinyInteger('trimestre')->index();
             $table->enum('type_note', ['composition', 'interrogation', 'devoir']);
             $table->decimal('note', 5, 2)->nullable();

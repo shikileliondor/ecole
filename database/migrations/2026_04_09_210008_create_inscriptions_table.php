@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('eleve_id')->constrained()->cascadeOnDelete();
             $table->foreignId('classe_id')->constrained()->restrictOnDelete();
-            $table->foreignId('annee_scolaire_id')->constrained()->restrictOnDelete();
+            $table->foreignId('annee_scolaire_id')->constrained('annees_scolaires')->restrictOnDelete();
             $table->date('date_inscription');
             $table->enum('type', ['nouvelle_inscription', 'reinscription']);
             $table->string('provenance_ecole')->nullable();

@@ -30,6 +30,8 @@ class PersonnelSeeder extends Seeder
     /** @var array<int, string> */
     private const VILLES = ['Abidjan', 'Bouaké', 'Yamoussoukro', 'Daloa', 'Korhogo'];
 
+    private int $emailSequence = 0;
+
     public function run(): void
     {
         DB::transaction(function (): void {
@@ -129,7 +131,15 @@ class PersonnelSeeder extends Seeder
 
         $slugPrenom = strtolower(str_replace([' ', "'", 'é', 'è'], ['', '', 'e', 'e'], $prenom));
         $slugNom = strtolower(str_replace([' ', "'", 'é', 'è'], ['', '', 'e', 'e'], $nom));
-        $email = sprintf('%s.%s%s@%s.ci', $slugPrenom, $slugNom, $emailSuffix ? ".{$emailSuffix}" : '', strtolower($etablissement->sigle));
+        $this->emailSequence++;
+        $email = sprintf(
+            '%s.%s%s.%d@%s.ci',
+            $slugPrenom,
+            $slugNom,
+            $emailSuffix ? ".{$emailSuffix}" : '',
+            $this->emailSequence,
+            strtolower($etablissement->sigle)
+        );
 
         $user = User::query()->create([
             'name' => trim($prenom . ' ' . $nom),
