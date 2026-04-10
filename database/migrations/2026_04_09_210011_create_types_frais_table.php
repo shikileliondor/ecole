@@ -14,8 +14,8 @@ return new class extends Migration
         Schema::create('types_frais', function (Blueprint $table) {
             $table->id();
             $table->foreignId('etablissement_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('annee_scolaire_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('niveau_id')->nullable()->constrained()->nullOnDelete();
+            $table->foreignId('annee_scolaire_id')->constrained('annees_scolaires')->cascadeOnDelete();
+            $table->foreignId('niveau_id')->nullable()->constrained('niveaux')->nullOnDelete();
             $table->string('libelle');
             $table->unsignedInteger('montant');
             $table->boolean('est_obligatoire')->default(true);

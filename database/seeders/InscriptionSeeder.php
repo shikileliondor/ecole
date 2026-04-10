@@ -61,7 +61,7 @@ class InscriptionSeeder extends Seeder
                         $niveauHistorique = $this->niveauInferieur($niveauActuel);
                         $classeHistorique = Classe::query()
                             ->where('etablissement_id', $anneeActive->etablissement_id)
-                            ->where('annee_scolaire_id', $anneeActive->id)
+                            ->where('annee_scolaire_id', $anneePrecedente->id)
                             ->where('niveau_id', $niveaux[$niveauHistorique]->id)
                             ->where('nom', 'like', "% {$this->suffixeClasse($classe->nom)}")
                             ->first();

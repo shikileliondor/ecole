@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('salaires', function (Blueprint $table) {
             $table->id();
             $table->foreignId('personnel_id')->constrained('personnel')->cascadeOnDelete();
-            $table->foreignId('annee_scolaire_id')->constrained()->restrictOnDelete();
+            $table->foreignId('annee_scolaire_id')->constrained('annees_scolaires')->restrictOnDelete();
             $table->tinyInteger('mois');
             $table->unsignedInteger('salaire_base');
             $table->unsignedInteger('primes')->default(0);

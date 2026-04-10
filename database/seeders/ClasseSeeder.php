@@ -16,40 +16,42 @@ class ClasseSeeder extends Seeder
     public function run(): void
     {
         DB::transaction(function (): void {
-            // Création des classes A/B pour l'année active de chaque établissement
+            // Création des classes A/B pour chaque année scolaire de chaque établissement
             $niveaux = Niveau::query()->orderBy('ordre')->get();
 
             Etablissement::query()->each(function (Etablissement $etablissement) use ($niveaux): void {
-                $anneeActive = AnneeScolaire::query()
+                $annees = AnneeScolaire::query()
                     ->where('etablissement_id', $etablissement->id)
-                    ->where('est_active', true)
-                    ->firstOrFail();
+                    ->orderBy('date_debut')
+                    ->get();
 
                 $compteurSalle = 1;
 
-                foreach ($niveaux as $niveau) {
-                    foreach (['A', 'B'] as $suffixe) {
-                        Classe::query()->updateOrCreate(
-                            [
-                                'etablissement_id' => $etablissement->id,
-                                'annee_scolaire_id' => $anneeActive->id,
-                                'niveau_id' => $niveau->id,
-                                'nom' => "{$niveau->libelle} {$suffixe}",
-                            ],
-                            [
-                                'capacite_max' => random_int(35, 45),
-                                'salle' => 'Salle ' . $compteurSalle,
-                                'enseignant_titulaire_id' => null,
-                                'statut' => 'active',
-                            ],
-                        );
+                foreach ($annees as $anneeScolaire) {
+                    foreach ($niveaux as $niveau) {
+                        foreach (['A', 'B'] as $suffixe) {
+                            Classe::query()->updateOrCreate(
+                                [
+                                    'etablissement_id' => $etablissement->id,
+                                    'annee_scolaire_id' => $anneeScolaire->id,
+                                    'niveau_id' => $niveau->id,
+                                    'nom' => "{$niveau->libelle} {$suffixe}",
+                                ],
+                                [
+                                    'capacite_max' => random_int(35, 45),
+                                    'salle' => 'Salle ' . $compteurSalle,
+                                    'enseignant_titulaire_id' => null,
+                                    'statut' => 'active',
+                                ],
+                            );
 
-                        $compteurSalle++;
+                            $compteurSalle++;
+                        }
                     }
                 }
             });
 
-            $this->command?->info('✓ Classes (A/B) créées pour l’année active.');
+            $this->command?->info('✓ Classes (A/B) créées pour chaque année scolaire.');
         });
     }
 }
