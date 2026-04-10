@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('annees_scolaires', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('etablissement_id')->constrained()->cascadeOnDelete()->index();
+            $table->foreignId('etablissement_id')->constrained()->cascadeOnDelete();
             $table->string('libelle');
             $table->date('date_debut');
             $table->date('date_fin');

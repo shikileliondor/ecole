@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('eleves', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('etablissement_id')->constrained()->cascadeOnDelete()->index();
+            $table->foreignId('etablissement_id')->constrained()->cascadeOnDelete();
             $table->string('matricule')->unique();
             $table->string('nom');
             $table->string('prenoms');
