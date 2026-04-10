@@ -16,6 +16,8 @@ class AnneeScolaire extends Model
 {
     use HasFactory;
 
+    protected $table = 'annees_scolaires';
+
     public const STATUTS = [
         'en_cours' => 'en_cours',
         'cloturee' => 'cloturee',
