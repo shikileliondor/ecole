@@ -25,28 +25,23 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/', [EleveController::class, 'index'])->name('index');
 
             Route::get('/create', [EleveController::class, 'create'])
-                ->name('create')
-                ->middleware('permission:eleves.creer');
+                ->name('create');
 
             Route::post('/', [EleveController::class, 'store'])
-                ->name('store')
-                ->middleware('permission:eleves.creer');
+                ->name('store');
 
             Route::get('/export/pdf', [EleveController::class, 'exportPdf'])->name('export.pdf');
 
             Route::get('/{id}', [EleveController::class, 'show'])->name('show');
 
             Route::get('/{id}/edit', [EleveController::class, 'edit'])
-                ->name('edit')
-                ->middleware('permission:eleves.modifier');
+                ->name('edit');
 
             Route::put('/{id}', [EleveController::class, 'update'])
-                ->name('update')
-                ->middleware('permission:eleves.modifier');
+                ->name('update');
 
             Route::delete('/{id}', [EleveController::class, 'destroy'])
-                ->name('destroy')
-                ->middleware('permission:eleves.supprimer');
+                ->name('destroy');
 
             Route::post('/{id}/transferer', [EleveController::class, 'transferer'])->name('transferer');
         });
