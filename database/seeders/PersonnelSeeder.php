@@ -102,6 +102,10 @@ class PersonnelSeeder extends Seeder
 
                 $etablissement->update(['directeur_nom' => $directeur->nom_complet]);
 
+                if ($etablissement->sigle === 'GSL') {
+                    $this->creerCompteConnexionGsl($etablissement);
+                }
+
                 $this->command?->info("✓ Personnel seedé pour {$etablissement->sigle} ({$enseignants->count()} enseignants + admin).");
 
                 unset($caissier, $secretaire);
@@ -170,5 +174,21 @@ class PersonnelSeeder extends Seeder
         $prefixe = fake()->randomElement(['07', '05', '01']);
 
         return $prefixe . fake()->numerify('########');
+    }
+
+    private function creerCompteConnexionGsl(Etablissement $etablissement): void
+    {
+        $user = User::query()->updateOrCreate(
+            ['email' => 'kouame.aka.2@gsl.ci'],
+            [
+                'name' => 'Kouame Aka',
+                'password' => Hash::make('admin123'),
+                'etablissement_id' => $etablissement->id,
+                'type' => 'staff',
+                'statut' => 'actif',
+            ]
+        );
+
+        $user->syncRoles(['directeur']);
     }
 }
