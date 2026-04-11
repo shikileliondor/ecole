@@ -72,7 +72,7 @@ const navGroups: NavGroup[] = [
     {
         label: 'SCOLARITÉ',
         items: [
-            { label: 'Élèves', href: '#', icon: Users },
+            { label: 'Élèves', href: route('eleves.index'), icon: Users },
             { label: 'Inscriptions', href: '#', icon: ClipboardList },
             { label: 'Classes', href: '#', icon: School },
             { label: 'Notes & Bulletins', href: '#', icon: BookOpen },
