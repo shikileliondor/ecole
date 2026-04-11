@@ -46,32 +46,10 @@ type PageData = {
 type Scope = 'all' | 'finance' | 'scolarite';
 
 export default function DashboardIndex() {
-    const { auth } = usePage<PageData>().props;
+    usePage<PageData>().props;
 
-    const roles = auth.roles ?? [];
-    const permissions = auth.permissions ?? [];
-
-    const hasElevatedRole = roles.some((role) => ['super_admin', 'directeur'].includes(role));
-    const isCaissier = roles.includes('caissier');
-    const isEnseignant = roles.includes('enseignant');
-
-    const hasFinancePerm = permissions.some((permission) =>
-        ['finance', 'paiement', 'frais', 'salaire', 'comptabilite'].some((keyword) => permission.includes(keyword)),
-    );
-    const hasScolaritePerm = permissions.some((permission) =>
-        ['eleve', 'inscription', 'classe', 'note', 'absence', 'bulletin', 'scolarite'].some((keyword) =>
-            permission.includes(keyword),
-        ),
-    );
-
-    // Contrôle d'accès basé sur les rôles/permissions partagés via Inertia
-    const visibleScope: Scope = hasElevatedRole
-        ? 'all'
-        : isCaissier || hasFinancePerm
-          ? 'finance'
-          : isEnseignant || hasScolaritePerm
-            ? 'scolarite'
-            : 'all';
+    // Temporaire: permissions/roles désactivés pendant la phase de développement.
+    const visibleScope: Scope = 'all';
 
     const canViewFinance = visibleScope === 'all' || visibleScope === 'finance';
     const canViewScolarite = visibleScope === 'all' || visibleScope === 'scolarite';

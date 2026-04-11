@@ -11,10 +11,10 @@ use Illuminate\Validation\Rule;
 
 class StoreEleveRequest extends FormRequest
 {
-    /** Autorise uniquement les utilisateurs ayant la permission de créer un élève. */
+    /** Temporaire: permissions désactivées pendant la phase de développement. */
     public function authorize(): bool
     {
-        return (bool) $this->user()?->can('eleves.creer');
+        return true;
     }
 
     /** Prépare les valeurs par défaut métier avant validation. */

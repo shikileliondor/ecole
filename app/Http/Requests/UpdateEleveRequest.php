@@ -11,10 +11,10 @@ use Illuminate\Validation\Rule;
 
 class UpdateEleveRequest extends FormRequest
 {
-    /** Autorise uniquement les utilisateurs ayant la permission de modifier un élève. */
+    /** Temporaire: permissions désactivées pendant la phase de développement. */
     public function authorize(): bool
     {
-        return (bool) $this->user()?->can('eleves.modifier');
+        return true;
     }
 
     /** Prépare les valeurs métier par défaut avant validation. */
