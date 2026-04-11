@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\EleveController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -14,6 +15,42 @@ Route::get('/', function () {
 
 Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', fn () => Inertia::render('Dashboard/Index'))->name('dashboard');
+});
+
+
+Route::middleware(['auth'])->group(function () {
+    Route::prefix('eleves')
+        ->name('eleves.')
+        ->middleware('permission:eleves.voir')
+        ->group(function (): void {
+            Route::get('/', [EleveController::class, 'index'])->name('index');
+
+            Route::get('/create', [EleveController::class, 'create'])
+                ->name('create')
+                ->middleware('permission:eleves.creer');
+
+            Route::post('/', [EleveController::class, 'store'])
+                ->name('store')
+                ->middleware('permission:eleves.creer');
+
+            Route::get('/export/pdf', [EleveController::class, 'exportPdf'])->name('export.pdf');
+
+            Route::get('/{id}', [EleveController::class, 'show'])->name('show');
+
+            Route::get('/{id}/edit', [EleveController::class, 'edit'])
+                ->name('edit')
+                ->middleware('permission:eleves.modifier');
+
+            Route::put('/{id}', [EleveController::class, 'update'])
+                ->name('update')
+                ->middleware('permission:eleves.modifier');
+
+            Route::delete('/{id}', [EleveController::class, 'destroy'])
+                ->name('destroy')
+                ->middleware('permission:eleves.supprimer');
+
+            Route::post('/{id}/transferer', [EleveController::class, 'transferer'])->name('transferer');
+        });
 });
 
 Route::middleware('auth')->group(function () {
