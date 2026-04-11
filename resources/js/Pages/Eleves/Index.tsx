@@ -27,7 +27,7 @@ import type { Classe, Eleve, Niveau, PaginationLink, PaginationMeta, Stats } fro
 type Filters = { search?: string; classe_id?: string; niveau_id?: string; statut?: string; sexe?: string };
 
 type Props = {
-    eleves: { data: Eleve[]; links: PaginationLink[]; meta: PaginationMeta };
+    eleves: { data: Eleve[]; links: PaginationLink[]; meta?: PaginationMeta; from?: number | null; to?: number | null; total?: number };
     classes: Classe[];
     niveaux: Niveau[];
     filters: Filters;
@@ -192,7 +192,7 @@ export default function ElevesIndex({ eleves, classes, niveaux, filters, stats }
                             {!hasActiveFilters ? <Link href={route('eleves.create')}><Button className="bg-[#1a56a0]">Inscrire le premier élève</Button></Link> : null}
                         </div>
                     )}
-                    <div className="p-4"><Pagination links={eleves.links} meta={eleves.meta} /></div>
+                    <div className="p-4"><Pagination links={eleves.links} meta={eleves.meta ?? { from: eleves.from ?? 0, to: eleves.to ?? 0, total: eleves.total ?? 0, current_page: 1, last_page: 1, per_page: 20 }} /></div>
                 </section>
             </div>
 

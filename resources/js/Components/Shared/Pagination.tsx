@@ -4,7 +4,7 @@ import type { PaginationLink, PaginationMeta } from '@/types/eleve';
 
 type PaginationProps = {
     links: PaginationLink[];
-    meta: PaginationMeta;
+    meta?: PaginationMeta;
 };
 
 function decodeLabel(label: string): string {
@@ -16,10 +16,14 @@ export default function Pagination({ links, meta }: PaginationProps) {
         return null;
     }
 
+    const from = meta?.from ?? 0;
+    const to = meta?.to ?? 0;
+    const total = meta?.total ?? 0;
+
     return (
         <div className="mt-4 flex flex-col items-center justify-between gap-3 border-t border-gray-100 pt-4 md:flex-row">
             <p className="text-sm text-gray-500">
-                Affichage de {meta.from ?? 0} à {meta.to ?? 0} sur {meta.total} résultats
+                Affichage de {from} à {to} sur {total} résultats
             </p>
 
             <div className="flex flex-wrap items-center gap-2">
