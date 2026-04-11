@@ -21,7 +21,6 @@ Route::middleware(['auth'])->group(function () {
 Route::middleware(['auth'])->group(function () {
     Route::prefix('eleves')
         ->name('eleves.')
-        ->middleware('permission:eleves.voir')
         ->group(function (): void {
             Route::get('/', [EleveController::class, 'index'])->name('index');
 
