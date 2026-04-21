@@ -10,9 +10,12 @@ import {
     ClipboardList,
     CreditCard,
     LayoutDashboard,
+    Mail,
+    MailCheck,
     LogOut,
     Menu,
     Moon,
+    MonitorPlay,
     Receipt,
     RefreshCw,
     School,
@@ -42,6 +45,11 @@ type NavGroup = {
         href: string;
         icon: typeof LayoutDashboard;
         notifications?: number;
+        children?: Array<{
+            label: string;
+            href: string;
+            icon: typeof LayoutDashboard;
+        }>;
     }>;
 };
 
@@ -96,7 +104,17 @@ const navGroups: NavGroup[] = [
         label: 'RAPPORTS',
         items: [
             { label: 'Rapports', href: '#', icon: BarChart3 },
-            { label: 'Paramètres', href: route('parametres.index'), icon: Settings },
+            {
+                label: 'Paramètres',
+                href: route('parametres.index'),
+                icon: Settings,
+                children: [
+                    { label: 'Paramètres généraux', href: route('parametres.index'), icon: Settings },
+                    { label: 'Slides Hero', href: route('parametres.index'), icon: MonitorPlay },
+                    { label: 'Templates notifications', href: route('parametres.index'), icon: Mail },
+                    { label: 'Historique notifications', href: route('parametres.index'), icon: MailCheck },
+                ],
+            },
         ],
     },
 ];
@@ -108,6 +126,9 @@ export default function AppLayout({
     const { auth } = usePage<AuthProps>().props;
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [isDarkMode, setIsDarkMode] = useState(false);
+    const [openedMenus, setOpenedMenus] = useState<Record<string, boolean>>({
+        Paramètres: window.location.pathname.startsWith('/parametres'),
+    });
 
     const userName = auth.user?.name ?? 'Utilisateur';
     const roleName = auth.roles?.[0]?.replace('_', ' ') ?? 'membre';
@@ -158,25 +179,78 @@ export default function AppLayout({
                                     const Icon = item.icon;
                                     const isActive =
                                         item.href !== '#' && pathname.startsWith(new URL(item.href, window.location.origin).pathname);
+                                    const isOpen = openedMenus[item.label] ?? false;
+                                    const hasChildren = (item.children?.length ?? 0) > 0;
 
                                     return (
-                                        <Link
-                                            key={item.label}
-                                            href={item.href}
-                                            className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition ${
-                                                isActive
-                                                    ? 'bg-white/20 font-medium text-white'
-                                                    : 'text-white/70 hover:bg-white/10 hover:text-white'
-                                            }`}
-                                        >
-                                            <Icon size={16} />
-                                            <span className="flex-1">{item.label}</span>
-                                            {item.notifications ? (
-                                                <span className="rounded-full bg-red-500 px-2 py-0.5 text-xs font-medium text-white">
-                                                    {item.notifications}
-                                                </span>
+                                        <div key={item.label}>
+                                            {hasChildren ? (
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        setOpenedMenus((prev) => ({
+                                                            ...prev,
+                                                            [item.label]: !isOpen,
+                                                        }))
+                                                    }
+                                                    className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition ${
+                                                        isActive || isOpen
+                                                            ? 'bg-white/20 font-medium text-white'
+                                                            : 'text-white/70 hover:bg-white/10 hover:text-white'
+                                                    }`}
+                                                >
+                                                    <Icon size={16} />
+                                                    <span className="flex-1 text-left">{item.label}</span>
+                                                    <ChevronDown
+                                                        size={15}
+                                                        className={`transition-transform ${isOpen ? 'rotate-180' : ''}`}
+                                                    />
+                                                </button>
+                                            ) : (
+                                                <Link
+                                                    href={item.href}
+                                                    className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition ${
+                                                        isActive
+                                                            ? 'bg-white/20 font-medium text-white'
+                                                            : 'text-white/70 hover:bg-white/10 hover:text-white'
+                                                    }`}
+                                                >
+                                                    <Icon size={16} />
+                                                    <span className="flex-1">{item.label}</span>
+                                                    {item.notifications ? (
+                                                        <span className="rounded-full bg-red-500 px-2 py-0.5 text-xs font-medium text-white">
+                                                            {item.notifications}
+                                                        </span>
+                                                    ) : null}
+                                                </Link>
+                                            )}
+
+                                            {hasChildren && isOpen ? (
+                                                <div className="ml-7 mt-1 space-y-1 border-l border-white/20 pl-3">
+                                                    {item.children?.map((child) => {
+                                                        const ChildIcon = child.icon;
+                                                        const childActive =
+                                                            child.href !== '#' &&
+                                                            pathname.startsWith(new URL(child.href, window.location.origin).pathname);
+
+                                                        return (
+                                                            <Link
+                                                                key={child.label}
+                                                                href={child.href}
+                                                                className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition ${
+                                                                    childActive
+                                                                        ? 'bg-white/15 text-white'
+                                                                        : 'text-white/70 hover:bg-white/10 hover:text-white'
+                                                                }`}
+                                                            >
+                                                                <ChildIcon size={14} />
+                                                                <span className="truncate">{child.label}</span>
+                                                            </Link>
+                                                        );
+                                                    })}
+                                                </div>
                                             ) : null}
-                                        </Link>
+                                        </div>
                                     );
                                 })}
                             </div>
