@@ -44,14 +44,18 @@ class InscriptionService
 
             $this->attachTuteurs($eleve, $data);
 
-            $inscription = Inscription::query()->create([
-                'eleve_id' => $eleve->id,
-                'classe_id' => (int) $data['classe_id'],
-                'annee_scolaire_id' => (int) $data['annee_scolaire_id'],
-                'date_inscription' => $data['date_inscription'],
-                'type' => $typeInscription === 'reinscription' ? Inscription::TYPES['reinscription'] : Inscription::TYPES['nouvelle_inscription'],
-                'statut' => $data['statut'],
-            ]);
+            $inscription = Inscription::query()->updateOrCreate(
+                [
+                    'eleve_id' => $eleve->id,
+                    'annee_scolaire_id' => (int) $data['annee_scolaire_id'],
+                ],
+                [
+                    'classe_id' => (int) $data['classe_id'],
+                    'date_inscription' => $data['date_inscription'],
+                    'type' => $typeInscription === 'reinscription' ? Inscription::TYPES['reinscription'] : Inscription::TYPES['nouvelle_inscription'],
+                    'statut' => $data['statut'],
+                ]
+            );
 
             $eleve->update(['est_boursier' => (bool) ($data['boursier'] ?? false)]);
 
