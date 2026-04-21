@@ -25,6 +25,9 @@ class InscriptionService
                     ->orWhere('prenoms', 'like', "%{$search}%")
                     ->orWhere('matricule', 'like', "%{$search}%"));
             })
+            ->when(! empty($filters['classe_id']), fn ($q) => $q->where('classe_id', (int) $filters['classe_id']))
+            ->when(! empty($filters['annee_scolaire_id']), fn ($q) => $q->where('annee_scolaire_id', (int) $filters['annee_scolaire_id']))
+            ->when(! empty($filters['statut']), fn ($q) => $q->where('statut', (string) $filters['statut']))
             ->latest('id')
             ->paginate(20)
             ->appends($filters);

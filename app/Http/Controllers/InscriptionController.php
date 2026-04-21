@@ -27,8 +27,10 @@ class InscriptionController extends Controller
         $etablissementId = (int) auth()->user()->etablissement_id;
 
         return Inertia::render('Inscriptions/Index', [
-            'inscriptions' => $this->inscriptionService->index($request->only(['search']), $etablissementId),
-            'filters' => $request->only(['search']),
+            'inscriptions' => $this->inscriptionService->index($request->only(['search', 'classe_id', 'annee_scolaire_id', 'statut']), $etablissementId),
+            'filters' => $request->only(['search', 'classe_id', 'annee_scolaire_id', 'statut']),
+            'classes' => Classe::query()->where('etablissement_id', $etablissementId)->orderBy('nom')->get(['id', 'nom']),
+            'annees' => AnneeScolaire::query()->where('etablissement_id', $etablissementId)->orderByDesc('date_debut')->get(['id', 'libelle']),
         ]);
     }
 
