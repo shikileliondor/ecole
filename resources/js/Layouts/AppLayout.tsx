@@ -96,7 +96,7 @@ const navGroups: NavGroup[] = [
         label: 'RAPPORTS',
         items: [
             { label: 'Rapports', href: '#', icon: BarChart3 },
-            { label: 'Paramètres', href: '#', icon: Settings },
+            { label: 'Paramètres', href: route('parametres.index'), icon: Settings },
         ],
     },
 ];

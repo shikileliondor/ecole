@@ -3,6 +3,7 @@
 use App\Http\Controllers\EleveController;
 use App\Http\Controllers\InscriptionController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ParametreController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -49,17 +50,16 @@ Route::middleware(['auth'])->group(function () {
 });
 
 
-Route::middleware(['auth'])->group(function () {
-    Route::prefix('inscriptions')
-        ->name('inscriptions.')
-        ->group(function (): void {
-            Route::get('/', [InscriptionController::class, 'index'])->name('index');
-            Route::get('/create', [InscriptionController::class, 'create'])->name('create');
-            Route::post('/', [InscriptionController::class, 'store'])->name('store');
-            Route::get('/{id}', [InscriptionController::class, 'show'])->name('show');
-            Route::get('/{id}/edit', [InscriptionController::class, 'edit'])->name('edit');
-            Route::put('/{id}', [InscriptionController::class, 'update'])->name('update');
-        });
+Route::middleware(['auth'])->prefix('parametres')->name('parametres.')->group(function (): void {
+    Route::get('/', [ParametreController::class, 'index'])->name('index');
+    Route::post('/annees', [ParametreController::class, 'storeAnnee'])->name('annees.store');
+    Route::patch('/annees/{annee}/activer', [ParametreController::class, 'activateAnnee'])->name('annees.activate');
+    Route::post('/periodes', [ParametreController::class, 'storePeriode'])->name('periodes.store');
+    Route::post('/modes-paiement', [ParametreController::class, 'storeModePaiement'])->name('modes-paiement.store');
+    Route::post('/statuts-inscription', [ParametreController::class, 'storeStatutInscription'])->name('statuts-inscription.store');
+    Route::post('/roles', [ParametreController::class, 'storeRole'])->name('roles.store');
+    Route::post('/permissions', [ParametreController::class, 'storePermission'])->name('permissions.store');
+    Route::post('/modeles-impression', [ParametreController::class, 'storeModeleImpression'])->name('modeles-impression.store');
 });
 
 Route::middleware('auth')->group(function () {
