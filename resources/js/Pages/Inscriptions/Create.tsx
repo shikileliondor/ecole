@@ -6,6 +6,8 @@ import { Input } from '@/Components/ui/input';
 import { Label } from '@/Components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/Components/ui/select';
 import { Textarea } from '@/Components/ui/textarea';
+import { Alert, AlertContent, AlertDescription, AlertIcon, AlertTitle } from '@/components/ui/alert-1';
+import { CircleAlert } from 'lucide-react';
 
 type Props = {
     classes: Array<any>;
@@ -36,6 +38,8 @@ export default function InscriptionsCreate({ classes, annees, eleves, parents }:
     const submit = () => {
         post(route('inscriptions.store'), { forceFormData: true });
     };
+
+    const errorEntries = Object.entries(errors);
 
     return (
         <AppLayout title="Nouvelle inscription">
@@ -147,7 +151,25 @@ export default function InscriptionsCreate({ classes, annees, eleves, parents }:
                     </CardContent>
                 </Card>
 
-                {Object.keys(errors).length > 0 ? <Card><CardContent className="pt-6 text-sm text-red-600">Veuillez corriger les erreurs du formulaire.</CardContent></Card> : null}
+                {errorEntries.length > 0 ? (
+                    <Alert variant="destructive" appearance="light">
+                        <AlertIcon>
+                            <CircleAlert className="size-4" />
+                        </AlertIcon>
+                        <AlertContent>
+                            <AlertTitle>Veuillez corriger les erreurs du formulaire.</AlertTitle>
+                            <AlertDescription>
+                                <ul className="list-disc pl-5">
+                                    {errorEntries.map(([field, message]) => (
+                                        <li key={field}>
+                                            <span className="font-semibold">{field.replaceAll('_', ' ')}</span>: {message}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </AlertDescription>
+                        </AlertContent>
+                    </Alert>
+                ) : null}
 
                 <div className="flex justify-end gap-3">
                     <Button type="button" variant="outline" onClick={() => window.history.back()}>Annuler</Button>
