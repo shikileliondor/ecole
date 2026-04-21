@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\EleveController;
+use App\Http\Controllers\InscriptionController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ParametreController;
 use Illuminate\Support\Facades\Route;
