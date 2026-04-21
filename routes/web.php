@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\EleveController;
+use App\Http\Controllers\InscriptionController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -44,6 +45,20 @@ Route::middleware(['auth'])->group(function () {
                 ->name('destroy');
 
             Route::post('/{id}/transferer', [EleveController::class, 'transferer'])->name('transferer');
+        });
+});
+
+
+Route::middleware(['auth'])->group(function () {
+    Route::prefix('inscriptions')
+        ->name('inscriptions.')
+        ->group(function (): void {
+            Route::get('/', [InscriptionController::class, 'index'])->name('index');
+            Route::get('/create', [InscriptionController::class, 'create'])->name('create');
+            Route::post('/', [InscriptionController::class, 'store'])->name('store');
+            Route::get('/{id}', [InscriptionController::class, 'show'])->name('show');
+            Route::get('/{id}/edit', [InscriptionController::class, 'edit'])->name('edit');
+            Route::put('/{id}', [InscriptionController::class, 'update'])->name('update');
         });
 });
 

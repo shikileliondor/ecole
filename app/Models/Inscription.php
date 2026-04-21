@@ -62,6 +62,13 @@ class Inscription extends Model
         return $this->belongsTo(AnneeScolaire::class);
     }
 
+
+    /** Retourne les documents justificatifs de l'inscription. */
+    public function documents(): HasMany
+    {
+        return $this->hasMany(InscriptionDocument::class);
+    }
+
     /** Retourne les notes liées à l'inscription. */
     public function notes(): HasMany
     {
