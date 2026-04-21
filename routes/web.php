@@ -62,6 +62,15 @@ Route::middleware(['auth'])->prefix('parametres')->name('parametres.')->group(fu
     Route::post('/modeles-impression', [ParametreController::class, 'storeModeleImpression'])->name('modeles-impression.store');
 });
 
+Route::middleware(['auth'])->prefix('inscriptions')->name('inscriptions.')->group(function (): void {
+    Route::get('/', [InscriptionController::class, 'index'])->name('index');
+    Route::get('/create', [InscriptionController::class, 'create'])->name('create');
+    Route::post('/', [InscriptionController::class, 'store'])->name('store');
+    Route::get('/{id}', [InscriptionController::class, 'show'])->name('show');
+    Route::get('/{id}/edit', [InscriptionController::class, 'edit'])->name('edit');
+    Route::put('/{id}', [InscriptionController::class, 'update'])->name('update');
+});
+
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
