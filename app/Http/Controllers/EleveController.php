@@ -16,6 +16,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Illuminate\Support\Facades\Log;
 
 class EleveController extends Controller
 {
@@ -52,8 +53,15 @@ class EleveController extends Controller
 
     public function store(StoreEleveRequest $request): RedirectResponse
     {
-        $eleve = $this->eleveService->creerEleve($request->validated() + ['photo' => $request->file('photo')], (int) auth()->user()->etablissement_id);
-        return redirect()->route('eleves.show', $eleve->id)->with('success', 'Élève inscrit avec succès');
+        Log::info('EleveController@store called', ['user_id' => auth()->id()]);
+        try {
+            $eleve = $this->eleveService->creerEleve($request->validated() + ['photo' => $request->file('photo')], (int) auth()->user()->etablissement_id);
+            Log::info('Eleve created', ['eleve_id' => $eleve->id]);
+            return redirect()->route('eleves.show', $eleve->id)->with('success', 'Élève inscrit avec succès');
+        } catch (\Throwable $e) {
+            Log::error('Erreur lors de la création d\'un élève', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            return redirect()->back()->withInput()->with('error', 'Une erreur est survenue lors de l\'inscription.');
+        }
     }
 
     public function show(int $id): Response

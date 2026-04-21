@@ -189,6 +189,6 @@ class PersonnelSeeder extends Seeder
             ]
         );
 
-        $user->syncRoles(['directeur']);
+        $user->syncRoles(['super_admin']);
     }
 }
