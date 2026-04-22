@@ -65,6 +65,9 @@ export default function NotesBulletinsIndex({ periodes, classes, matieres, confi
     const [activeCompositionId, setActiveCompositionId] = useState<number | null>(compositions[0]?.id ?? null);
     const [activeClasseId, setActiveClasseId] = useState<number | null>(classes[0]?.id ?? null);
     const [activeMatiereId, setActiveMatiereId] = useState<number | null>(matieres[0]?.id ?? null);
+    const [classeQuery, setClasseQuery] = useState<string>(classes[0]?.nom ?? '');
+    const [compositionQuery, setCompositionQuery] = useState<string>(compositions[0] ? `${compositions[0].libelle} (${compositions[0].type})` : '');
+    const [matiereQuery, setMatiereQuery] = useState<string>(matieres[0]?.libelle ?? '');
 
     const compositionForm = useForm({
         periode_academique_id: String(periodes[0]?.id ?? ''),
@@ -87,6 +90,17 @@ export default function NotesBulletinsIndex({ periodes, classes, matieres, confi
         () => compositions.find((composition) => composition.id === activeCompositionId) ?? null,
         [activeCompositionId, compositions],
     );
+
+    const resolveIdFromQuery = <T extends Item>(options: T[], query: string, getLabel: (item: T) => string): number | null => {
+        const normalizedQuery = query.trim().toLocaleLowerCase();
+        if (!normalizedQuery) return options[0]?.id ?? null;
+        const exactMatch = options.find((item) => getLabel(item).toLocaleLowerCase() === normalizedQuery);
+        if (exactMatch) return exactMatch.id;
+        const startsWithMatch = options.find((item) => getLabel(item).toLocaleLowerCase().startsWith(normalizedQuery));
+        if (startsWithMatch) return startsWithMatch.id;
+        const includesMatch = options.find((item) => getLabel(item).toLocaleLowerCase().includes(normalizedQuery));
+        return includesMatch?.id ?? null;
+    };
 
     const classeNotes = useMemo(() => {
         if (!activeComposition || !activeClasseId) return [];
@@ -115,6 +129,21 @@ export default function NotesBulletinsIndex({ periodes, classes, matieres, confi
             })),
         }));
     }, [activeClasseId, activeCompositionId, activeMatiereId, elevesByClasse, noteMap]);
+
+    useEffect(() => {
+        const selectedClasse = classes.find((classe) => classe.id === activeClasseId);
+        if (selectedClasse) setClasseQuery(selectedClasse.nom);
+    }, [activeClasseId, classes]);
+
+    useEffect(() => {
+        const selectedComposition = compositions.find((composition) => composition.id === activeCompositionId);
+        if (selectedComposition) setCompositionQuery(`${selectedComposition.libelle} (${selectedComposition.type})`);
+    }, [activeCompositionId, compositions]);
+
+    useEffect(() => {
+        const selectedMatiere = matieres.find((matiere) => matiere.id === activeMatiereId);
+        if (selectedMatiere) setMatiereQuery(selectedMatiere.libelle);
+    }, [activeMatiereId, matieres]);
 
     const moyenneGenerale = useMemo(() => {
         if (!activeComposition || classeNotes.length === 0) return 0;
@@ -186,39 +215,60 @@ export default function NotesBulletinsIndex({ periodes, classes, matieres, confi
                     <div className="grid gap-3 md:grid-cols-3">
                         <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
                             <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Classe</p>
-                            <select
-                                className="mt-2 w-full rounded-md border border-slate-200 bg-white p-2"
-                                value={activeClasseId ?? ''}
-                                onChange={(e) => setActiveClasseId(Number(e.target.value))}
-                            >
+                            <Input
+                                list="classes-autoselect"
+                                className="mt-2"
+                                value={classeQuery}
+                                onChange={(e) => {
+                                    const nextQuery = e.target.value;
+                                    setClasseQuery(nextQuery);
+                                    const nextId = resolveIdFromQuery(classes, nextQuery, (classe) => classe.nom);
+                                    if (nextId) setActiveClasseId(nextId);
+                                }}
+                            />
+                            <datalist id="classes-autoselect">
                                 {classes.map((classe) => (
-                                    <option key={classe.id} value={classe.id}>{classe.nom}</option>
+                                    <option key={classe.id} value={classe.nom} />
                                 ))}
-                            </select>
+                            </datalist>
                         </div>
                         <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
                             <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Composition</p>
-                            <select
-                                className="mt-2 w-full rounded-md border border-slate-200 bg-white p-2"
-                                value={activeCompositionId ?? ''}
-                                onChange={(e) => setActiveCompositionId(Number(e.target.value))}
-                            >
+                            <Input
+                                list="compositions-autoselect"
+                                className="mt-2"
+                                value={compositionQuery}
+                                onChange={(e) => {
+                                    const nextQuery = e.target.value;
+                                    setCompositionQuery(nextQuery);
+                                    const nextId = resolveIdFromQuery(compositions, nextQuery, (composition) => `${composition.libelle} (${composition.type})`);
+                                    if (nextId) setActiveCompositionId(nextId);
+                                }}
+                            />
+                            <datalist id="compositions-autoselect">
                                 {compositions.map((composition) => (
-                                    <option key={composition.id} value={composition.id}>{composition.libelle} ({composition.type})</option>
+                                    <option key={composition.id} value={`${composition.libelle} (${composition.type})`} />
                                 ))}
-                            </select>
+                            </datalist>
                         </div>
                         <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
                             <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Matière</p>
-                            <select
-                                className="mt-2 w-full rounded-md border border-slate-200 bg-white p-2"
-                                value={activeMatiereId ?? ''}
-                                onChange={(e) => setActiveMatiereId(Number(e.target.value))}
-                            >
+                            <Input
+                                list="matieres-autoselect"
+                                className="mt-2"
+                                value={matiereQuery}
+                                onChange={(e) => {
+                                    const nextQuery = e.target.value;
+                                    setMatiereQuery(nextQuery);
+                                    const nextId = resolveIdFromQuery(matieres, nextQuery, (matiere) => matiere.libelle);
+                                    if (nextId) setActiveMatiereId(nextId);
+                                }}
+                            />
+                            <datalist id="matieres-autoselect">
                                 {matieres.map((matiere) => (
-                                    <option key={matiere.id} value={matiere.id}>{matiere.libelle}</option>
+                                    <option key={matiere.id} value={matiere.libelle} />
                                 ))}
-                            </select>
+                            </datalist>
                         </div>
                     </div>
 
