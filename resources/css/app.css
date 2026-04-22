@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:wght@600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -92,5 +94,15 @@
 
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@layer components {
+  .student-show {
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .student-show .fraunces {
+    font-family: 'Fraunces', serif;
   }
 }
