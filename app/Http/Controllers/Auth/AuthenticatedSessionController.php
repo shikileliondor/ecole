@@ -3,11 +3,11 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Auth\LoginRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -26,29 +26,10 @@ class AuthenticatedSessionController extends Controller
 
     /**
      * Handle an incoming authentication request.
-     *
-     * @throws \Illuminate\Validation\ValidationException
      */
-    public function store(Request $request): RedirectResponse
+    public function store(LoginRequest $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'email' => ['required', 'string', 'email'],
-            'password' => ['required', 'string'],
-            'remember' => ['nullable', 'boolean'],
-        ]);
-
-        $remember = (bool) ($validated['remember'] ?? false);
-
-        $authenticated = Auth::attempt([
-            'email' => mb_strtolower(trim((string) $validated['email'])),
-            'password' => $validated['password'],
-        ], $remember);
-
-        if (! $authenticated) {
-            throw ValidationException::withMessages([
-                'email' => 'Ces identifiants ne correspondent à aucun compte.',
-            ]);
-        }
+        $request->authenticate();
 
         $request->session()->regenerate();
 
