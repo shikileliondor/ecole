@@ -14,6 +14,7 @@ use App\Services\EleveService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Inertia\Inertia;
 use Inertia\Response;
 use Illuminate\Support\Facades\Log;
@@ -117,5 +118,56 @@ class EleveController extends Controller
         $pdf = Pdf::loadView('eleves.export-pdf', ['eleves' => $eleves, 'classe' => $classe, 'date_edition' => now(), 'filters' => $filters]);
 
         return $pdf->download('eleves-' . ($classe?->nom ? str($classe->nom)->slug() : 'toutes-classes') . '-' . now()->format('Y-m-d') . '.pdf');
+    }
+
+    public function exportWord(Request $request)
+    {
+        $etablissementId = (int) auth()->user()->etablissement_id;
+        $filters = $request->only(['search', 'classe_id', 'niveau_id', 'statut', 'sexe']);
+        $classe = $request->filled('classe_id') ? Classe::query()->find((int) $request->integer('classe_id')) : null;
+        $eleves = $this->eleveService->getListePourExport($filters, $etablissementId);
+        $filename = 'eleves-' . ($classe?->nom ? str($classe->nom)->slug() : 'toutes-classes') . '-' . now()->format('Y-m-d') . '.doc';
+
+        return response()
+            ->view('eleves.export-word', ['eleves' => $eleves, 'classe' => $classe, 'date_edition' => now()])
+            ->header('Content-Type', 'application/msword; charset=UTF-8')
+            ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
+    }
+
+    public function exportExcel(Request $request): StreamedResponse
+    {
+        $etablissementId = (int) auth()->user()->etablissement_id;
+        $filters = $request->only(['search', 'classe_id', 'niveau_id', 'statut', 'sexe']);
+        $classe = $request->filled('classe_id') ? Classe::query()->find((int) $request->integer('classe_id')) : null;
+        $eleves = $this->eleveService->getListePourExport($filters, $etablissementId);
+        $filename = 'eleves-' . ($classe?->nom ? str($classe->nom)->slug() : 'toutes-classes') . '-' . now()->format('Y-m-d') . '.csv';
+
+        return response()->streamDownload(function () use ($eleves): void {
+            $output = fopen('php://output', 'w');
+            if ($output === false) {
+                return;
+            }
+
+            fputs($output, "\xEF\xBB\xBF");
+            fputcsv($output, ['N°', 'Matricule', 'Nom et prénoms', 'Sexe', 'Date naissance', 'Parent', 'Téléphone', 'Statut'], ';');
+
+            foreach ($eleves as $index => $eleve) {
+                $parent = $eleve->parentsTuteurs->firstWhere('pivot.est_principal', true) ?? $eleve->parentsTuteurs->first();
+                fputcsv($output, [
+                    $index + 1,
+                    $eleve->matricule,
+                    trim($eleve->nom . ' ' . $eleve->prenoms),
+                    $eleve->sexe === 'M' ? 'Garçon' : 'Fille',
+                    optional($eleve->date_naissance)->format('d/m/Y') ?? $eleve->date_naissance,
+                    trim(($parent?->nom ?? '') . ' ' . ($parent?->prenoms ?? '')),
+                    $parent?->telephone_1,
+                    ucfirst((string) $eleve->statut),
+                ], ';');
+            }
+
+            fclose($output);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
     }
 }
