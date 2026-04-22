@@ -38,7 +38,7 @@ class SecurityHeaders
     {
         $policy = (string) config('security.headers.content_security_policy');
 
-        if (! app()->environment('local') || ! Vite::isRunningHot()) {
+        if (! Vite::isRunningHot()) {
             return $policy;
         }
 
@@ -49,16 +49,49 @@ class SecurityHeaders
             return $policy;
         }
 
-        $connectOrigins = [$origin];
-        if (str_starts_with($origin, 'http://')) {
-            $connectOrigins[] = 'ws://'.substr($origin, strlen('http://'));
-        } elseif (str_starts_with($origin, 'https://')) {
-            $connectOrigins[] = 'wss://'.substr($origin, strlen('https://'));
+        $origins = $this->expandLoopbackOrigins($origin);
+
+        $connectOrigins = $origins;
+        foreach ($origins as $origin) {
+            if (str_starts_with($origin, 'http://')) {
+                $connectOrigins[] = 'ws://'.substr($origin, strlen('http://'));
+            } elseif (str_starts_with($origin, 'https://')) {
+                $connectOrigins[] = 'wss://'.substr($origin, strlen('https://'));
+            }
         }
 
-        $policy = $this->appendDirectiveSources($policy, 'script-src', [$origin]);
+        $policy = $this->appendDirectiveSources($policy, 'script-src', $origins);
 
         return $this->appendDirectiveSources($policy, 'connect-src', $connectOrigins);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function expandLoopbackOrigins(string $origin): array
+    {
+        $parts = parse_url($origin);
+        $scheme = $parts['scheme'] ?? null;
+        $host = $parts['host'] ?? null;
+        $port = $parts['port'] ?? null;
+
+        if (! is_string($scheme) || ! is_string($host)) {
+            return [$origin];
+        }
+
+        $hosts = [$host];
+
+        if ($host === 'localhost' || $host === '127.0.0.1' || $host === '::1') {
+            $hosts = ['localhost', '127.0.0.1', '::1'];
+        }
+
+        return array_values(array_unique(array_map(function (string $loopbackHost) use ($scheme, $port): string {
+            if (str_contains($loopbackHost, ':')) {
+                $loopbackHost = '['.$loopbackHost.']';
+            }
+
+            return $port ? "{$scheme}://{$loopbackHost}:{$port}" : "{$scheme}://{$loopbackHost}";
+        }, $hosts)));
     }
 
     /**
