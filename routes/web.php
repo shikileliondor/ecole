@@ -56,9 +56,13 @@ Route::middleware(['auth'])->prefix('parametres')->name('parametres.')->group(fu
     Route::patch('/config/{onglet}', [ParametreController::class, 'updateConfig'])->name('config.update');
     Route::post('/annees', [ParametreController::class, 'storeAnnee'])->name('annees.store');
     Route::patch('/annees/{annee}/activer', [ParametreController::class, 'activateAnnee'])->name('annees.activate');
+    Route::patch('/annees/{annee}/cloturer', [ParametreController::class, 'closeAnnee'])->name('annees.close');
+    Route::patch('/annees/{annee}/rouvrir', [ParametreController::class, 'reopenAnnee'])->name('annees.reopen');
     Route::post('/periodes', [ParametreController::class, 'storePeriode'])->name('periodes.store');
     Route::post('/modes-paiement', [ParametreController::class, 'storeModePaiement'])->name('modes-paiement.store');
+    Route::patch('/modes-paiement/{modePaiement}/toggle', [ParametreController::class, 'toggleModePaiement'])->name('modes-paiement.toggle');
     Route::post('/statuts-inscription', [ParametreController::class, 'storeStatutInscription'])->name('statuts-inscription.store');
+    Route::patch('/statuts-inscription/{statutInscription}/toggle', [ParametreController::class, 'toggleStatutInscription'])->name('statuts-inscription.toggle');
     Route::post('/roles', [ParametreController::class, 'storeRole'])->name('roles.store');
     Route::post('/permissions', [ParametreController::class, 'storePermission'])->name('permissions.store');
     Route::post('/modeles-impression', [ParametreController::class, 'storeModeleImpression'])->name('modeles-impression.store');
