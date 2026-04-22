@@ -5,6 +5,7 @@ use App\Http\Controllers\InscriptionController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ParametreController;
+use App\Http\Controllers\ClasseController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -82,6 +83,11 @@ Route::middleware(['auth'])->prefix('parametres')->name('parametres.')->group(fu
     Route::delete('/permissions/{permission}', [ParametreController::class, 'destroyPermission'])->name('permissions.destroy');
     Route::post('/modeles-impression', [ParametreController::class, 'storeModeleImpression'])->name('modeles-impression.store');
     Route::delete('/modeles-impression/{modeleImpression}', [ParametreController::class, 'destroyModeleImpression'])->name('modeles-impression.destroy');
+});
+
+
+Route::middleware(['auth'])->prefix('classes')->name('classes.')->group(function (): void {
+    Route::get('/', [ClasseController::class, 'index'])->name('index');
 });
 
 Route::middleware(['auth'])->prefix('inscriptions')->name('inscriptions.')->group(function (): void {
