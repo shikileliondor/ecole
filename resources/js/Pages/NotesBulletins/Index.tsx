@@ -304,9 +304,10 @@ export default function NotesBulletinsIndex({ periodes, classes, matieres, confi
                                 <tbody>
                                     {notesElevesForm.data.notes.map((entry, index) => {
                                         const eleve = elevesByClasse.find((inscription) => inscription.id === entry.inscription_id)?.eleve;
+                                        const eleveNomComplet = [eleve?.prenoms, eleve?.nom].filter(Boolean).join(' ').trim() || 'Élève introuvable';
                                         return (
                                             <tr key={entry.inscription_id} className="border-t border-slate-100">
-                                                <td className="px-4 py-2 font-medium text-slate-800">{eleve?.prenoms} {eleve?.nom}</td>
+                                                <td className="px-4 py-2 font-medium text-slate-800">{eleveNomComplet}</td>
                                                 <td className="px-4 py-2">
                                                     <Input
                                                         type="number"
