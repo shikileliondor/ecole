@@ -158,6 +158,17 @@ export default function ParametresIndex(props: Props) {
 
     const anneeForm = useForm({ libelle: '', date_debut: '', date_fin: '' });
     const periodeForm = useForm({ annee_scolaire_id: '', libelle: '', date_debut: '', date_fin: '', ordre: 1 });
+    const [selectedPeriodeForComposition, setSelectedPeriodeForComposition] = useState<number | null>(null);
+    const compositionParPeriodeForm = useForm({
+        periode_academique_id: '',
+        libelle: '',
+        type: 'simple',
+        bareme: Number(config('evaluations').bareme_principal ?? 20),
+        seuil_validation: String(config('evaluations').seuil_validation ?? '10'),
+        regle_moyenne: String(config('evaluations').regle_moyenne ?? 'ponderee_coefficient'),
+        mode_arrondi: String(config('evaluations').mode_arrondi ?? 'dixieme_superieur'),
+        appreciations_auto: String(config('evaluations').appreciations_auto ?? '>=16: Très bien\n>=14: Bien\n>=12: Assez bien\n>=10: Passable\n<10: Insuffisant'),
+    });
     const [editingNiveauId, setEditingNiveauId] = useState<number | null>(null);
     const [editingClasseId, setEditingClasseId] = useState<number | null>(null);
     const [editingMatiereId, setEditingMatiereId] = useState<number | null>(null);
@@ -338,12 +349,73 @@ export default function ParametresIndex(props: Props) {
                                             <td className="px-4 py-3">{formatDate(periode.date_debut)}</td>
                                             <td className="px-4 py-3">{formatDate(periode.date_fin)}</td>
                                             <td className="px-4 py-3">
-                                                <Button size="sm" variant="outline" onClick={() => router.delete(route('parametres.periodes.destroy', periode.id))}>Supprimer</Button>
+                                                <div className="flex flex-wrap gap-2">
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={() => {
+                                                            setSelectedPeriodeForComposition(periode.id);
+                                                            compositionParPeriodeForm.setData('periode_academique_id', String(periode.id));
+                                                            compositionParPeriodeForm.setData('libelle', `Composition ${periode.libelle}`);
+                                                        }}
+                                                    >
+                                                        Ajouter composition
+                                                    </Button>
+                                                    <Button size="sm" variant="outline" onClick={() => router.delete(route('parametres.periodes.destroy', periode.id))}>Supprimer</Button>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))}
                                 </Table>
                             </div>
+                            {selectedPeriodeForComposition ? (
+                                <form
+                                    className="mt-4 grid gap-2 rounded-lg border border-slate-200 bg-slate-50 p-4 md:grid-cols-4"
+                                    onSubmit={(e) => {
+                                        e.preventDefault();
+                                        compositionParPeriodeForm.post(route('notes-bulletins.compositions.store'), {
+                                            onSuccess: () => {
+                                                compositionParPeriodeForm.setData('libelle', '');
+                                                setSelectedPeriodeForComposition(null);
+                                            },
+                                        });
+                                    }}
+                                >
+                                    <Input
+                                        placeholder="Libellé composition"
+                                        value={compositionParPeriodeForm.data.libelle}
+                                        onChange={(e) => compositionParPeriodeForm.setData('libelle', e.target.value)}
+                                    />
+                                    <select className="rounded-md border border-slate-200 p-2 text-sm" value={compositionParPeriodeForm.data.type} onChange={(e) => compositionParPeriodeForm.setData('type', e.target.value)}>
+                                        <option value="simple">Simple</option>
+                                        <option value="passage">Passage</option>
+                                    </select>
+                                    <Input type="number" min={1} max={100} value={compositionParPeriodeForm.data.bareme} onChange={(e) => compositionParPeriodeForm.setData('bareme', Number(e.target.value || 20))} />
+                                    <Input value={compositionParPeriodeForm.data.seuil_validation} onChange={(e) => compositionParPeriodeForm.setData('seuil_validation', e.target.value)} />
+                                    <select className="rounded-md border border-slate-200 p-2 text-sm" value={compositionParPeriodeForm.data.regle_moyenne} onChange={(e) => compositionParPeriodeForm.setData('regle_moyenne', e.target.value)}>
+                                        <option value="simple">Moyenne simple</option>
+                                        <option value="ponderee_coefficient">Moyenne pondérée</option>
+                                    </select>
+                                    <select className="rounded-md border border-slate-200 p-2 text-sm" value={compositionParPeriodeForm.data.mode_arrondi} onChange={(e) => compositionParPeriodeForm.setData('mode_arrondi', e.target.value)}>
+                                        <option value="unite_inferieure">Unité inférieure</option>
+                                        <option value="unite_superieure">Unité supérieure</option>
+                                        <option value="demi_point">Demi-point</option>
+                                        <option value="dixieme_inferieur">Dixième inférieur</option>
+                                        <option value="dixieme_superieur">Dixième supérieur</option>
+                                    </select>
+                                    <div className="md:col-span-2">
+                                        <Textarea
+                                            rows={3}
+                                            value={compositionParPeriodeForm.data.appreciations_auto}
+                                            onChange={(e) => compositionParPeriodeForm.setData('appreciations_auto', e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="md:col-span-2 flex items-end justify-end gap-2">
+                                        <Button type="button" variant="outline" onClick={() => setSelectedPeriodeForComposition(null)}>Annuler</Button>
+                                        <Button type="submit">Créer la composition du trimestre</Button>
+                                    </div>
+                                </form>
+                            ) : null}
                         </Section>
 
                         <Section title="Référentiels académiques exploités" subtitle="Ces référentiels alimentent classes, notes, bulletins et inscriptions.">
