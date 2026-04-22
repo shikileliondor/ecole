@@ -108,6 +108,35 @@ class SecurityHeaders
     }
 
     /**
+     * @return list<string>
+     */
+    private function expandLoopbackOrigins(string $origin): array
+    {
+        $parts = parse_url($origin);
+        $scheme = $parts['scheme'] ?? null;
+        $host = $parts['host'] ?? null;
+        $port = $parts['port'] ?? null;
+
+        if (! is_string($scheme) || ! is_string($host)) {
+            return [$origin];
+        }
+
+        $hosts = [$host];
+
+        if ($host === 'localhost' || $host === '127.0.0.1' || $host === '::1') {
+            $hosts = ['localhost', '127.0.0.1', '::1'];
+        }
+
+        return array_values(array_unique(array_map(function (string $loopbackHost) use ($scheme, $port): string {
+            if (str_contains($loopbackHost, ':')) {
+                $loopbackHost = '['.$loopbackHost.']';
+            }
+
+            return $port ? "{$scheme}://{$loopbackHost}:{$port}" : "{$scheme}://{$loopbackHost}";
+        }, $hosts)));
+    }
+
+    /**
      * @param  list<string>  $sources
      */
     private function appendDirectiveSources(string $policy, string $directive, array $sources): string
