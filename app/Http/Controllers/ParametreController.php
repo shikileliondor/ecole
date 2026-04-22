@@ -45,7 +45,11 @@ class ParametreController extends Controller
             'annees' => AnneeScolaire::query()->where('etablissement_id', $etablissementId)->orderByDesc('date_debut')->get(),
             'periodes' => PeriodeAcademique::query()->whereHas('anneeScolaire', fn ($query) => $query->where('etablissement_id', $etablissementId))->with('anneeScolaire:id,libelle')->orderBy('ordre')->get(),
             'niveaux' => Niveau::query()->ordonnes()->get(),
-            'classes' => Classe::query()->where('etablissement_id', $etablissementId)->with('niveau')->orderBy('nom')->get(),
+            'classes' => Classe::query()
+                ->where('etablissement_id', $etablissementId)
+                ->with(['niveau:id,libelle', 'anneeScolaire:id,libelle'])
+                ->orderBy('nom')
+                ->get(),
             'matieres' => Matiere::query()->ordonnesBulletin()->get(),
             'typesFrais' => TypeFrais::query()->where('etablissement_id', $etablissementId)->with(['niveau', 'classe'])->orderBy('ordre')->get(),
             'modesPaiement' => ModePaiement::query()->where('etablissement_id', $etablissementId)->orderBy('ordre')->get(),
@@ -241,6 +245,188 @@ class ParametreController extends Controller
         $this->auditService->log($request, $etablissementId, 'finance', 'create_mode_paiement', $mode, null, $mode->toArray());
 
         return back()->with('success', 'Mode de paiement ajouté.');
+    }
+
+    public function storeNiveau(Request $request): RedirectResponse
+    {
+        $etablissementId = (int) auth()->user()->etablissement_id;
+        $data = $request->validate([
+            'libelle' => ['required', 'string', 'max:60', 'unique:niveaux,libelle'],
+            'cycle' => ['required', 'string', 'in:CP,CE,CM'],
+            'ordre' => ['required', 'integer', 'min:1', 'max:99'],
+            'description' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $niveau = Niveau::query()->create($data);
+        $this->auditService->log($request, $etablissementId, 'referentiels', 'create_niveau', $niveau, null, $niveau->toArray());
+
+        return back()->with('success', 'Niveau ajouté.');
+    }
+
+    public function updateNiveau(Request $request, Niveau $niveau): RedirectResponse
+    {
+        $etablissementId = (int) auth()->user()->etablissement_id;
+        $data = $request->validate([
+            'libelle' => ['required', 'string', 'max:60', 'unique:niveaux,libelle,' . $niveau->id],
+            'cycle' => ['required', 'string', 'in:CP,CE,CM'],
+            'ordre' => ['required', 'integer', 'min:1', 'max:99'],
+            'description' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $avant = $niveau->toArray();
+        $niveau->update($data);
+        $this->auditService->log($request, $etablissementId, 'referentiels', 'update_niveau', $niveau, $avant, $niveau->toArray());
+
+        return back()->with('success', 'Niveau mis à jour.');
+    }
+
+    public function destroyNiveau(Request $request, Niveau $niveau): RedirectResponse
+    {
+        $etablissementId = (int) auth()->user()->etablissement_id;
+
+        if ($niveau->classes()->exists() || $niveau->typesFrais()->exists()) {
+            return back()->withErrors(['libelle' => 'Impossible de supprimer ce niveau car il est déjà utilisé.']);
+        }
+
+        $avant = $niveau->toArray();
+        $niveau->delete();
+        $this->auditService->log($request, $etablissementId, 'referentiels', 'delete_niveau', $niveau, $avant, null);
+
+        return back()->with('success', 'Niveau supprimé.');
+    }
+
+    public function storeClasse(Request $request): RedirectResponse
+    {
+        $etablissementId = (int) auth()->user()->etablissement_id;
+        $data = $request->validate([
+            'nom' => ['required', 'string', 'max:80'],
+            'niveau_id' => ['required', 'integer', 'exists:niveaux,id'],
+            'annee_scolaire_id' => ['required', 'integer', 'exists:annees_scolaires,id'],
+            'capacite_max' => ['nullable', 'integer', 'min:1', 'max:99'],
+            'salle' => ['nullable', 'string', 'max:80'],
+            'statut' => ['required', 'string', 'in:active,inactive'],
+        ]);
+
+        abort_unless(
+            AnneeScolaire::query()->where('id', (int) $data['annee_scolaire_id'])->where('etablissement_id', $etablissementId)->exists(),
+            403
+        );
+
+        $classe = Classe::query()->create([
+            ...$data,
+            'etablissement_id' => $etablissementId,
+            'capacite_max' => (int) ($data['capacite_max'] ?? 40),
+            'enseignant_titulaire_id' => null,
+        ]);
+
+        $this->auditService->log($request, $etablissementId, 'referentiels', 'create_classe', $classe, null, $classe->toArray());
+
+        return back()->with('success', 'Classe ajoutée.');
+    }
+
+    public function updateClasse(Request $request, Classe $classe): RedirectResponse
+    {
+        $etablissementId = (int) auth()->user()->etablissement_id;
+        abort_unless($classe->etablissement_id === $etablissementId, 403);
+
+        $data = $request->validate([
+            'nom' => ['required', 'string', 'max:80'],
+            'niveau_id' => ['required', 'integer', 'exists:niveaux,id'],
+            'annee_scolaire_id' => ['required', 'integer', 'exists:annees_scolaires,id'],
+            'capacite_max' => ['nullable', 'integer', 'min:1', 'max:99'],
+            'salle' => ['nullable', 'string', 'max:80'],
+            'statut' => ['required', 'string', 'in:active,inactive'],
+        ]);
+
+        abort_unless(
+            AnneeScolaire::query()->where('id', (int) $data['annee_scolaire_id'])->where('etablissement_id', $etablissementId)->exists(),
+            403
+        );
+
+        $avant = $classe->toArray();
+        $classe->update([
+            ...$data,
+            'capacite_max' => (int) ($data['capacite_max'] ?? 40),
+        ]);
+
+        $this->auditService->log($request, $etablissementId, 'referentiels', 'update_classe', $classe, $avant, $classe->toArray());
+
+        return back()->with('success', 'Classe mise à jour.');
+    }
+
+    public function destroyClasse(Request $request, Classe $classe): RedirectResponse
+    {
+        $etablissementId = (int) auth()->user()->etablissement_id;
+        abort_unless($classe->etablissement_id === $etablissementId, 403);
+
+        if ($classe->inscriptions()->exists()) {
+            return back()->withErrors(['nom' => 'Impossible de supprimer une classe déjà utilisée dans des inscriptions.']);
+        }
+
+        $avant = $classe->toArray();
+        $classe->delete();
+        $this->auditService->log($request, $etablissementId, 'referentiels', 'delete_classe', $classe, $avant, null);
+
+        return back()->with('success', 'Classe supprimée.');
+    }
+
+    public function storeMatiere(Request $request): RedirectResponse
+    {
+        $etablissementId = (int) auth()->user()->etablissement_id;
+        $data = $request->validate([
+            'libelle' => ['required', 'string', 'max:80', 'unique:matieres,libelle'],
+            'code' => ['required', 'string', 'max:20', 'unique:matieres,code'],
+            'coefficient' => ['required', 'integer', 'min:1', 'max:20'],
+            'ordre_bulletin' => ['required', 'integer', 'min:1', 'max:99'],
+            'est_notee' => ['boolean'],
+            'type_evaluation' => ['required', 'string', 'in:note,appreciation'],
+        ]);
+
+        $matiere = Matiere::query()->create([
+            ...$data,
+            'est_notee' => (bool) ($data['est_notee'] ?? true),
+        ]);
+
+        $this->auditService->log($request, $etablissementId, 'referentiels', 'create_matiere', $matiere, null, $matiere->toArray());
+
+        return back()->with('success', 'Matière ajoutée.');
+    }
+
+    public function updateMatiere(Request $request, Matiere $matiere): RedirectResponse
+    {
+        $etablissementId = (int) auth()->user()->etablissement_id;
+        $data = $request->validate([
+            'libelle' => ['required', 'string', 'max:80', 'unique:matieres,libelle,' . $matiere->id],
+            'code' => ['required', 'string', 'max:20', 'unique:matieres,code,' . $matiere->id],
+            'coefficient' => ['required', 'integer', 'min:1', 'max:20'],
+            'ordre_bulletin' => ['required', 'integer', 'min:1', 'max:99'],
+            'est_notee' => ['boolean'],
+            'type_evaluation' => ['required', 'string', 'in:note,appreciation'],
+        ]);
+
+        $avant = $matiere->toArray();
+        $matiere->update([
+            ...$data,
+            'est_notee' => (bool) ($data['est_notee'] ?? true),
+        ]);
+
+        $this->auditService->log($request, $etablissementId, 'referentiels', 'update_matiere', $matiere, $avant, $matiere->toArray());
+
+        return back()->with('success', 'Matière mise à jour.');
+    }
+
+    public function destroyMatiere(Request $request, Matiere $matiere): RedirectResponse
+    {
+        $etablissementId = (int) auth()->user()->etablissement_id;
+        if ($matiere->notes()->exists()) {
+            return back()->withErrors(['libelle' => 'Impossible de supprimer une matière déjà utilisée dans des notes.']);
+        }
+
+        $avant = $matiere->toArray();
+        $matiere->delete();
+        $this->auditService->log($request, $etablissementId, 'referentiels', 'delete_matiere', $matiere, $avant, null);
+
+        return back()->with('success', 'Matière supprimée.');
     }
 
     public function destroyModePaiement(Request $request, ModePaiement $modePaiement): RedirectResponse

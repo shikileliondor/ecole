@@ -15,6 +15,7 @@ type Item = { id: number; [key: string]: unknown };
 type TabId =
     | 'general'
     | 'academique'
+    | 'referentiels'
     | 'inscriptions'
     | 'finance'
     | 'evaluations'
@@ -48,9 +49,9 @@ type Props = {
     configs: Record<string, Record<string, unknown>>;
     annees: Array<Item & { libelle: string; date_debut: string; date_fin: string; est_active: boolean }>;
     periodes: Array<Item & { libelle: string; date_debut: string; date_fin: string; ordre: number; annee_scolaire_id: number; anneeScolaire?: { libelle: string } }>;
-    niveaux: Array<Item & { libelle: string; cycle: string }>;
-    classes: Array<Item & { nom: string; niveau_id?: number; niveau?: { libelle: string } }>;
-    matieres: Array<Item & { libelle: string; coefficient: number }>;
+    niveaux: Array<Item & { libelle: string; cycle: string; ordre?: number; description?: string }>;
+    classes: Array<Item & { nom: string; niveau_id?: number; annee_scolaire_id?: number; capacite_max?: number; salle?: string; statut?: string; niveau?: { libelle: string }; anneeScolaire?: { libelle: string } }>;
+    matieres: Array<Item & { libelle: string; code: string; coefficient: number; ordre_bulletin: number; est_notee: boolean; type_evaluation: string }>;
     typesFrais: Array<Item & { libelle: string; montant: number; frequence?: string; est_obligatoire?: boolean; niveau?: { libelle: string }; classe?: { nom: string } }>;
     modesPaiement: Array<Item & { libelle: string; code?: string; ordre: number; est_actif: boolean }>;
     statutsInscription: Array<Item & { libelle: string; code?: string; ordre: number; est_actif: boolean }>;
@@ -157,6 +158,12 @@ export default function ParametresIndex(props: Props) {
 
     const anneeForm = useForm({ libelle: '', date_debut: '', date_fin: '' });
     const periodeForm = useForm({ annee_scolaire_id: '', libelle: '', date_debut: '', date_fin: '', ordre: 1 });
+    const [editingNiveauId, setEditingNiveauId] = useState<number | null>(null);
+    const [editingClasseId, setEditingClasseId] = useState<number | null>(null);
+    const [editingMatiereId, setEditingMatiereId] = useState<number | null>(null);
+    const niveauForm = useForm({ libelle: '', cycle: 'CP', ordre: 1, description: '' });
+    const classeForm = useForm({ nom: '', niveau_id: '', annee_scolaire_id: '', capacite_max: 40, salle: '', statut: 'active' });
+    const matiereForm = useForm({ libelle: '', code: '', coefficient: 1, ordre_bulletin: 1, est_notee: true, type_evaluation: 'note' });
     const modeForm = useForm({ libelle: '' });
     const typeFraisForm = useForm({
         libelle: '',
@@ -175,6 +182,7 @@ export default function ParametresIndex(props: Props) {
         () => [
             { id: 'general', label: 'Général' },
             { id: 'academique', label: 'Académique' },
+            { id: 'referentiels', label: 'Référentiels' },
             { id: 'inscriptions', label: 'Inscriptions' },
             { id: 'finance', label: 'Finance' },
             { id: 'evaluations', label: 'Évaluations' },
@@ -184,6 +192,32 @@ export default function ParametresIndex(props: Props) {
         ] satisfies Array<{ id: TabId; label: string }>,
         [],
     );
+    const anneeActive = props.annees.find((annee) => annee.est_active);
+
+    const resetNiveauForm = () => {
+        setEditingNiveauId(null);
+        niveauForm.reset();
+        niveauForm.setData({ libelle: '', cycle: 'CP', ordre: 1, description: '' });
+    };
+
+    const resetClasseForm = () => {
+        setEditingClasseId(null);
+        classeForm.reset();
+        classeForm.setData({
+            nom: '',
+            niveau_id: '',
+            annee_scolaire_id: anneeActive ? String(anneeActive.id) : '',
+            capacite_max: 40,
+            salle: '',
+            statut: 'active',
+        });
+    };
+
+    const resetMatiereForm = () => {
+        setEditingMatiereId(null);
+        matiereForm.reset();
+        matiereForm.setData({ libelle: '', code: '', coefficient: 1, ordre_bulletin: 1, est_notee: true, type_evaluation: 'note' });
+    };
 
     return (
         <AppLayout title="Paramètres">
@@ -317,6 +351,184 @@ export default function ParametresIndex(props: Props) {
                                 <div className="rounded-lg border border-slate-200 p-4"><p className="text-sm text-slate-500">Niveaux</p><p className="text-2xl font-semibold">{props.niveaux.length}</p></div>
                                 <div className="rounded-lg border border-slate-200 p-4"><p className="text-sm text-slate-500">Classes</p><p className="text-2xl font-semibold">{props.classes.length}</p></div>
                                 <div className="rounded-lg border border-slate-200 p-4"><p className="text-sm text-slate-500">Matières</p><p className="text-2xl font-semibold">{props.matieres.length}</p></div>
+                            </div>
+                        </Section>
+                    </div>
+                ) : null}
+
+                {activeTab === 'referentiels' ? (
+                    <div className="space-y-4">
+                        <Section title="Niveaux" subtitle="Structure pédagogique utilisée dans les classes, inscriptions et frais.">
+                            <form
+                                className="grid gap-2 md:grid-cols-5"
+                                onSubmit={(e) => {
+                                    e.preventDefault();
+                                    if (editingNiveauId) {
+                                        niveauForm.patch(route('parametres.niveaux.update', editingNiveauId), { onSuccess: () => resetNiveauForm() });
+                                        return;
+                                    }
+                                    niveauForm.post(route('parametres.niveaux.store'), { onSuccess: () => resetNiveauForm() });
+                                }}
+                            >
+                                <Input placeholder="CP1" value={niveauForm.data.libelle} onChange={(e) => niveauForm.setData('libelle', e.target.value)} />
+                                <select className="rounded-md border border-slate-200 p-2 text-sm" value={niveauForm.data.cycle} onChange={(e) => niveauForm.setData('cycle', e.target.value)}>
+                                    <option value="CP">CP</option>
+                                    <option value="CE">CE</option>
+                                    <option value="CM">CM</option>
+                                </select>
+                                <Input type="number" min={1} value={niveauForm.data.ordre} onChange={(e) => niveauForm.setData('ordre', Number(e.target.value || 1))} />
+                                <Input placeholder="Description (optionnel)" value={niveauForm.data.description} onChange={(e) => niveauForm.setData('description', e.target.value)} />
+                                <div className="flex gap-2">
+                                    <Button type="submit">{editingNiveauId ? 'Mettre à jour' : 'Ajouter'}</Button>
+                                    {editingNiveauId ? <Button type="button" variant="outline" onClick={resetNiveauForm}>Annuler</Button> : null}
+                                </div>
+                            </form>
+                            <div className="mt-3">
+                                <Table headers={['Libellé', 'Cycle', 'Ordre', 'Actions']}>
+                                    {props.niveaux.map((niveau) => (
+                                        <tr key={niveau.id}>
+                                            <td className="px-4 py-3">{niveau.libelle}</td>
+                                            <td className="px-4 py-3">{niveau.cycle}</td>
+                                            <td className="px-4 py-3">{String(niveau.ordre ?? '-')}</td>
+                                            <td className="px-4 py-3">
+                                                <div className="flex flex-wrap gap-2">
+                                                    <Button size="sm" variant="outline" onClick={() => {
+                                                        setEditingNiveauId(niveau.id);
+                                                        niveauForm.setData({
+                                                            libelle: String(niveau.libelle ?? ''),
+                                                            cycle: String(niveau.cycle ?? 'CP'),
+                                                            ordre: Number(niveau.ordre ?? 1),
+                                                            description: String(niveau.description ?? ''),
+                                                        });
+                                                    }}>Modifier</Button>
+                                                    <Button size="sm" variant="outline" onClick={() => router.delete(route('parametres.niveaux.destroy', niveau.id))}>Supprimer</Button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </Table>
+                            </div>
+                        </Section>
+
+                        <Section title="Classes" subtitle="Classes par niveau et année scolaire, utilisées dans tous les modules.">
+                            <form
+                                className="grid gap-2 md:grid-cols-4"
+                                onSubmit={(e) => {
+                                    e.preventDefault();
+                                    if (editingClasseId) {
+                                        classeForm.patch(route('parametres.classes.update', editingClasseId), { onSuccess: () => resetClasseForm() });
+                                        return;
+                                    }
+                                    classeForm.post(route('parametres.classes.store'), { onSuccess: () => resetClasseForm() });
+                                }}
+                            >
+                                <Input placeholder="6e A" value={classeForm.data.nom} onChange={(e) => classeForm.setData('nom', e.target.value)} />
+                                <select className="rounded-md border border-slate-200 p-2 text-sm" value={classeForm.data.niveau_id} onChange={(e) => classeForm.setData('niveau_id', e.target.value)}>
+                                    <option value="">Niveau</option>
+                                    {props.niveaux.map((niveau) => <option key={niveau.id} value={String(niveau.id)}>{niveau.libelle}</option>)}
+                                </select>
+                                <select className="rounded-md border border-slate-200 p-2 text-sm" value={classeForm.data.annee_scolaire_id} onChange={(e) => classeForm.setData('annee_scolaire_id', e.target.value)}>
+                                    <option value="">Année scolaire</option>
+                                    {props.annees.map((annee) => <option key={annee.id} value={String(annee.id)}>{annee.libelle}</option>)}
+                                </select>
+                                <Input type="number" min={1} value={classeForm.data.capacite_max} onChange={(e) => classeForm.setData('capacite_max', Number(e.target.value || 40))} />
+                                <Input placeholder="Salle (optionnel)" value={classeForm.data.salle} onChange={(e) => classeForm.setData('salle', e.target.value)} />
+                                <select className="rounded-md border border-slate-200 p-2 text-sm" value={classeForm.data.statut} onChange={(e) => classeForm.setData('statut', e.target.value)}>
+                                    <option value="active">Active</option>
+                                    <option value="inactive">Inactive</option>
+                                </select>
+                                <div className="md:col-span-2 flex gap-2 justify-end">
+                                    <Button type="submit">{editingClasseId ? 'Mettre à jour' : 'Ajouter'}</Button>
+                                    {editingClasseId ? <Button type="button" variant="outline" onClick={resetClasseForm}>Annuler</Button> : null}
+                                </div>
+                            </form>
+                            <div className="mt-3">
+                                <Table headers={['Classe', 'Niveau', 'Année', 'Statut', 'Actions']}>
+                                    {props.classes.map((classe) => (
+                                        <tr key={classe.id}>
+                                            <td className="px-4 py-3">{classe.nom}</td>
+                                            <td className="px-4 py-3">{classe.niveau?.libelle ?? '-'}</td>
+                                            <td className="px-4 py-3">{classe.anneeScolaire?.libelle ?? '-'}</td>
+                                            <td className="px-4 py-3">{classe.statut === 'inactive' ? 'Inactive' : 'Active'}</td>
+                                            <td className="px-4 py-3">
+                                                <div className="flex flex-wrap gap-2">
+                                                    <Button size="sm" variant="outline" onClick={() => {
+                                                        setEditingClasseId(classe.id);
+                                                        classeForm.setData({
+                                                            nom: String(classe.nom ?? ''),
+                                                            niveau_id: classe.niveau_id ? String(classe.niveau_id) : '',
+                                                            annee_scolaire_id: classe.annee_scolaire_id ? String(classe.annee_scolaire_id) : '',
+                                                            capacite_max: Number(classe.capacite_max ?? 40),
+                                                            salle: String(classe.salle ?? ''),
+                                                            statut: String(classe.statut ?? 'active'),
+                                                        });
+                                                    }}>Modifier</Button>
+                                                    <Button size="sm" variant="outline" onClick={() => router.delete(route('parametres.classes.destroy', classe.id))}>Supprimer</Button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </Table>
+                            </div>
+                        </Section>
+
+                        <Section title="Matières" subtitle="Matières utilisées pour la saisie des notes et bulletins.">
+                            <form
+                                className="grid gap-2 md:grid-cols-5"
+                                onSubmit={(e) => {
+                                    e.preventDefault();
+                                    if (editingMatiereId) {
+                                        matiereForm.patch(route('parametres.matieres.update', editingMatiereId), { onSuccess: () => resetMatiereForm() });
+                                        return;
+                                    }
+                                    matiereForm.post(route('parametres.matieres.store'), { onSuccess: () => resetMatiereForm() });
+                                }}
+                            >
+                                <Input placeholder="Mathématiques" value={matiereForm.data.libelle} onChange={(e) => matiereForm.setData('libelle', e.target.value)} />
+                                <Input placeholder="MATH" value={matiereForm.data.code} onChange={(e) => matiereForm.setData('code', e.target.value)} />
+                                <Input type="number" min={1} value={matiereForm.data.coefficient} onChange={(e) => matiereForm.setData('coefficient', Number(e.target.value || 1))} />
+                                <Input type="number" min={1} value={matiereForm.data.ordre_bulletin} onChange={(e) => matiereForm.setData('ordre_bulletin', Number(e.target.value || 1))} />
+                                <select className="rounded-md border border-slate-200 p-2 text-sm" value={matiereForm.data.type_evaluation} onChange={(e) => matiereForm.setData('type_evaluation', e.target.value)}>
+                                    <option value="note">Notée</option>
+                                    <option value="appreciation">Appréciation</option>
+                                </select>
+                                <label className="rounded-md border border-slate-200 px-3 py-2 text-sm md:col-span-2 flex items-center gap-2">
+                                    <Checkbox checked={matiereForm.data.est_notee} onCheckedChange={(checked) => matiereForm.setData('est_notee', Boolean(checked))} />
+                                    Matière notée
+                                </label>
+                                <div className="md:col-span-3 flex justify-end gap-2">
+                                    <Button type="submit">{editingMatiereId ? 'Mettre à jour' : 'Ajouter'}</Button>
+                                    {editingMatiereId ? <Button type="button" variant="outline" onClick={resetMatiereForm}>Annuler</Button> : null}
+                                </div>
+                            </form>
+                            <div className="mt-3">
+                                <Table headers={['Matière', 'Code', 'Coef.', 'Ordre', 'Type', 'Actions']}>
+                                    {props.matieres.map((matiere) => (
+                                        <tr key={matiere.id}>
+                                            <td className="px-4 py-3">{matiere.libelle}</td>
+                                            <td className="px-4 py-3">{matiere.code}</td>
+                                            <td className="px-4 py-3">{String(matiere.coefficient)}</td>
+                                            <td className="px-4 py-3">{String(matiere.ordre_bulletin)}</td>
+                                            <td className="px-4 py-3">{matiere.type_evaluation}</td>
+                                            <td className="px-4 py-3">
+                                                <div className="flex flex-wrap gap-2">
+                                                    <Button size="sm" variant="outline" onClick={() => {
+                                                        setEditingMatiereId(matiere.id);
+                                                        matiereForm.setData({
+                                                            libelle: String(matiere.libelle ?? ''),
+                                                            code: String(matiere.code ?? ''),
+                                                            coefficient: Number(matiere.coefficient ?? 1),
+                                                            ordre_bulletin: Number(matiere.ordre_bulletin ?? 1),
+                                                            est_notee: Boolean(matiere.est_notee ?? true),
+                                                            type_evaluation: String(matiere.type_evaluation ?? 'note'),
+                                                        });
+                                                    }}>Modifier</Button>
+                                                    <Button size="sm" variant="outline" onClick={() => router.delete(route('parametres.matieres.destroy', matiere.id))}>Supprimer</Button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </Table>
                             </div>
                         </Section>
                     </div>
