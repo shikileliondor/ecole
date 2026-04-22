@@ -1,6 +1,7 @@
 import InputError from '@/Components/InputError';
 import { Button } from '@/Components/ui/button';
 import { Checkbox } from '@/Components/ui/checkbox';
+import FeedbackAlert from '@/Components/ui/feedback-alert';
 import { Input } from '@/Components/ui/input';
 import { Label } from '@/Components/ui/label';
 import { Head, Link, useForm } from '@inertiajs/react';
@@ -104,13 +105,9 @@ export default function Login({ canResetPassword, status }: LoginProps) {
                             </p>
                         </div>
 
-                        {status && <div className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-700">{status}</div>}
+                        {status ? <FeedbackAlert type="success" message={status} /> : null}
 
-                        {form.errors.auth && (
-                            <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600">
-                                {form.errors.auth}
-                            </div>
-                        )}
+                        {form.errors.auth ? <FeedbackAlert type="error" message={form.errors.auth} /> : null}
 
                         <form onSubmit={submit} className="space-y-5">
                             {/* Onglets Email / Téléphone */}

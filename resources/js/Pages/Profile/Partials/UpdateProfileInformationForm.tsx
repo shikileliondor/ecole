@@ -2,7 +2,7 @@ import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
-import { Transition } from '@headlessui/react';
+import FeedbackAlert from '@/Components/ui/feedback-alert';
 import { Link, useForm, usePage } from '@inertiajs/react';
 import { FormEventHandler } from 'react';
 
@@ -89,10 +89,11 @@ export default function UpdateProfileInformation({
                         </p>
 
                         {status === 'verification-link-sent' && (
-                            <div className="mt-2 text-sm font-medium text-green-600">
-                                A new verification link has been sent to your
-                                email address.
-                            </div>
+                            <FeedbackAlert
+                                type="success"
+                                className="mt-2"
+                                message="A new verification link has been sent to your email address."
+                            />
                         )}
                     </div>
                 )}
@@ -100,17 +101,7 @@ export default function UpdateProfileInformation({
                 <div className="flex items-center gap-4">
                     <PrimaryButton disabled={processing}>Save</PrimaryButton>
 
-                    <Transition
-                        show={recentlySuccessful}
-                        enter="transition ease-in-out"
-                        enterFrom="opacity-0"
-                        leave="transition ease-in-out"
-                        leaveTo="opacity-0"
-                    >
-                        <p className="text-sm text-gray-600">
-                            Saved.
-                        </p>
-                    </Transition>
+                    {recentlySuccessful ? <FeedbackAlert type="success" message="Saved." /> : null}
                 </div>
             </form>
         </section>

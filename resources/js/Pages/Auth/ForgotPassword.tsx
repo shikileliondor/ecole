@@ -1,5 +1,6 @@
 import InputError from '@/Components/InputError';
 import PrimaryButton from '@/Components/PrimaryButton';
+import FeedbackAlert from '@/Components/ui/feedback-alert';
 import TextInput from '@/Components/TextInput';
 import GuestLayout from '@/Layouts/GuestLayout';
 import { Head, useForm } from '@inertiajs/react';
@@ -26,11 +27,7 @@ export default function ForgotPassword({ status }: { status?: string }) {
                 allow you to choose a new one.
             </div>
 
-            {status && (
-                <div className="mb-4 text-sm font-medium text-green-600">
-                    {status}
-                </div>
-            )}
+            {status ? <FeedbackAlert type="success" className="mb-4" message={status} /> : null}
 
             <form onSubmit={submit}>
                 <TextInput

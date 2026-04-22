@@ -2,12 +2,11 @@ import AppLayout from '@/Layouts/AppLayout';
 import { Head, useForm } from '@inertiajs/react';
 import { Button } from '@/Components/ui/button';
 import { Card, CardContent } from '@/Components/ui/card';
+import FeedbackAlert from '@/Components/ui/feedback-alert';
 import { Input } from '@/Components/ui/input';
 import { Label } from '@/Components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/Components/ui/select';
 import { Textarea } from '@/Components/ui/textarea';
-import { Alert, AlertContent, AlertDescription, AlertIcon, AlertTitle } from '@/components/ui/alert-1';
-import { CircleAlert } from 'lucide-react';
 
 type Props = {
     classes: Array<any>;
@@ -152,23 +151,13 @@ export default function InscriptionsCreate({ classes, annees, eleves, parents }:
                 </Card>
 
                 {errorEntries.length > 0 ? (
-                    <Alert variant="destructive" appearance="light">
-                        <AlertIcon>
-                            <CircleAlert className="size-4" />
-                        </AlertIcon>
-                        <AlertContent>
-                            <AlertTitle>Veuillez corriger les erreurs du formulaire.</AlertTitle>
-                            <AlertDescription>
-                                <ul className="list-disc pl-5">
-                                    {errorEntries.map(([field, message]) => (
-                                        <li key={field}>
-                                            <span className="font-semibold">{field.replaceAll('_', ' ')}</span>: {message}
-                                        </li>
-                                    ))}
-                                </ul>
-                            </AlertDescription>
-                        </AlertContent>
-                    </Alert>
+                    <FeedbackAlert
+                        type="error"
+                        title="Veuillez corriger les erreurs du formulaire."
+                        message={errorEntries
+                            .map(([field, message]) => `${field.replaceAll('_', ' ')}: ${String(message)}`)
+                            .join(' · ')}
+                    />
                 ) : null}
 
                 <div className="flex justify-end gap-3">

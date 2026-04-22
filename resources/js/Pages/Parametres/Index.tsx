@@ -2,6 +2,7 @@ import AppLayout from '@/Layouts/AppLayout';
 import { Head, router, useForm } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
 import { Button } from '@/Components/ui/button';
+import FeedbackAlert from '@/Components/ui/feedback-alert';
 import { Input } from '@/Components/ui/input';
 import { Checkbox } from '@/Components/ui/checkbox';
 import { Textarea } from '@/Components/ui/textarea';
@@ -218,9 +219,7 @@ export default function ParametresIndex(props: Props) {
                                     <Button type="submit">Enregistrer</Button>
                                 </div>
                                 {Object.keys(generalForm.errors).length > 0 ? (
-                                    <p className="text-sm text-red-600">
-                                        {Object.values(generalForm.errors)[0]}
-                                    </p>
+                                    <FeedbackAlert type="error" message={String(Object.values(generalForm.errors)[0])} />
                                 ) : null}
                             </form>
                         </Section>
