@@ -61,6 +61,15 @@ Route::middleware(['auth'])->prefix('parametres')->name('parametres.')->group(fu
     Route::patch('/annees/{annee}/rouvrir', [ParametreController::class, 'reopenAnnee'])->name('annees.reopen');
     Route::post('/periodes', [ParametreController::class, 'storePeriode'])->name('periodes.store');
     Route::delete('/periodes/{periode}', [ParametreController::class, 'destroyPeriode'])->name('periodes.destroy');
+    Route::post('/niveaux', [ParametreController::class, 'storeNiveau'])->name('niveaux.store');
+    Route::patch('/niveaux/{niveau}', [ParametreController::class, 'updateNiveau'])->name('niveaux.update');
+    Route::delete('/niveaux/{niveau}', [ParametreController::class, 'destroyNiveau'])->name('niveaux.destroy');
+    Route::post('/classes', [ParametreController::class, 'storeClasse'])->name('classes.store');
+    Route::patch('/classes/{classe}', [ParametreController::class, 'updateClasse'])->name('classes.update');
+    Route::delete('/classes/{classe}', [ParametreController::class, 'destroyClasse'])->name('classes.destroy');
+    Route::post('/matieres', [ParametreController::class, 'storeMatiere'])->name('matieres.store');
+    Route::patch('/matieres/{matiere}', [ParametreController::class, 'updateMatiere'])->name('matieres.update');
+    Route::delete('/matieres/{matiere}', [ParametreController::class, 'destroyMatiere'])->name('matieres.destroy');
     Route::post('/modes-paiement', [ParametreController::class, 'storeModePaiement'])->name('modes-paiement.store');
     Route::delete('/modes-paiement/{modePaiement}', [ParametreController::class, 'destroyModePaiement'])->name('modes-paiement.destroy');
     Route::post('/types-frais', [ParametreController::class, 'storeTypeFrais'])->name('types-frais.store');
