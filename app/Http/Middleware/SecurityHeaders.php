@@ -38,7 +38,7 @@ class SecurityHeaders
     {
         $policy = (string) config('security.headers.content_security_policy');
 
-        if (! app()->environment('local') || ! Vite::isRunningHot()) {
+        if (! Vite::isRunningHot()) {
             return $policy;
         }
 

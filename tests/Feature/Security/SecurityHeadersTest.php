@@ -21,7 +21,7 @@ class SecurityHeadersTest extends TestCase
 
     public function test_csp_allows_all_loopback_vite_origins_when_hot_reload_is_enabled(): void
     {
-        config()->set('app.env', 'local');
+        config()->set('app.env', 'staging');
         config()->set('app.vite_dev_server_url', 'http://localhost:5173');
 
         Vite::shouldReceive('isRunningHot')->once()->andReturnTrue();
@@ -38,5 +38,21 @@ class SecurityHeadersTest extends TestCase
         $this->assertStringContainsString('ws://localhost:5173', $csp);
         $this->assertStringContainsString('ws://127.0.0.1:5173', $csp);
         $this->assertStringContainsString('ws://[::1]:5173', $csp);
+    }
+
+    public function test_csp_is_not_modified_when_hot_reload_is_disabled(): void
+    {
+        config()->set('app.env', 'local');
+        config()->set('security.headers.content_security_policy', "default-src 'self'; script-src 'self'; connect-src 'self';");
+
+        Vite::shouldReceive('isRunningHot')->once()->andReturnFalse();
+
+        $response = $this->get('/login');
+
+        $response->assertOk();
+        $this->assertSame(
+            "default-src 'self'; script-src 'self'; connect-src 'self';",
+            (string) $response->headers->get('Content-Security-Policy')
+        );
     }
 }
