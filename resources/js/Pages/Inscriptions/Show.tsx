@@ -1,4 +1,4 @@
-import InscriptionShowCard from '@/Components/Inscriptions/InscriptionShowCard';
+import { InscriptionShowCard } from '@/Components/Inscriptions';
 import { Button } from '@/Components/ui/button';
 import AppLayout from '@/Layouts/AppLayout';
 import { Head, Link } from '@inertiajs/react';
