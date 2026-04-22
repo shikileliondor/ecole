@@ -1,7 +1,13 @@
 import AppLayout from '@/Layouts/AppLayout';
 import { Head, router } from '@inertiajs/react';
 import type { ReactNode } from 'react';
+import { useState } from 'react';
 import { Users, Percent, Trophy, CalendarDays } from 'lucide-react';
+import Pagination from '@/Components/Shared/Pagination';
+import { Input } from '@/Components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/Components/ui/select';
+import { Button } from '@/Components/ui/button';
+import type { PaginationLink, PaginationMeta } from '@/types/eleve';
 
 type ClasseCard = {
     id: number;
@@ -60,12 +66,48 @@ type DetailData = {
 };
 
 type Props = {
-    classes: ClasseCard[];
+    classes: {
+        data: ClasseCard[];
+        links: PaginationLink[];
+        meta?: PaginationMeta;
+        from?: number | null;
+        to?: number | null;
+        total?: number;
+    };
     selectedClasseId?: number | null;
     detail?: DetailData | null;
+    filters: {
+        search?: string | null;
+        statut?: string | null;
+    };
 };
 
-export default function ClassesIndex({ classes, selectedClasseId, detail }: Props) {
+export default function ClassesIndex({ classes, selectedClasseId, detail, filters }: Props) {
+    const [localFilters, setLocalFilters] = useState({
+        search: filters.search ?? '',
+        statut: filters.statut ?? 'all',
+    });
+    const [searchTimeout, setSearchTimeout] = useState<number | null>(null);
+
+    const submitFilters = (nextFilters: { search: string; statut: string }) => {
+        router.get(route('classes.index'), {
+            search: nextFilters.search || undefined,
+            statut: nextFilters.statut === 'all' ? undefined : nextFilters.statut,
+        }, { preserveState: true, replace: true });
+    };
+
+    const onSearchChange = (value: string) => {
+        const next = { ...localFilters, search: value };
+        setLocalFilters(next);
+        if (searchTimeout) {
+            window.clearTimeout(searchTimeout);
+        }
+        const timeout = window.setTimeout(() => submitFilters(next), 300);
+        setSearchTimeout(timeout);
+    };
+
+    const hasActiveFilters = localFilters.search.trim() !== '' || localFilters.statut !== 'all';
+
     return (
         <AppLayout title="Classes">
             <Head title="Classes" />
@@ -78,7 +120,45 @@ export default function ClassesIndex({ classes, selectedClasseId, detail }: Prop
 
                 <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
                     <section className="space-y-3 xl:col-span-1">
-                        {classes.map((classe) => {
+                        <div className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm">
+                            <div className="space-y-2">
+                                <Input
+                                    value={localFilters.search}
+                                    onChange={(e) => onSearchChange(e.target.value)}
+                                    placeholder="Rechercher une classe, niveau, année..."
+                                />
+                                <Select value={localFilters.statut} onValueChange={(value) => {
+                                    const next = { ...localFilters, statut: value };
+                                    setLocalFilters(next);
+                                    submitFilters(next);
+                                }}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Statut" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">Tous les statuts</SelectItem>
+                                        <SelectItem value="active">Actif</SelectItem>
+                                        <SelectItem value="inactive">Inactif</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                {hasActiveFilters ? (
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        className="w-full"
+                                        onClick={() => {
+                                            const reset = { search: '', statut: 'all' };
+                                            setLocalFilters(reset);
+                                            submitFilters(reset);
+                                        }}
+                                    >
+                                        Réinitialiser les filtres
+                                    </Button>
+                                ) : null}
+                            </div>
+                        </div>
+
+                        {classes.data.map((classe) => {
                             const isActive = classe.id === selectedClasseId;
                             const capacity = classe.capacite_max ?? 0;
                             const fillRate = capacity > 0 ? Math.round((classe.effectif / capacity) * 100) : 0;
@@ -87,7 +167,12 @@ export default function ClassesIndex({ classes, selectedClasseId, detail }: Prop
                                 <button
                                     key={classe.id}
                                     type="button"
-                                    onClick={() => router.get(route('classes.index'), { classe: classe.id }, { preserveScroll: true, preserveState: true })}
+                                    onClick={() => router.get(route('classes.index'), {
+                                        classe: classe.id,
+                                        page: classes.meta?.current_page,
+                                        search: localFilters.search || undefined,
+                                        statut: localFilters.statut === 'all' ? undefined : localFilters.statut,
+                                    }, { preserveScroll: true, preserveState: true })}
                                     className={`w-full rounded-xl border p-4 text-left transition ${
                                         isActive
                                             ? 'border-blue-500 bg-blue-50 shadow-sm'
@@ -108,6 +193,20 @@ export default function ClassesIndex({ classes, selectedClasseId, detail }: Prop
                                 </button>
                             );
                         })}
+
+                        <div className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm">
+                            <Pagination
+                                links={classes.links}
+                                meta={classes.meta ?? {
+                                    from: classes.from ?? 0,
+                                    to: classes.to ?? 0,
+                                    total: classes.total ?? 0,
+                                    current_page: 1,
+                                    last_page: 1,
+                                    per_page: 12,
+                                }}
+                            />
+                        </div>
                     </section>
 
                     <section className="space-y-6 xl:col-span-2">
