@@ -81,7 +81,7 @@ const navGroups: NavGroup[] = [
         label: 'SCOLARITÉ',
         items: [
             { label: 'Élèves', href: route('eleves.index'), icon: Users },
-            { label: 'Inscriptions', href: route('inscriptions.index'), icon: ClipboardList },
+            // { label: 'Inscriptions', href: route('inscriptions.index'), icon: ClipboardList },
             { label: 'Nouvelle inscription', href: route('inscriptions.create'), icon: ClipboardList },
             { label: 'Classes', href: '#', icon: School },
             { label: 'Notes & Bulletins', href: '#', icon: BookOpen },
@@ -110,6 +110,7 @@ const navGroups: NavGroup[] = [
                 icon: Settings,
                 children: [
                     { label: 'Paramètres généraux', href: route('parametres.index'), icon: Settings },
+                    { label: 'Nouvelle inscription', href: route('inscriptions.create'), icon: ClipboardList },
                     { label: 'Slides Hero', href: route('parametres.index'), icon: MonitorPlay },
                     { label: 'Templates notifications', href: route('parametres.index'), icon: Mail },
                     { label: 'Historique notifications', href: route('parametres.index'), icon: MailCheck },
