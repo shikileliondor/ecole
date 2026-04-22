@@ -16,18 +16,41 @@ class ClasseController extends Controller
     public function index(Request $request): Response
     {
         $etablissementId = (int) auth()->user()->etablissement_id;
+        $filters = [
+            'search' => trim((string) $request->string('search')->value()),
+            'statut' => trim((string) $request->string('statut')->value()),
+        ];
         $selectedId = $request->integer('classe');
 
-        $classes = Classe::query()
+        $classesQuery = Classe::query()
             ->where('etablissement_id', $etablissementId)
             ->with(['niveau:id,libelle', 'anneeScolaire:id,libelle', 'enseignantTitulaire:id,nom,prenoms'])
             ->withCount([
                 'inscriptions as effectif' => fn ($query) => $query->where('statut', Inscription::STATUTS['inscrit']),
             ])
-            ->orderBy('nom')
-            ->get();
+            ->orderBy('nom');
 
-        $selectedClasse = $classes->firstWhere('id', $selectedId) ?? $classes->first();
+        if ($filters['search'] !== '') {
+            $search = $filters['search'];
+            $classesQuery->where(function ($query) use ($search): void {
+                $query
+                    ->where('nom', 'like', "%{$search}%")
+                    ->orWhereHas('niveau', fn ($niveauQuery) => $niveauQuery->where('libelle', 'like', "%{$search}%"))
+                    ->orWhereHas('anneeScolaire', fn ($anneeQuery) => $anneeQuery->where('libelle', 'like', "%{$search}%"));
+            });
+        }
+
+        if ($filters['statut'] !== '') {
+            $classesQuery->where('statut', $filters['statut']);
+        }
+
+        $classes = $classesQuery
+            ->paginate(12)
+            ->withQueryString();
+
+        $classesItems = $classes->getCollection();
+
+        $selectedClasse = $classesItems->firstWhere('id', $selectedId) ?? $classesItems->first();
 
         $detail = $selectedClasse ? $this->buildClasseDetail($selectedClasse->id, $etablissementId) : null;
 
@@ -35,6 +58,10 @@ class ClasseController extends Controller
             'classes' => $classes,
             'selectedClasseId' => $selectedClasse?->id,
             'detail' => $detail,
+            'filters' => [
+                'search' => $filters['search'] !== '' ? $filters['search'] : null,
+                'statut' => $filters['statut'] !== '' ? $filters['statut'] : null,
+            ],
         ]);
     }
 
