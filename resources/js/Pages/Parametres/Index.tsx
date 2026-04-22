@@ -49,9 +49,9 @@ type Props = {
     annees: Array<Item & { libelle: string; date_debut: string; date_fin: string; est_active: boolean }>;
     periodes: Array<Item & { libelle: string; date_debut: string; date_fin: string; ordre: number; annee_scolaire_id: number; anneeScolaire?: { libelle: string } }>;
     niveaux: Array<Item & { libelle: string; cycle: string }>;
-    classes: Array<Item & { nom: string; niveau?: { libelle: string } }>;
+    classes: Array<Item & { nom: string; niveau_id?: number; niveau?: { libelle: string } }>;
     matieres: Array<Item & { libelle: string; coefficient: number }>;
-    typesFrais: Array<Item & { libelle: string; montant: number; niveau?: { libelle: string } }>;
+    typesFrais: Array<Item & { libelle: string; montant: number; frequence?: string; est_obligatoire?: boolean; niveau?: { libelle: string }; classe?: { nom: string } }>;
     modesPaiement: Array<Item & { libelle: string; code?: string; ordre: number; est_actif: boolean }>;
     statutsInscription: Array<Item & { libelle: string; code?: string; ordre: number; est_actif: boolean }>;
     roles: Array<Item & { name: string; permissions: Array<{ name: string }> }>;
@@ -157,8 +157,16 @@ export default function ParametresIndex(props: Props) {
 
     const anneeForm = useForm({ libelle: '', date_debut: '', date_fin: '' });
     const periodeForm = useForm({ annee_scolaire_id: '', libelle: '', date_debut: '', date_fin: '', ordre: 1 });
-    const modeForm = useForm({ libelle: '', code: '', ordre: 1 });
-    const statutForm = useForm({ libelle: '', code: '', ordre: 1 });
+    const modeForm = useForm({ libelle: '' });
+    const typeFraisForm = useForm({
+        libelle: '',
+        montant: 0,
+        niveau_id: '',
+        classe_id: '',
+        frequence: 'unique',
+        est_obligatoire: true,
+    });
+    const statutForm = useForm({ libelle: '' });
     const permissionForm = useForm({ name: '' });
     const roleForm = useForm({ name: '', permissions: [] as string[] });
     const modeleForm = useForm({ type_document: props.typesDocument[0] ?? 'bulletin', nom: '', description: '', template_html: '', est_defaut: false });
@@ -266,8 +274,7 @@ export default function ParametresIndex(props: Props) {
                                                     {!annee.est_active ? (
                                                         <Button size="sm" variant="outline" onClick={() => router.patch(route('parametres.annees.activate', annee.id))}>Activer</Button>
                                                     ) : null}
-                                                    <Button size="sm" variant="outline" onClick={() => router.patch(route('parametres.annees.close', annee.id))}>Clôturer</Button>
-                                                    <Button size="sm" variant="outline" onClick={() => router.patch(route('parametres.annees.reopen', annee.id))}>Réouvrir</Button>
+                                                    <Button size="sm" variant="outline" onClick={() => router.delete(route('parametres.annees.destroy', annee.id))}>Supprimer</Button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -289,14 +296,16 @@ export default function ParametresIndex(props: Props) {
                             </form>
                             <div className="mt-2 flex justify-end"><Button type="button" onClick={() => periodeForm.post(route('parametres.periodes.store'))}>Ajouter la période</Button></div>
                             <div className="mt-3">
-                                <Table headers={['Ordre', 'Période', 'Année scolaire', 'Début', 'Fin']}>
+                                <Table headers={['Période', 'Année scolaire', 'Début', 'Fin', 'Action']}>
                                     {props.periodes.map((periode) => (
                                         <tr key={periode.id}>
-                                            <td className="px-4 py-3">{periode.ordre}</td>
                                             <td className="px-4 py-3">{periode.libelle}</td>
                                             <td className="px-4 py-3">{periode.anneeScolaire?.libelle ?? '-'}</td>
                                             <td className="px-4 py-3">{formatDate(periode.date_debut)}</td>
                                             <td className="px-4 py-3">{formatDate(periode.date_fin)}</td>
+                                            <td className="px-4 py-3">
+                                                <Button size="sm" variant="outline" onClick={() => router.delete(route('parametres.periodes.destroy', periode.id))}>Supprimer</Button>
+                                            </td>
                                         </tr>
                                     ))}
                                 </Table>
@@ -316,24 +325,17 @@ export default function ParametresIndex(props: Props) {
                 {activeTab === 'inscriptions' ? (
                     <div className="space-y-4">
                         <Section title="Référentiels d'inscription" subtitle="Statuts métier visibles par les gestionnaires.">
-                            <form className="grid gap-2 md:grid-cols-4" onSubmit={(e) => { e.preventDefault(); statutForm.post(route('parametres.statuts-inscription.store')); }}>
+                            <form className="grid gap-2 md:grid-cols-2" onSubmit={(e) => { e.preventDefault(); statutForm.post(route('parametres.statuts-inscription.store')); }}>
                                 <Input placeholder="Préinscrit" value={statutForm.data.libelle} onChange={(e) => statutForm.setData('libelle', e.target.value)} />
-                                <Input placeholder="preinscrit" value={statutForm.data.code} onChange={(e) => statutForm.setData('code', e.target.value)} />
-                                <Input type="number" min={1} value={statutForm.data.ordre} onChange={(e) => statutForm.setData('ordre', Number(e.target.value))} />
                                 <Button type="submit">Ajouter le statut</Button>
                             </form>
                             <div className="mt-3">
-                                <Table headers={['Statut', 'Code', 'Ordre', 'Actif', 'Action']}>
+                                <Table headers={['Statut', 'Action']}>
                                     {props.statutsInscription.map((item) => (
                                         <tr key={item.id}>
                                             <td className="px-4 py-3">{item.libelle}</td>
-                                            <td className="px-4 py-3">{item.code || '-'}</td>
-                                            <td className="px-4 py-3">{item.ordre}</td>
-                                            <td className="px-4 py-3">{item.est_actif ? 'Oui' : 'Non'}</td>
                                             <td className="px-4 py-3">
-                                                <Button size="sm" variant="outline" onClick={() => router.patch(route('parametres.statuts-inscription.toggle', item.id))}>
-                                                    {item.est_actif ? 'Désactiver' : 'Activer'}
-                                                </Button>
+                                                <Button size="sm" variant="outline" onClick={() => router.delete(route('parametres.statuts-inscription.destroy', item.id))}>Supprimer</Button>
                                             </td>
                                         </tr>
                                     ))}
@@ -359,24 +361,17 @@ export default function ParametresIndex(props: Props) {
                 {activeTab === 'finance' ? (
                     <div className="space-y-4">
                         <Section title="Modes de paiement" subtitle="Canaux autorisés en caisse et en ligne.">
-                            <form className="grid gap-2 md:grid-cols-4" onSubmit={(e) => { e.preventDefault(); modeForm.post(route('parametres.modes-paiement.store')); }}>
+                            <form className="grid gap-2 md:grid-cols-2" onSubmit={(e) => { e.preventDefault(); modeForm.post(route('parametres.modes-paiement.store')); }}>
                                 <Input placeholder="Orange Money" value={modeForm.data.libelle} onChange={(e) => modeForm.setData('libelle', e.target.value)} />
-                                <Input placeholder="orange_money" value={modeForm.data.code} onChange={(e) => modeForm.setData('code', e.target.value)} />
-                                <Input type="number" min={1} value={modeForm.data.ordre} onChange={(e) => modeForm.setData('ordre', Number(e.target.value))} />
                                 <Button type="submit">Ajouter</Button>
                             </form>
                             <div className="mt-3">
-                                <Table headers={['Libellé', 'Code', 'Ordre', 'Actif', 'Action']}>
+                                <Table headers={['Libellé', 'Action']}>
                                     {props.modesPaiement.map((item) => (
                                         <tr key={item.id}>
                                             <td className="px-4 py-3">{item.libelle}</td>
-                                            <td className="px-4 py-3">{item.code || '-'}</td>
-                                            <td className="px-4 py-3">{item.ordre}</td>
-                                            <td className="px-4 py-3">{item.est_actif ? 'Oui' : 'Non'}</td>
                                             <td className="px-4 py-3">
-                                                <Button size="sm" variant="outline" onClick={() => router.patch(route('parametres.modes-paiement.toggle', item.id))}>
-                                                    {item.est_actif ? 'Désactiver' : 'Activer'}
-                                                </Button>
+                                                <Button size="sm" variant="outline" onClick={() => router.delete(route('parametres.modes-paiement.destroy', item.id))}>Supprimer</Button>
                                             </td>
                                         </tr>
                                     ))}
@@ -385,12 +380,71 @@ export default function ParametresIndex(props: Props) {
                         </Section>
 
                         <Section title="Frais configurés" subtitle="Référentiel des frais scolaires déjà disponibles.">
-                            <Table headers={['Type de frais', 'Niveau', 'Montant']}>
+                            <form
+                                className="mb-4 grid gap-2 md:grid-cols-3"
+                                onSubmit={(e) => {
+                                    e.preventDefault();
+                                    typeFraisForm.post(route('parametres.types-frais.store'), {
+                                        onSuccess: () => typeFraisForm.reset('libelle', 'montant', 'niveau_id', 'classe_id'),
+                                    });
+                                }}
+                            >
+                                <Input placeholder="Scolarité 6e" value={typeFraisForm.data.libelle} onChange={(e) => typeFraisForm.setData('libelle', e.target.value)} />
+                                <Input
+                                    type="number"
+                                    min={1}
+                                    placeholder="Montant (FCFA)"
+                                    value={typeFraisForm.data.montant}
+                                    onChange={(e) => typeFraisForm.setData('montant', Number(e.target.value || 0))}
+                                />
+                                <select
+                                    className="rounded-md border border-slate-200 p-2 text-sm"
+                                    value={typeFraisForm.data.classe_id}
+                                    onChange={(e) => typeFraisForm.setData('classe_id', e.target.value)}
+                                >
+                                    <option value="">Toutes classes</option>
+                                    {props.classes.map((classe) => (
+                                        <option key={classe.id} value={String(classe.id)}>
+                                            {classe.nom}
+                                        </option>
+                                    ))}
+                                </select>
+                                <select
+                                    className="rounded-md border border-slate-200 p-2 text-sm"
+                                    value={typeFraisForm.data.niveau_id}
+                                    onChange={(e) => typeFraisForm.setData('niveau_id', e.target.value)}
+                                    disabled={typeFraisForm.data.classe_id !== ''}
+                                >
+                                    <option value="">Tous niveaux</option>
+                                    {props.niveaux.map((niveau) => (
+                                        <option key={niveau.id} value={String(niveau.id)}>
+                                            {niveau.libelle}
+                                        </option>
+                                    ))}
+                                </select>
+                                <select className="rounded-md border border-slate-200 p-2 text-sm" value={typeFraisForm.data.frequence} onChange={(e) => typeFraisForm.setData('frequence', e.target.value)}>
+                                    <option value="unique">Unique</option>
+                                    <option value="trimestriel">Trimestriel</option>
+                                    <option value="mensuel">Mensuel</option>
+                                </select>
+                                <label className="flex items-center gap-2 rounded-md border border-slate-200 px-3 text-sm">
+                                    <Checkbox checked={typeFraisForm.data.est_obligatoire} onCheckedChange={(checked) => typeFraisForm.setData('est_obligatoire', Boolean(checked))} />
+                                    Frais obligatoire
+                                </label>
+                                <div className="md:col-span-3 flex justify-end">
+                                    <Button type="submit">Ajouter le frais</Button>
+                                </div>
+                            </form>
+                            <Table headers={['Type de frais', 'Portée', 'Fréquence', 'Montant', 'Action']}>
                                 {props.typesFrais.map((frais) => (
                                     <tr key={frais.id}>
                                         <td className="px-4 py-3">{frais.libelle}</td>
-                                        <td className="px-4 py-3">{frais.niveau?.libelle ?? 'Tous niveaux'}</td>
+                                        <td className="px-4 py-3">{frais.classe?.nom ? `Classe ${frais.classe.nom}` : (frais.niveau?.libelle ?? 'Tous niveaux')}</td>
+                                        <td className="px-4 py-3">{frais.frequence ?? '-'}</td>
                                         <td className="px-4 py-3">{formatMoney(Number(frais.montant))} FCFA</td>
+                                        <td className="px-4 py-3">
+                                            <Button size="sm" variant="outline" onClick={() => router.delete(route('parametres.types-frais.destroy', frais.id))}>Supprimer</Button>
+                                        </td>
                                     </tr>
                                 ))}
                             </Table>
@@ -456,10 +510,17 @@ export default function ParametresIndex(props: Props) {
                                 <Input placeholder="notes.create" value={permissionForm.data.name} onChange={(e) => permissionForm.setData('name', e.target.value)} />
                                 <Button type="submit" variant="outline">Ajouter permission</Button>
                             </form>
-                            <div className="mt-3 grid gap-2 md:grid-cols-3">
-                                {props.permissions.map((permission) => (
-                                    <div key={permission.id} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm">{permission.name}</div>
-                                ))}
+                            <div className="mt-3">
+                                <Table headers={['Permission', 'Action']}>
+                                    {props.permissions.map((permission) => (
+                                        <tr key={permission.id}>
+                                            <td className="px-4 py-3">{permission.name}</td>
+                                            <td className="px-4 py-3">
+                                                <Button size="sm" variant="outline" onClick={() => router.delete(route('parametres.permissions.destroy', permission.id))}>Supprimer</Button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </Table>
                             </div>
                         </Section>
 
@@ -482,11 +543,14 @@ export default function ParametresIndex(props: Props) {
                             </form>
 
                             <div className="mt-4">
-                                <Table headers={['Rôle', 'Permissions associées']}>
+                                <Table headers={['Rôle', 'Permissions associées', 'Action']}>
                                     {props.roles.map((role) => (
                                         <tr key={role.id}>
                                             <td className="px-4 py-3 font-medium">{role.name}</td>
                                             <td className="px-4 py-3">{role.permissions.map((permission) => permission.name).join(', ') || '-'}</td>
+                                            <td className="px-4 py-3">
+                                                <Button size="sm" variant="outline" onClick={() => router.delete(route('parametres.roles.destroy', role.id))}>Supprimer</Button>
+                                            </td>
                                         </tr>
                                     ))}
                                 </Table>
@@ -523,13 +587,16 @@ export default function ParametresIndex(props: Props) {
                             </form>
 
                             <div className="mt-3">
-                                <Table headers={['Type', 'Nom', 'Description', 'Défaut']}>
+                                <Table headers={['Type', 'Nom', 'Description', 'Défaut', 'Action']}>
                                     {props.modelesImpression.map((item) => (
                                         <tr key={item.id}>
                                             <td className="px-4 py-3">{item.type_document}</td>
                                             <td className="px-4 py-3">{item.nom}</td>
                                             <td className="px-4 py-3">{item.description || '-'}</td>
                                             <td className="px-4 py-3">{item.est_defaut ? 'Oui' : 'Non'}</td>
+                                            <td className="px-4 py-3">
+                                                <Button size="sm" variant="outline" onClick={() => router.delete(route('parametres.modeles-impression.destroy', item.id))}>Supprimer</Button>
+                                            </td>
                                         </tr>
                                     ))}
                                 </Table>

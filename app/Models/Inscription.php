@@ -117,11 +117,18 @@ class Inscription extends Model
         return Attribute::make(
             get: function (): int {
                 $niveauId = $this->classe?->niveau_id;
+                $classeId = $this->classe_id;
 
                 return (int) TypeFrais::query()
                     ->where('etablissement_id', $this->classe?->etablissement_id)
                     ->where('annee_scolaire_id', $this->annee_scolaire_id)
                     ->where('est_obligatoire', true)
+                    ->where(function (Builder $query) use ($classeId): void {
+                        $query->whereNull('classe_id');
+                        if ($classeId !== null) {
+                            $query->orWhere('classe_id', $classeId);
+                        }
+                    })
                     ->where(function (Builder $query) use ($niveauId): void {
                         $query->whereNull('niveau_id');
                         if ($niveauId !== null) {

@@ -55,17 +55,24 @@ Route::middleware(['auth'])->prefix('parametres')->name('parametres.')->group(fu
     Route::patch('/general', [ParametreController::class, 'updateGeneral'])->name('general.update');
     Route::patch('/config/{onglet}', [ParametreController::class, 'updateConfig'])->name('config.update');
     Route::post('/annees', [ParametreController::class, 'storeAnnee'])->name('annees.store');
+    Route::delete('/annees/{annee}', [ParametreController::class, 'destroyAnnee'])->name('annees.destroy');
     Route::patch('/annees/{annee}/activer', [ParametreController::class, 'activateAnnee'])->name('annees.activate');
     Route::patch('/annees/{annee}/cloturer', [ParametreController::class, 'closeAnnee'])->name('annees.close');
     Route::patch('/annees/{annee}/rouvrir', [ParametreController::class, 'reopenAnnee'])->name('annees.reopen');
     Route::post('/periodes', [ParametreController::class, 'storePeriode'])->name('periodes.store');
+    Route::delete('/periodes/{periode}', [ParametreController::class, 'destroyPeriode'])->name('periodes.destroy');
     Route::post('/modes-paiement', [ParametreController::class, 'storeModePaiement'])->name('modes-paiement.store');
-    Route::patch('/modes-paiement/{modePaiement}/toggle', [ParametreController::class, 'toggleModePaiement'])->name('modes-paiement.toggle');
+    Route::delete('/modes-paiement/{modePaiement}', [ParametreController::class, 'destroyModePaiement'])->name('modes-paiement.destroy');
+    Route::post('/types-frais', [ParametreController::class, 'storeTypeFrais'])->name('types-frais.store');
+    Route::delete('/types-frais/{typeFrais}', [ParametreController::class, 'destroyTypeFrais'])->name('types-frais.destroy');
     Route::post('/statuts-inscription', [ParametreController::class, 'storeStatutInscription'])->name('statuts-inscription.store');
-    Route::patch('/statuts-inscription/{statutInscription}/toggle', [ParametreController::class, 'toggleStatutInscription'])->name('statuts-inscription.toggle');
+    Route::delete('/statuts-inscription/{statutInscription}', [ParametreController::class, 'destroyStatutInscription'])->name('statuts-inscription.destroy');
     Route::post('/roles', [ParametreController::class, 'storeRole'])->name('roles.store');
+    Route::delete('/roles/{role}', [ParametreController::class, 'destroyRole'])->name('roles.destroy');
     Route::post('/permissions', [ParametreController::class, 'storePermission'])->name('permissions.store');
+    Route::delete('/permissions/{permission}', [ParametreController::class, 'destroyPermission'])->name('permissions.destroy');
     Route::post('/modeles-impression', [ParametreController::class, 'storeModeleImpression'])->name('modeles-impression.store');
+    Route::delete('/modeles-impression/{modeleImpression}', [ParametreController::class, 'destroyModeleImpression'])->name('modeles-impression.destroy');
 });
 
 Route::middleware(['auth'])->prefix('inscriptions')->name('inscriptions.')->group(function (): void {
