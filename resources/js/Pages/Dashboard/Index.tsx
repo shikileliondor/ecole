@@ -41,89 +41,50 @@ type AuthData = {
 
 type PageData = {
     auth: AuthData;
+    scope: Scope;
+    schoolYearLabel?: string | null;
+    metrics: {
+        elevesInscrits: number;
+        recouvrement: number;
+        recettesMois: string;
+        absencesJour: number;
+        classesActives: number;
+        enseignants: number;
+        impayesEnCours: string;
+        bulletinsTrimestre: number;
+    };
+    inscriptionData: Array<{ mois: string; total: number }>;
+    niveauData: Array<{ niveau: string; eleves: number }>;
+    payments: Array<{ eleve: string; classe: string; montant: string; mode: string; date: string }>;
+    criticalUnpaid: Array<{ eleve: string; classe: string; montant: string }>;
+    absencePieData: Array<{ name: string; value: number; color: string }>;
+    events: Array<{ titre: string; date: string; type: string }>;
+    activities: Array<{ icon: 'inscription' | 'paiement'; texte: string; time: string }>;
 };
 
 type Scope = 'all' | 'finance' | 'scolarite';
 
 export default function DashboardIndex() {
-    usePage<PageData>().props;
-
-    // Temporaire: permissions/roles désactivés pendant la phase de développement.
-    const visibleScope: Scope = 'all';
+    const {
+        scope: visibleScope,
+        schoolYearLabel,
+        metrics,
+        inscriptionData,
+        niveauData,
+        payments,
+        criticalUnpaid,
+        absencePieData,
+        events,
+        activities,
+    } = usePage<PageData>().props;
 
     const canViewFinance = visibleScope === 'all' || visibleScope === 'finance';
     const canViewScolarite = visibleScope === 'all' || visibleScope === 'scolarite';
 
-    // TODO: remplacer par props Inertia
-    const metrics = {
-        elevesInscrits: 247,
-        recouvrement: 78,
-        recettesMois: '1 250 000 FCFA',
-        absencesJour: 8,
-        classesActives: 14,
-        enseignants: 22,
-        impayesEnCours: '6 450 000 FCFA',
-        bulletinsTrimestre: 241,
-    };
-
-    // TODO: remplacer par props Inertia
-    const inscriptionData = [
-        { mois: 'Nov', total: 118 },
-        { mois: 'Déc', total: 136 },
-        { mois: 'Jan', total: 154 },
-        { mois: 'Fév', total: 181 },
-        { mois: 'Mar', total: 220 },
-        { mois: 'Avr', total: 247 },
-    ];
-
-    // TODO: remplacer par props Inertia
-    const niveauData = [
-        { niveau: 'CP1', eleves: 38, color: 'rgba(26,86,160,0.4)' },
-        { niveau: 'CP2', eleves: 42, color: 'rgba(26,86,160,0.52)' },
-        { niveau: 'CE1', eleves: 40, color: 'rgba(26,86,160,0.6)' },
-        { niveau: 'CE2', eleves: 39, color: 'rgba(26,86,160,0.68)' },
-        { niveau: 'CM1', eleves: 45, color: 'rgba(26,86,160,0.78)' },
-        { niveau: 'CM2', eleves: 43, color: 'rgba(26,86,160,0.9)' },
-    ];
-
-    // TODO: remplacer par props Inertia
-    const payments = [
-        { eleve: 'Amani Koffi', classe: 'CM2-A', montant: '85 000 FCFA', mode: 'Wave', date: '08/04/2026' },
-        { eleve: 'N’Dri Yao', classe: 'CE1-B', montant: '65 000 FCFA', mode: 'Orange Money', date: '08/04/2026' },
-        { eleve: 'Konan Aya', classe: 'CP2-A', montant: '45 000 FCFA', mode: 'Espèces', date: '07/04/2026' },
-        { eleve: 'Traoré Idriss', classe: 'CM1-A', montant: '90 000 FCFA', mode: 'Wave', date: '07/04/2026' },
-        { eleve: 'Fofana Fatou', classe: 'CE2-A', montant: '70 000 FCFA', mode: 'Orange Money', date: '06/04/2026' },
-    ];
-
-    // TODO: remplacer par props Inertia
-    const criticalUnpaid = [
-        { eleve: 'Assi Marius', classe: 'CM2-B', montant: '120 000 FCFA' },
-        { eleve: 'Coulibaly Inès', classe: 'CE2-B', montant: '95 000 FCFA' },
-        { eleve: 'Kouamé Didier', classe: 'CM1-B', montant: '88 000 FCFA' },
-        { eleve: 'Bamba Ruth', classe: 'CP1-A', montant: '71 000 FCFA' },
-    ];
-
-    // TODO: remplacer par props Inertia
-    const absencePieData = [
-        { name: 'Justifiées', value: 24, color: '#1a56a0' },
-        { name: 'Non justifiées', value: 11, color: '#f97316' },
-    ];
-
-    // TODO: remplacer par props Inertia
-    const events = [
-        { titre: 'Conseil de classe T1', date: '12 avr. 2026', type: 'Pédagogie' },
-        { titre: 'Remise des bulletins', date: '18 avr. 2026', type: 'Administration' },
-        { titre: 'Sortie scolaire CP', date: '24 avr. 2026', type: 'Vie scolaire' },
-        { titre: 'Réunion parents', date: '30 avr. 2026', type: 'Communication' },
-    ];
-
-    // TODO: remplacer par props Inertia
-    const activities = [
-        { icon: GraduationCap, texte: 'Nouvelle inscription: N’Guessan Léa (CE1-A)', time: 'il y a 25 min' },
-        { icon: CreditCard, texte: 'Paiement validé pour Koffi Junior', time: 'il y a 1h' },
-        { icon: FileText, texte: 'Notes de mathématiques saisies (CM2-A)', time: 'il y a 2h' },
-        { icon: CalendarX, texte: 'Absence signalée pour Yao Mariam', time: 'il y a 3h' },
-    ];
+    const niveauChartData = niveauData.map((entry, index) => ({
+        ...entry,
+        color: `rgba(26,86,160,${Math.min(0.38 + index * 0.1, 0.95)})`,
+    }));
 
     const paymentModeClass: Record<string, string> = {
         Wave: 'bg-green-100 text-green-700',
@@ -141,7 +102,7 @@ export default function DashboardIndex() {
                     <div>
                         <h1 className="text-2xl font-semibold text-gray-800">Tableau de bord</h1>
                         <p className="text-sm text-gray-500">
-                            Vue d&apos;ensemble de votre activité — 2025-2026
+                            Vue d&apos;ensemble de votre activité — {schoolYearLabel ?? 'Année scolaire en cours'}
                         </p>
                     </div>
                     <ButtonNouvelleInscription />
@@ -233,7 +194,7 @@ export default function DashboardIndex() {
                                         <YAxis stroke="#6b7280" />
                                         <Tooltip />
                                         <Bar dataKey="eleves" radius={[8, 8, 0, 0]}>
-                                            {niveauData.map((entry) => (
+                                            {niveauChartData.map((entry) => (
                                                 <Cell key={entry.niveau} fill={entry.color} />
                                             ))}
                                         </Bar>
@@ -272,7 +233,7 @@ export default function DashboardIndex() {
                                                 <td className="py-3">{payment.classe}</td>
                                                 <td className="py-3 font-medium">{payment.montant}</td>
                                                 <td className="py-3">
-                                                    <span className={`rounded-full px-2 py-1 text-xs font-medium ${paymentModeClass[payment.mode]}`}>
+                                                    <span className={`rounded-full px-2 py-1 text-xs font-medium ${paymentModeClass[payment.mode] ?? 'bg-gray-100 text-gray-700'}`}>
                                                         {payment.mode}
                                                     </span>
                                                 </td>
@@ -365,7 +326,7 @@ export default function DashboardIndex() {
                         <h2 className="mb-4 text-base font-medium text-gray-800">Activité récente</h2>
                         <div className="space-y-3">
                             {activities.map((activity) => {
-                                const ActivityIcon = activity.icon;
+                                const ActivityIcon = activity.icon === 'paiement' ? CreditCard : GraduationCap;
 
                                 return (
                                     <div key={activity.texte} className="flex items-start gap-3 rounded-lg border border-gray-100 p-3">

@@ -132,7 +132,7 @@ export default function AppLayout({
 
     const userName = auth.user?.name ?? 'Utilisateur';
     const roleName = auth.roles?.[0]?.replace('_', ' ') ?? 'membre';
-    const schoolName = auth.user?.etablissement_nom ?? 'École Primaire Les Palmiers';
+    const schoolName = auth.user?.etablissement_nom ?? 'Établissement non défini';
     const initials = userName
         .split(' ')
         .map((name) => name[0])
