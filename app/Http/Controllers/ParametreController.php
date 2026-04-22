@@ -6,10 +6,12 @@ namespace App\Http\Controllers;
 
 use App\Models\AnneeScolaire;
 use App\Models\Classe;
+use App\Models\Etablissement;
 use App\Models\Matiere;
 use App\Models\ModeleImpression;
 use App\Models\ModePaiement;
 use App\Models\Niveau;
+use App\Models\ParametreConfig;
 use App\Models\PeriodeAcademique;
 use App\Models\StatutInscription;
 use App\Models\TypeFrais;
@@ -25,10 +27,18 @@ class ParametreController extends Controller
     public function index(): Response
     {
         $etablissementId = (int) auth()->user()->etablissement_id;
+        $etablissement = Etablissement::query()->findOrFail($etablissementId);
+
+        $configs = ParametreConfig::query()
+            ->where('etablissement_id', $etablissementId)
+            ->pluck('donnees', 'onglet')
+            ->all();
 
         return Inertia::render('Parametres/Index', [
+            'etablissement' => $etablissement,
+            'configs' => $configs,
             'annees' => AnneeScolaire::query()->where('etablissement_id', $etablissementId)->orderByDesc('date_debut')->get(),
-            'periodes' => PeriodeAcademique::query()->whereHas('anneeScolaire', fn ($query) => $query->where('etablissement_id', $etablissementId))->orderBy('ordre')->get(),
+            'periodes' => PeriodeAcademique::query()->whereHas('anneeScolaire', fn ($query) => $query->where('etablissement_id', $etablissementId))->with('anneeScolaire:id,libelle')->orderBy('ordre')->get(),
             'niveaux' => Niveau::query()->ordonnes()->get(),
             'classes' => Classe::query()->where('etablissement_id', $etablissementId)->with('niveau')->orderBy('nom')->get(),
             'matieres' => Matiere::query()->ordonnesBulletin()->get(),
@@ -40,6 +50,44 @@ class ParametreController extends Controller
             'modelesImpression' => ModeleImpression::query()->where('etablissement_id', $etablissementId)->orderBy('type_document')->orderBy('nom')->get(),
             'typesDocument' => ['bulletin', 'recu', 'carte_scolaire', 'attestation'],
         ]);
+    }
+
+    public function updateGeneral(Request $request): RedirectResponse
+    {
+        $etablissementId = (int) auth()->user()->etablissement_id;
+        $data = $request->validate([
+            'nom' => ['required', 'string', 'max:120'],
+            'sigle' => ['nullable', 'string', 'max:30'],
+            'contact_email' => ['nullable', 'email', 'max:120'],
+            'contact_telephone' => ['required', 'string', 'max:30'],
+            'contact_whatsapp' => ['nullable', 'string', 'max:30'],
+            'localisation_ville' => ['required', 'string', 'max:120'],
+            'localisation_commune' => ['nullable', 'string', 'max:120'],
+            'localisation_quartier' => ['nullable', 'string', 'max:120'],
+            'devise' => ['nullable', 'string', 'max:10'],
+            'directeur_nom' => ['nullable', 'string', 'max:120'],
+            'agrement_mena' => ['nullable', 'string', 'max:120'],
+            'annee_creation' => ['nullable', 'integer', 'min:1900', 'max:2100'],
+        ]);
+
+        Etablissement::query()->where('id', $etablissementId)->update($data);
+
+        return back()->with('success', 'Paramètres généraux mis à jour.');
+    }
+
+    public function updateConfig(Request $request, string $onglet): RedirectResponse
+    {
+        $etablissementId = (int) auth()->user()->etablissement_id;
+        $data = $request->validate([
+            'donnees' => ['array'],
+        ]);
+
+        ParametreConfig::query()->updateOrCreate(
+            ['etablissement_id' => $etablissementId, 'onglet' => $onglet],
+            ['donnees' => $data['donnees'] ?? []],
+        );
+
+        return back()->with('success', 'Configuration mise à jour.');
     }
 
     public function storeAnnee(Request $request): RedirectResponse

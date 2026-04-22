@@ -52,6 +52,8 @@ Route::middleware(['auth'])->group(function () {
 
 Route::middleware(['auth'])->prefix('parametres')->name('parametres.')->group(function (): void {
     Route::get('/', [ParametreController::class, 'index'])->name('index');
+    Route::patch('/general', [ParametreController::class, 'updateGeneral'])->name('general.update');
+    Route::patch('/config/{onglet}', [ParametreController::class, 'updateConfig'])->name('config.update');
     Route::post('/annees', [ParametreController::class, 'storeAnnee'])->name('annees.store');
     Route::patch('/annees/{annee}/activer', [ParametreController::class, 'activateAnnee'])->name('annees.activate');
     Route::post('/periodes', [ParametreController::class, 'storePeriode'])->name('periodes.store');
