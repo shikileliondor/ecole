@@ -94,6 +94,7 @@ Route::middleware(['auth'])->prefix('notes-bulletins')->name('notes-bulletins.')
     Route::get('/', [NoteBulletinController::class, 'index'])->name('index');
     Route::post('/compositions', [NoteBulletinController::class, 'storeComposition'])->name('compositions.store');
     Route::post('/compositions/{composition}/notes', [NoteBulletinController::class, 'storeNotes'])->name('compositions.notes.store');
+    Route::post('/compositions/{composition}/notes-eleves', [NoteBulletinController::class, 'storeEleveNotes'])->name('compositions.notes-eleves.store');
     Route::get('/compositions/{composition}/export', [NoteBulletinController::class, 'exportComposition'])->name('compositions.export');
 });
 

@@ -7,7 +7,9 @@ namespace App\Http\Controllers;
 use App\Models\Classe;
 use App\Models\Composition;
 use App\Models\CompositionNote;
+use App\Models\Inscription;
 use App\Models\Matiere;
+use App\Models\Note;
 use App\Models\ParametreConfig;
 use App\Models\PeriodeAcademique;
 use Illuminate\Http\RedirectResponse;
@@ -29,12 +31,33 @@ class NoteBulletinController extends Controller
         $compositions = Composition::query()
             ->where('etablissement_id', $etablissementId)
             ->with([
-                'periodeAcademique:id,libelle',
+                'periodeAcademique:id,libelle,ordre,annee_scolaire_id',
                 'notes.classe:id,nom',
                 'notes.matiere:id,libelle,coefficient',
             ])
             ->latest()
             ->get();
+
+        $inscriptions = Inscription::query()
+            ->whereHas('classe', fn ($query) => $query->where('etablissement_id', $etablissementId))
+            ->where('statut', Inscription::STATUTS['inscrit'])
+            ->with(['eleve:id,nom,prenoms', 'classe:id,nom'])
+            ->orderBy('numero_ordre')
+            ->orderBy('id')
+            ->get(['id', 'eleve_id', 'classe_id', 'annee_scolaire_id', 'numero_ordre']);
+
+        $notes = Note::query()
+            ->where('type_note', Note::TYPES_NOTES['composition'])
+            ->whereIn('inscription_id', $inscriptions->pluck('id'))
+            ->get(['inscription_id', 'matiere_id', 'trimestre', 'note']);
+
+        $noteMap = [];
+        foreach ($compositions as $composition) {
+            $trimestre = max(1, (int) ($composition->periodeAcademique?->ordre ?? 1));
+            foreach ($notes->where('trimestre', $trimestre) as $note) {
+                $noteMap[(string) $composition->id][(string) $note->matiere_id][(string) $note->inscription_id] = (string) $note->note;
+            }
+        }
 
         return Inertia::render('NotesBulletins/Index', [
             'periodes' => PeriodeAcademique::query()
@@ -45,6 +68,8 @@ class NoteBulletinController extends Controller
             'matieres' => Matiere::query()->ordonnesBulletin()->get(['id', 'libelle', 'coefficient']),
             'configEvaluation' => $config ?? [],
             'compositions' => $compositions,
+            'inscriptions' => $inscriptions,
+            'noteMap' => $noteMap,
         ]);
     }
 
@@ -147,5 +172,58 @@ class NoteBulletinController extends Controller
             fputcsv($output, ['Décision', $composition->type === 'passage' ? ($moyenne >= (float) $composition->seuil_validation ? 'Passe' : 'Redouble') : 'Simple']);
             fclose($output);
         }, $filename, ['Content-Type' => 'text/csv']);
+    }
+
+    public function storeEleveNotes(Request $request, Composition $composition): RedirectResponse
+    {
+        $etablissementId = (int) auth()->user()->etablissement_id;
+        abort_unless($composition->etablissement_id === $etablissementId, 403);
+
+        $data = $request->validate([
+            'classe_id' => ['required', 'integer', 'exists:classes,id'],
+            'matiere_id' => ['required', 'integer', 'exists:matieres,id'],
+            'notes' => ['required', 'array', 'min:1'],
+            'notes.*.inscription_id' => ['required', 'integer', 'exists:inscriptions,id'],
+            'notes.*.note' => ['nullable', 'numeric', 'min:0', 'max:100'],
+        ]);
+
+        $trimestre = max(1, (int) ($composition->periodeAcademique()->value('ordre') ?? 1));
+        $anneeScolaireId = (int) ($composition->periodeAcademique()->value('annee_scolaire_id') ?? 0);
+
+        $inscriptions = Inscription::query()
+            ->whereIn('id', collect($data['notes'])->pluck('inscription_id'))
+            ->where('classe_id', (int) $data['classe_id'])
+            ->where('statut', Inscription::STATUTS['inscrit'])
+            ->whereHas('classe', fn ($query) => $query->where('etablissement_id', $etablissementId))
+            ->get(['id']);
+
+        foreach ($data['notes'] as $payload) {
+            $inscriptionId = (int) $payload['inscription_id'];
+            if (! $inscriptions->firstWhere('id', $inscriptionId)) {
+                continue;
+            }
+
+            $noteValue = $payload['note'];
+            if ($noteValue === null || $noteValue === '') {
+                continue;
+            }
+
+            Note::query()->updateOrCreate(
+                [
+                    'inscription_id' => $inscriptionId,
+                    'matiere_id' => (int) $data['matiere_id'],
+                    'trimestre' => $trimestre,
+                    'type_note' => Note::TYPES_NOTES['composition'],
+                ],
+                [
+                    'annee_scolaire_id' => $anneeScolaireId,
+                    'note' => (float) $noteValue,
+                    'date_saisie' => now(),
+                    'saisi_par' => auth()->id(),
+                ]
+            );
+        }
+
+        return back()->with('success', 'Notes par élève enregistrées.');
     }
 }

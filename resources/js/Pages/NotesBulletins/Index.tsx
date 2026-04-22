@@ -1,17 +1,26 @@
 import AppLayout from '@/Layouts/AppLayout';
-import { Head, router, useForm } from '@inertiajs/react';
+import { Head, useForm } from '@inertiajs/react';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
 import { Textarea } from '@/Components/ui/textarea';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 type Item = { id: number; [key: string]: unknown };
+
+type InscriptionRow = {
+    id: number;
+    classe_id: number;
+    numero_ordre?: number | null;
+    eleve?: { nom?: string; prenoms?: string };
+};
 
 type Props = {
     periodes: Array<Item & { libelle: string }>;
     classes: Array<Item & { nom: string }>;
     matieres: Array<Item & { libelle: string; coefficient: number }>;
     configEvaluation: Record<string, unknown>;
+    inscriptions: InscriptionRow[];
+    noteMap: Record<string, Record<string, Record<string, string>>>;
     compositions: Array<
         Item & {
             libelle: string;
@@ -52,9 +61,10 @@ const roundByMode = (value: number, mode: string) => {
     }
 };
 
-export default function NotesBulletinsIndex({ periodes, classes, matieres, configEvaluation, compositions }: Props) {
+export default function NotesBulletinsIndex({ periodes, classes, matieres, configEvaluation, compositions, inscriptions, noteMap }: Props) {
     const [activeCompositionId, setActiveCompositionId] = useState<number | null>(compositions[0]?.id ?? null);
     const [activeClasseId, setActiveClasseId] = useState<number | null>(classes[0]?.id ?? null);
+    const [activeMatiereId, setActiveMatiereId] = useState<number | null>(matieres[0]?.id ?? null);
 
     const compositionForm = useForm({
         periode_academique_id: String(periodes[0]?.id ?? ''),
@@ -67,9 +77,10 @@ export default function NotesBulletinsIndex({ periodes, classes, matieres, confi
         appreciations_auto: String(configEvaluation.appreciations_auto ?? ''),
     });
 
-    const notesForm = useForm({
+    const notesElevesForm = useForm({
         classe_id: String(activeClasseId ?? ''),
-        notes: matieres.map((matiere) => ({ matiere_id: matiere.id, moyenne: '' })),
+        matiere_id: String(activeMatiereId ?? ''),
+        notes: [] as Array<{ inscription_id: number; note: string }>,
     });
 
     const activeComposition = useMemo(
@@ -81,6 +92,29 @@ export default function NotesBulletinsIndex({ periodes, classes, matieres, confi
         if (!activeComposition || !activeClasseId) return [];
         return activeComposition.notes.filter((item) => item.classe_id === activeClasseId);
     }, [activeClasseId, activeComposition]);
+
+    const elevesByClasse = useMemo(() => {
+        if (!activeClasseId) return [];
+        return inscriptions
+            .filter((inscription) => inscription.classe_id === activeClasseId)
+            .sort((a, b) => Number(a.numero_ordre ?? 0) - Number(b.numero_ordre ?? 0));
+    }, [activeClasseId, inscriptions]);
+
+    useEffect(() => {
+        const compositionKey = String(activeCompositionId ?? '');
+        const matiereKey = String(activeMatiereId ?? '');
+        const mapped = noteMap[compositionKey]?.[matiereKey] ?? {};
+
+        notesElevesForm.setData((current) => ({
+            ...current,
+            classe_id: String(activeClasseId ?? ''),
+            matiere_id: String(activeMatiereId ?? ''),
+            notes: elevesByClasse.map((inscription) => ({
+                inscription_id: inscription.id,
+                note: mapped[String(inscription.id)] ?? '',
+            })),
+        }));
+    }, [activeClasseId, activeCompositionId, activeMatiereId, elevesByClasse, noteMap]);
 
     const moyenneGenerale = useMemo(() => {
         if (!activeComposition || classeNotes.length === 0) return 0;
@@ -106,7 +140,7 @@ export default function NotesBulletinsIndex({ periodes, classes, matieres, confi
             <div className="space-y-6">
                 <section className="rounded-xl border border-slate-200 bg-white p-5">
                     <h1 className="text-2xl font-bold text-slate-900">Notes & Bulletins</h1>
-                    <p className="mt-1 text-sm text-slate-600">Créez des compositions par période, saisissez les moyennes par classe et exportez les bulletins.</p>
+                    <p className="mt-1 text-sm text-slate-600">Créez des compositions par période, puis sélectionnez classe, composition et matière pour saisir les notes par élève.</p>
                 </section>
 
                 <section className="rounded-xl border border-slate-200 bg-white p-5">
@@ -150,62 +184,91 @@ export default function NotesBulletinsIndex({ periodes, classes, matieres, confi
 
                 <section className="rounded-xl border border-slate-200 bg-white p-5">
                     <div className="grid gap-3 md:grid-cols-3">
-                        <select className="rounded-md border border-slate-200 p-2" value={activeCompositionId ?? ''} onChange={(e) => setActiveCompositionId(Number(e.target.value))}>
-                            {compositions.map((composition) => (
-                                <option key={composition.id} value={composition.id}>{composition.libelle} ({composition.type})</option>
-                            ))}
-                        </select>
-                        <select className="rounded-md border border-slate-200 p-2" value={activeClasseId ?? ''} onChange={(e) => { const value = Number(e.target.value); setActiveClasseId(value); notesForm.setData('classe_id', String(value)); }}>
-                            {classes.map((classe) => (
-                                <option key={classe.id} value={classe.id}>{classe.nom}</option>
-                            ))}
-                        </select>
-                        {activeCompositionId && activeClasseId ? (
-                            <a href={route('notes-bulletins.compositions.export', { composition: activeCompositionId, classe_id: activeClasseId })} className="inline-flex items-center justify-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white">Exporter CSV</a>
-                        ) : null}
+                        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Classe</p>
+                            <select
+                                className="mt-2 w-full rounded-md border border-slate-200 bg-white p-2"
+                                value={activeClasseId ?? ''}
+                                onChange={(e) => setActiveClasseId(Number(e.target.value))}
+                            >
+                                {classes.map((classe) => (
+                                    <option key={classe.id} value={classe.id}>{classe.nom}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Composition</p>
+                            <select
+                                className="mt-2 w-full rounded-md border border-slate-200 bg-white p-2"
+                                value={activeCompositionId ?? ''}
+                                onChange={(e) => setActiveCompositionId(Number(e.target.value))}
+                            >
+                                {compositions.map((composition) => (
+                                    <option key={composition.id} value={composition.id}>{composition.libelle} ({composition.type})</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Matière</p>
+                            <select
+                                className="mt-2 w-full rounded-md border border-slate-200 bg-white p-2"
+                                value={activeMatiereId ?? ''}
+                                onChange={(e) => setActiveMatiereId(Number(e.target.value))}
+                            >
+                                {matieres.map((matiere) => (
+                                    <option key={matiere.id} value={matiere.id}>{matiere.libelle}</option>
+                                ))}
+                            </select>
+                        </div>
                     </div>
 
-                    {activeComposition ? (
-                        <form
-                            className="mt-4 space-y-3"
-                            onSubmit={(e) => {
-                                e.preventDefault();
-                                if (!activeCompositionId) return;
-                                notesForm.post(route('notes-bulletins.compositions.notes.store', activeCompositionId));
-                            }}
-                        >
-                            <div className="grid gap-2 md:grid-cols-3">
-                                {matieres.map((matiere, index) => (
-                                    <div key={matiere.id} className="rounded-lg border border-slate-200 p-3">
-                                        <p className="text-sm font-medium text-slate-800">{matiere.libelle}</p>
-                                        <p className="text-xs text-slate-500">Coef {matiere.coefficient}</p>
-                                        <Input
-                                            className="mt-2"
-                                            type="number"
-                                            step="0.01"
-                                            min={0}
-                                            max={activeComposition.bareme}
-                                            value={String(notesForm.data.notes[index].moyenne)}
-                                            onChange={(e) =>
-                                                notesForm.setData(
-                                                    'notes',
-                                                    notesForm.data.notes.map((note, noteIndex) =>
-                                                        noteIndex === index ? { ...note, moyenne: e.target.value } : note,
-                                                    ),
-                                                )
-                                            }
-                                            placeholder={`/ ${activeComposition.bareme}`}
-                                        />
-                                    </div>
-                                ))}
-                            </div>
-                            <div className="flex justify-end">
-                                <Button type="submit">Enregistrer les notes</Button>
-                            </div>
-                        </form>
-                    ) : (
-                        <p className="mt-4 text-sm text-slate-500">Aucune composition disponible.</p>
-                    )}
+                    {activeCompositionId && activeClasseId ? (
+                        <a href={route('notes-bulletins.compositions.export', { composition: activeCompositionId, classe_id: activeClasseId })} className="mt-3 inline-flex items-center justify-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white">Exporter CSV</a>
+                    ) : null}
+
+                    <form
+                        className="mt-4 space-y-3"
+                        onSubmit={(e) => {
+                            e.preventDefault();
+                            if (!activeCompositionId) return;
+                            notesElevesForm.post(route('notes-bulletins.compositions.notes-eleves.store', activeCompositionId));
+                        }}
+                    >
+                        <div className="overflow-hidden rounded-lg border border-slate-200">
+                            <table className="min-w-full text-sm">
+                                <thead className="bg-slate-50 text-slate-700">
+                                    <tr>
+                                        <th className="px-4 py-2 text-left">Élève</th>
+                                        <th className="px-4 py-2 text-left">Note</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {notesElevesForm.data.notes.map((entry, index) => {
+                                        const eleve = elevesByClasse.find((inscription) => inscription.id === entry.inscription_id)?.eleve;
+                                        return (
+                                            <tr key={entry.inscription_id} className="border-t border-slate-100">
+                                                <td className="px-4 py-2 font-medium text-slate-800">{eleve?.prenoms} {eleve?.nom}</td>
+                                                <td className="px-4 py-2">
+                                                    <Input
+                                                        type="number"
+                                                        step="0.01"
+                                                        min={0}
+                                                        max={activeComposition?.bareme ?? 20}
+                                                        value={entry.note}
+                                                        onChange={(e) => notesElevesForm.setData('notes', notesElevesForm.data.notes.map((line, lineIndex) => lineIndex === index ? { ...line, note: e.target.value } : line))}
+                                                        placeholder={`/ ${activeComposition?.bareme ?? 20}`}
+                                                    />
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div className="flex justify-end">
+                            <Button type="submit">Enregistrer les notes</Button>
+                        </div>
+                    </form>
                 </section>
 
                 {activeComposition && activeClasseId ? (
