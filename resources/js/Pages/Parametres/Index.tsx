@@ -146,8 +146,8 @@ export default function ParametresIndex(props: Props) {
 
     const anneeForm = useForm({ libelle: '', date_debut: '', date_fin: '' });
     const periodeForm = useForm({ annee_scolaire_id: '', libelle: '', date_debut: '', date_fin: '', ordre: 1 });
-    const modeForm = useForm({ libelle: '', code: '', ordre: 1 });
-    const statutForm = useForm({ libelle: '', code: '', ordre: 1 });
+    const modeForm = useForm({ libelle: '' });
+    const statutForm = useForm({ libelle: '' });
     const permissionForm = useForm({ name: '' });
     const roleForm = useForm({ name: '', permissions: [] as string[] });
     const modeleForm = useForm({ type_document: props.typesDocument[0] ?? 'bulletin', nom: '', description: '', template_html: '', est_defaut: false });
@@ -254,8 +254,7 @@ export default function ParametresIndex(props: Props) {
                                                     {!annee.est_active ? (
                                                         <Button size="sm" variant="outline" onClick={() => router.patch(route('parametres.annees.activate', annee.id))}>Activer</Button>
                                                     ) : null}
-                                                    <Button size="sm" variant="outline" onClick={() => router.patch(route('parametres.annees.close', annee.id))}>Clôturer</Button>
-                                                    <Button size="sm" variant="outline" onClick={() => router.patch(route('parametres.annees.reopen', annee.id))}>Réouvrir</Button>
+                                                    <Button size="sm" variant="outline" onClick={() => router.delete(route('parametres.annees.destroy', annee.id))}>Supprimer</Button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -277,14 +276,16 @@ export default function ParametresIndex(props: Props) {
                             </form>
                             <div className="mt-2 flex justify-end"><Button type="button" onClick={() => periodeForm.post(route('parametres.periodes.store'))}>Ajouter la période</Button></div>
                             <div className="mt-3">
-                                <Table headers={['Ordre', 'Période', 'Année scolaire', 'Début', 'Fin']}>
+                                <Table headers={['Période', 'Année scolaire', 'Début', 'Fin', 'Action']}>
                                     {props.periodes.map((periode) => (
                                         <tr key={periode.id}>
-                                            <td className="px-4 py-3">{periode.ordre}</td>
                                             <td className="px-4 py-3">{periode.libelle}</td>
                                             <td className="px-4 py-3">{periode.anneeScolaire?.libelle ?? '-'}</td>
                                             <td className="px-4 py-3">{formatDate(periode.date_debut)}</td>
                                             <td className="px-4 py-3">{formatDate(periode.date_fin)}</td>
+                                            <td className="px-4 py-3">
+                                                <Button size="sm" variant="outline" onClick={() => router.delete(route('parametres.periodes.destroy', periode.id))}>Supprimer</Button>
+                                            </td>
                                         </tr>
                                     ))}
                                 </Table>
@@ -304,24 +305,17 @@ export default function ParametresIndex(props: Props) {
                 {activeTab === 'inscriptions' ? (
                     <div className="space-y-4">
                         <Section title="Référentiels d'inscription" subtitle="Statuts métier visibles par les gestionnaires.">
-                            <form className="grid gap-2 md:grid-cols-4" onSubmit={(e) => { e.preventDefault(); statutForm.post(route('parametres.statuts-inscription.store')); }}>
+                            <form className="grid gap-2 md:grid-cols-2" onSubmit={(e) => { e.preventDefault(); statutForm.post(route('parametres.statuts-inscription.store')); }}>
                                 <Input placeholder="Préinscrit" value={statutForm.data.libelle} onChange={(e) => statutForm.setData('libelle', e.target.value)} />
-                                <Input placeholder="preinscrit" value={statutForm.data.code} onChange={(e) => statutForm.setData('code', e.target.value)} />
-                                <Input type="number" min={1} value={statutForm.data.ordre} onChange={(e) => statutForm.setData('ordre', Number(e.target.value))} />
                                 <Button type="submit">Ajouter le statut</Button>
                             </form>
                             <div className="mt-3">
-                                <Table headers={['Statut', 'Code', 'Ordre', 'Actif', 'Action']}>
+                                <Table headers={['Statut', 'Action']}>
                                     {props.statutsInscription.map((item) => (
                                         <tr key={item.id}>
                                             <td className="px-4 py-3">{item.libelle}</td>
-                                            <td className="px-4 py-3">{item.code || '-'}</td>
-                                            <td className="px-4 py-3">{item.ordre}</td>
-                                            <td className="px-4 py-3">{item.est_actif ? 'Oui' : 'Non'}</td>
                                             <td className="px-4 py-3">
-                                                <Button size="sm" variant="outline" onClick={() => router.patch(route('parametres.statuts-inscription.toggle', item.id))}>
-                                                    {item.est_actif ? 'Désactiver' : 'Activer'}
-                                                </Button>
+                                                <Button size="sm" variant="outline" onClick={() => router.delete(route('parametres.statuts-inscription.destroy', item.id))}>Supprimer</Button>
                                             </td>
                                         </tr>
                                     ))}
@@ -347,24 +341,17 @@ export default function ParametresIndex(props: Props) {
                 {activeTab === 'finance' ? (
                     <div className="space-y-4">
                         <Section title="Modes de paiement" subtitle="Canaux autorisés en caisse et en ligne.">
-                            <form className="grid gap-2 md:grid-cols-4" onSubmit={(e) => { e.preventDefault(); modeForm.post(route('parametres.modes-paiement.store')); }}>
+                            <form className="grid gap-2 md:grid-cols-2" onSubmit={(e) => { e.preventDefault(); modeForm.post(route('parametres.modes-paiement.store')); }}>
                                 <Input placeholder="Orange Money" value={modeForm.data.libelle} onChange={(e) => modeForm.setData('libelle', e.target.value)} />
-                                <Input placeholder="orange_money" value={modeForm.data.code} onChange={(e) => modeForm.setData('code', e.target.value)} />
-                                <Input type="number" min={1} value={modeForm.data.ordre} onChange={(e) => modeForm.setData('ordre', Number(e.target.value))} />
                                 <Button type="submit">Ajouter</Button>
                             </form>
                             <div className="mt-3">
-                                <Table headers={['Libellé', 'Code', 'Ordre', 'Actif', 'Action']}>
+                                <Table headers={['Libellé', 'Action']}>
                                     {props.modesPaiement.map((item) => (
                                         <tr key={item.id}>
                                             <td className="px-4 py-3">{item.libelle}</td>
-                                            <td className="px-4 py-3">{item.code || '-'}</td>
-                                            <td className="px-4 py-3">{item.ordre}</td>
-                                            <td className="px-4 py-3">{item.est_actif ? 'Oui' : 'Non'}</td>
                                             <td className="px-4 py-3">
-                                                <Button size="sm" variant="outline" onClick={() => router.patch(route('parametres.modes-paiement.toggle', item.id))}>
-                                                    {item.est_actif ? 'Désactiver' : 'Activer'}
-                                                </Button>
+                                                <Button size="sm" variant="outline" onClick={() => router.delete(route('parametres.modes-paiement.destroy', item.id))}>Supprimer</Button>
                                             </td>
                                         </tr>
                                     ))}
@@ -444,10 +431,17 @@ export default function ParametresIndex(props: Props) {
                                 <Input placeholder="notes.create" value={permissionForm.data.name} onChange={(e) => permissionForm.setData('name', e.target.value)} />
                                 <Button type="submit" variant="outline">Ajouter permission</Button>
                             </form>
-                            <div className="mt-3 grid gap-2 md:grid-cols-3">
-                                {props.permissions.map((permission) => (
-                                    <div key={permission.id} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm">{permission.name}</div>
-                                ))}
+                            <div className="mt-3">
+                                <Table headers={['Permission', 'Action']}>
+                                    {props.permissions.map((permission) => (
+                                        <tr key={permission.id}>
+                                            <td className="px-4 py-3">{permission.name}</td>
+                                            <td className="px-4 py-3">
+                                                <Button size="sm" variant="outline" onClick={() => router.delete(route('parametres.permissions.destroy', permission.id))}>Supprimer</Button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </Table>
                             </div>
                         </Section>
 
@@ -470,11 +464,14 @@ export default function ParametresIndex(props: Props) {
                             </form>
 
                             <div className="mt-4">
-                                <Table headers={['Rôle', 'Permissions associées']}>
+                                <Table headers={['Rôle', 'Permissions associées', 'Action']}>
                                     {props.roles.map((role) => (
                                         <tr key={role.id}>
                                             <td className="px-4 py-3 font-medium">{role.name}</td>
                                             <td className="px-4 py-3">{role.permissions.map((permission) => permission.name).join(', ') || '-'}</td>
+                                            <td className="px-4 py-3">
+                                                <Button size="sm" variant="outline" onClick={() => router.delete(route('parametres.roles.destroy', role.id))}>Supprimer</Button>
+                                            </td>
                                         </tr>
                                     ))}
                                 </Table>
@@ -511,13 +508,16 @@ export default function ParametresIndex(props: Props) {
                             </form>
 
                             <div className="mt-3">
-                                <Table headers={['Type', 'Nom', 'Description', 'Défaut']}>
+                                <Table headers={['Type', 'Nom', 'Description', 'Défaut', 'Action']}>
                                     {props.modelesImpression.map((item) => (
                                         <tr key={item.id}>
                                             <td className="px-4 py-3">{item.type_document}</td>
                                             <td className="px-4 py-3">{item.nom}</td>
                                             <td className="px-4 py-3">{item.description || '-'}</td>
                                             <td className="px-4 py-3">{item.est_defaut ? 'Oui' : 'Non'}</td>
+                                            <td className="px-4 py-3">
+                                                <Button size="sm" variant="outline" onClick={() => router.delete(route('parametres.modeles-impression.destroy', item.id))}>Supprimer</Button>
+                                            </td>
                                         </tr>
                                     ))}
                                 </Table>

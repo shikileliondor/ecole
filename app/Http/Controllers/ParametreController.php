@@ -204,17 +204,36 @@ class ParametreController extends Controller
         return back()->with('success', 'Période académique ajoutée.');
     }
 
+    public function destroyPeriode(Request $request, PeriodeAcademique $periode): RedirectResponse
+    {
+        $etablissementId = (int) auth()->user()->etablissement_id;
+        abort_unless(
+            AnneeScolaire::query()
+                ->where('id', $periode->annee_scolaire_id)
+                ->where('etablissement_id', $etablissementId)
+                ->exists(),
+            403
+        );
+
+        $avant = $periode->toArray();
+        $periode->delete();
+
+        $this->auditService->log($request, $etablissementId, 'academique', 'delete_periode', $periode, $avant, null);
+
+        return back()->with('success', 'Période supprimée.');
+    }
+
     public function storeModePaiement(Request $request): RedirectResponse
     {
         $etablissementId = (int) auth()->user()->etablissement_id;
         $data = $request->validate([
             'libelle' => ['required', 'string', 'max:80'],
-            'code' => ['nullable', 'string', 'max:30'],
-            'ordre' => ['required', 'integer', 'min:1', 'max:99'],
         ]);
 
         $mode = ModePaiement::query()->create([
             ...$data,
+            'code' => null,
+            'ordre' => 1,
             'etablissement_id' => $etablissementId,
             'est_actif' => true,
         ]);
@@ -224,17 +243,17 @@ class ParametreController extends Controller
         return back()->with('success', 'Mode de paiement ajouté.');
     }
 
-    public function toggleModePaiement(Request $request, ModePaiement $modePaiement): RedirectResponse
+    public function destroyModePaiement(Request $request, ModePaiement $modePaiement): RedirectResponse
     {
         $etablissementId = (int) auth()->user()->etablissement_id;
         abort_unless($modePaiement->etablissement_id === $etablissementId, 403);
 
-        $avant = $modePaiement->only(['est_actif']);
-        $modePaiement->update(['est_actif' => ! $modePaiement->est_actif]);
+        $avant = $modePaiement->toArray();
+        $modePaiement->delete();
 
-        $this->auditService->log($request, $etablissementId, 'finance', 'toggle_mode_paiement', $modePaiement, $avant, $modePaiement->only(['est_actif']));
+        $this->auditService->log($request, $etablissementId, 'finance', 'delete_mode_paiement', $modePaiement, $avant, null);
 
-        return back()->with('success', 'Mode de paiement mis à jour.');
+        return back()->with('success', 'Mode de paiement supprimé.');
     }
 
     public function storeStatutInscription(Request $request): RedirectResponse
@@ -242,12 +261,12 @@ class ParametreController extends Controller
         $etablissementId = (int) auth()->user()->etablissement_id;
         $data = $request->validate([
             'libelle' => ['required', 'string', 'max:80'],
-            'code' => ['nullable', 'string', 'max:30'],
-            'ordre' => ['required', 'integer', 'min:1', 'max:99'],
         ]);
 
         $statut = StatutInscription::query()->create([
             ...$data,
+            'code' => null,
+            'ordre' => 1,
             'etablissement_id' => $etablissementId,
             'est_actif' => true,
         ]);
@@ -257,17 +276,17 @@ class ParametreController extends Controller
         return back()->with('success', 'Statut d\'inscription ajouté.');
     }
 
-    public function toggleStatutInscription(Request $request, StatutInscription $statutInscription): RedirectResponse
+    public function destroyStatutInscription(Request $request, StatutInscription $statutInscription): RedirectResponse
     {
         $etablissementId = (int) auth()->user()->etablissement_id;
         abort_unless($statutInscription->etablissement_id === $etablissementId, 403);
 
-        $avant = $statutInscription->only(['est_actif']);
-        $statutInscription->update(['est_actif' => ! $statutInscription->est_actif]);
+        $avant = $statutInscription->toArray();
+        $statutInscription->delete();
 
-        $this->auditService->log($request, $etablissementId, 'inscriptions', 'toggle_statut_inscription', $statutInscription, $avant, $statutInscription->only(['est_actif']));
+        $this->auditService->log($request, $etablissementId, 'inscriptions', 'delete_statut_inscription', $statutInscription, $avant, null);
 
-        return back()->with('success', 'Statut d\'inscription mis à jour.');
+        return back()->with('success', 'Statut d\'inscription supprimé.');
     }
 
     public function storeRole(Request $request): RedirectResponse
@@ -284,6 +303,13 @@ class ParametreController extends Controller
         return back()->with('success', 'Rôle enregistré.');
     }
 
+    public function destroyRole(Role $role): RedirectResponse
+    {
+        $role->delete();
+
+        return back()->with('success', 'Rôle supprimé.');
+    }
+
     public function storePermission(Request $request): RedirectResponse
     {
         $data = $request->validate([
@@ -293,6 +319,13 @@ class ParametreController extends Controller
         Permission::query()->firstOrCreate(['name' => $data['name'], 'guard_name' => 'web']);
 
         return back()->with('success', 'Permission enregistrée.');
+    }
+
+    public function destroyPermission(Permission $permission): RedirectResponse
+    {
+        $permission->delete();
+
+        return back()->with('success', 'Permission supprimée.');
     }
 
     public function storeModeleImpression(Request $request): RedirectResponse
@@ -320,5 +353,31 @@ class ParametreController extends Controller
         $this->auditService->log($request, $etablissementId, 'documents', 'create_modele_impression', $modele, null, $modele->toArray());
 
         return back()->with('success', 'Modèle PDF enregistré.');
+    }
+
+    public function destroyModeleImpression(Request $request, ModeleImpression $modeleImpression): RedirectResponse
+    {
+        $etablissementId = (int) auth()->user()->etablissement_id;
+        abort_unless($modeleImpression->etablissement_id === $etablissementId, 403);
+
+        $avant = $modeleImpression->toArray();
+        $modeleImpression->delete();
+
+        $this->auditService->log($request, $etablissementId, 'documents', 'delete_modele_impression', $modeleImpression, $avant, null);
+
+        return back()->with('success', 'Modèle PDF supprimé.');
+    }
+
+    public function destroyAnnee(Request $request, AnneeScolaire $annee): RedirectResponse
+    {
+        $etablissementId = (int) auth()->user()->etablissement_id;
+        abort_unless($annee->etablissement_id === $etablissementId, 403);
+
+        $avant = $annee->toArray();
+        $annee->delete();
+
+        $this->auditService->log($request, $etablissementId, 'academique', 'delete_annee', $annee, $avant, null);
+
+        return back()->with('success', 'Année scolaire supprimée.');
     }
 }
