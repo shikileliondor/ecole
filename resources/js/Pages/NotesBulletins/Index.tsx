@@ -142,7 +142,7 @@ export default function NotesBulletinsIndex({ periodes, classes, matieres, confi
                     <h1 className="text-2xl font-bold text-slate-900">Notes & Bulletins</h1>
                     <p className="mt-1 text-sm text-slate-600">Créez des compositions par période, puis sélectionnez classe, composition et matière pour saisir les notes par élève.</p>
                 </section>
-
+{/* 
                 <section className="rounded-xl border border-slate-200 bg-white p-5">
                     <h2 className="text-lg font-semibold text-slate-900">Nouvelle composition</h2>
                     <form
@@ -180,7 +180,7 @@ export default function NotesBulletinsIndex({ periodes, classes, matieres, confi
                             <Button type="submit">Enregistrer la composition</Button>
                         </div>
                     </form>
-                </section>
+                </section> */}
 
                 <section className="rounded-xl border border-slate-200 bg-white p-5">
                     <div className="grid gap-3 md:grid-cols-3">
