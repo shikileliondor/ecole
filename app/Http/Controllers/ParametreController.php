@@ -47,7 +47,7 @@ class ParametreController extends Controller
             'niveaux' => Niveau::query()->ordonnes()->get(),
             'classes' => Classe::query()->where('etablissement_id', $etablissementId)->with('niveau')->orderBy('nom')->get(),
             'matieres' => Matiere::query()->ordonnesBulletin()->get(),
-            'typesFrais' => TypeFrais::query()->where('etablissement_id', $etablissementId)->with('niveau')->orderBy('ordre')->get(),
+            'typesFrais' => TypeFrais::query()->where('etablissement_id', $etablissementId)->with(['niveau', 'classe'])->orderBy('ordre')->get(),
             'modesPaiement' => ModePaiement::query()->where('etablissement_id', $etablissementId)->orderBy('ordre')->get(),
             'statutsInscription' => StatutInscription::query()->where('etablissement_id', $etablissementId)->orderBy('ordre')->get(),
             'roles' => Role::query()->with('permissions')->orderBy('name')->get(),
@@ -254,6 +254,74 @@ class ParametreController extends Controller
         $this->auditService->log($request, $etablissementId, 'finance', 'delete_mode_paiement', $modePaiement, $avant, null);
 
         return back()->with('success', 'Mode de paiement supprimé.');
+    }
+
+    public function storeTypeFrais(Request $request): RedirectResponse
+    {
+        $etablissementId = (int) auth()->user()->etablissement_id;
+        $anneeActiveId = (int) AnneeScolaire::query()
+            ->where('etablissement_id', $etablissementId)
+            ->where('est_active', true)
+            ->value('id');
+
+        if ($anneeActiveId === 0) {
+            return back()->withErrors(['libelle' => 'Aucune année scolaire active pour créer un frais.']);
+        }
+
+        $data = $request->validate([
+            'libelle' => ['required', 'string', 'max:120'],
+            'montant' => ['required', 'integer', 'min:1'],
+            'niveau_id' => ['nullable', 'integer', 'exists:niveaux,id'],
+            'classe_id' => ['nullable', 'integer', 'exists:classes,id'],
+            'est_obligatoire' => ['boolean'],
+            'frequence' => ['required', 'string', 'in:unique,trimestriel,mensuel'],
+        ]);
+
+        if (! empty($data['classe_id'])) {
+            $classe = Classe::query()
+                ->where('id', (int) $data['classe_id'])
+                ->where('etablissement_id', $etablissementId)
+                ->firstOrFail();
+
+            $data['niveau_id'] = $classe->niveau_id;
+        }
+
+        $ordre = (int) TypeFrais::query()
+            ->where('etablissement_id', $etablissementId)
+            ->max('ordre') + 1;
+
+        $typeFrais = TypeFrais::query()->create([
+            'etablissement_id' => $etablissementId,
+            'annee_scolaire_id' => $anneeActiveId,
+            'niveau_id' => $data['niveau_id'] ?? null,
+            'classe_id' => $data['classe_id'] ?? null,
+            'libelle' => $data['libelle'],
+            'montant' => $data['montant'],
+            'est_obligatoire' => (bool) ($data['est_obligatoire'] ?? true),
+            'frequence' => $data['frequence'],
+            'ordre' => $ordre,
+        ]);
+
+        $this->auditService->log($request, $etablissementId, 'finance', 'create_type_frais', $typeFrais, null, $typeFrais->toArray());
+
+        return back()->with('success', 'Type de frais ajouté.');
+    }
+
+    public function destroyTypeFrais(Request $request, TypeFrais $typeFrais): RedirectResponse
+    {
+        $etablissementId = (int) auth()->user()->etablissement_id;
+        abort_unless($typeFrais->etablissement_id === $etablissementId, 403);
+
+        if ($typeFrais->paiements()->exists()) {
+            return back()->withErrors(['libelle' => 'Impossible de supprimer un frais déjà utilisé dans des paiements.']);
+        }
+
+        $avant = $typeFrais->toArray();
+        $typeFrais->delete();
+
+        $this->auditService->log($request, $etablissementId, 'finance', 'delete_type_frais', $typeFrais, $avant, null);
+
+        return back()->with('success', 'Type de frais supprimé.');
     }
 
     public function storeStatutInscription(Request $request): RedirectResponse
