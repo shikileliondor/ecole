@@ -7,6 +7,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ParametreController;
 use App\Http\Controllers\ClasseController;
 use App\Http\Controllers\NoteBulletinController;
+use App\Http\Controllers\PersonnelController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -109,6 +110,12 @@ Route::middleware(['auth'])->prefix('inscriptions')->name('inscriptions.')->grou
     Route::get('/{id}', [InscriptionController::class, 'show'])->name('show');
     Route::get('/{id}/edit', [InscriptionController::class, 'edit'])->name('edit');
     Route::put('/{id}', [InscriptionController::class, 'update'])->name('update');
+});
+
+
+Route::middleware(['auth'])->prefix('personnel')->name('personnel.')->group(function (): void {
+    Route::get('/', [PersonnelController::class, 'index'])->name('index');
+    Route::post('/', [PersonnelController::class, 'store'])->name('store');
 });
 
 Route::middleware('auth')->group(function () {
