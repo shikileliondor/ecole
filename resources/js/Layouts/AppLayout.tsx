@@ -98,7 +98,7 @@ const navGroups: NavGroup[] = [
     },
     {
         label: 'RESSOURCES HUMAINES',
-        items: [{ label: 'Personnel', href: '#', icon: UserCog }],
+        items: [{ label: 'Personnel', href: route('personnel.index'), icon: UserCog }],
     },
     {
         label: 'RAPPORTS',

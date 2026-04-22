@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -22,6 +23,12 @@ class Personnel extends Model
     public const SEXES = [
         'M' => 'M',
         'F' => 'F',
+    ];
+
+    public const CATEGORIES = [
+        'enseignant' => 'enseignant',
+        'personnel_ecole' => 'personnel_ecole',
+        'autre' => 'autre',
     ];
 
     public const TYPES = [
@@ -67,6 +74,7 @@ class Personnel extends Model
         'whatsapp',
         'email',
         'photo',
+        'categorie',
         'type',
         'diplome',
         'est_certifie_mena',
@@ -111,6 +119,20 @@ class Personnel extends Model
         return $this->hasMany(Classe::class, 'enseignant_titulaire_id');
     }
 
+
+    /** Retourne les documents de la fiche du personnel. */
+    public function documents(): HasMany
+    {
+        return $this->hasMany(PersonnelDocument::class);
+    }
+
+    /** Retourne les classes affectées (enseignant). */
+    public function classesAffectees(): BelongsToMany
+    {
+        return $this->belongsToMany(Classe::class, 'personnel_classe_affectations')
+            ->withTimestamps();
+    }
+
     /** Filtre le personnel actif. */
     public function scopeActif(Builder $query): Builder
     {
@@ -120,7 +142,7 @@ class Personnel extends Model
     /** Filtre les enseignants. */
     public function scopeEnseignants(Builder $query): Builder
     {
-        return $query->where('type', self::TYPES['enseignant']);
+        return $query->where('categorie', self::CATEGORIES['enseignant']);
     }
 
     /** Filtre le personnel certifié MENA. */
