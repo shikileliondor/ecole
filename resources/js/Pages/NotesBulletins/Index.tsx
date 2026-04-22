@@ -91,14 +91,16 @@ export default function NotesBulletinsIndex({ periodes, classes, matieres, confi
         [activeCompositionId, compositions],
     );
 
-    const resolveIdFromQuery = <T extends Item>(options: T[], query: string, getLabel: (item: T) => string): number | null => {
-        const normalizedQuery = query.trim().toLocaleLowerCase();
+    const normalizeLabel = (value: unknown): string => String(value ?? '').trim().toLocaleLowerCase();
+
+    const resolveIdFromQuery = <T extends Item>(options: T[], query: string, getLabel: (item: T) => string | undefined | null): number | null => {
+        const normalizedQuery = normalizeLabel(query);
         if (!normalizedQuery) return options[0]?.id ?? null;
-        const exactMatch = options.find((item) => getLabel(item).toLocaleLowerCase() === normalizedQuery);
+        const exactMatch = options.find((item) => normalizeLabel(getLabel(item)) === normalizedQuery);
         if (exactMatch) return exactMatch.id;
-        const startsWithMatch = options.find((item) => getLabel(item).toLocaleLowerCase().startsWith(normalizedQuery));
+        const startsWithMatch = options.find((item) => normalizeLabel(getLabel(item)).startsWith(normalizedQuery));
         if (startsWithMatch) return startsWithMatch.id;
-        const includesMatch = options.find((item) => getLabel(item).toLocaleLowerCase().includes(normalizedQuery));
+        const includesMatch = options.find((item) => normalizeLabel(getLabel(item)).includes(normalizedQuery));
         return includesMatch?.id ?? null;
     };
 
@@ -223,7 +225,7 @@ export default function NotesBulletinsIndex({ periodes, classes, matieres, confi
                                     const nextQuery = e.target.value;
                                     setClasseQuery(nextQuery);
                                     const nextId = resolveIdFromQuery(classes, nextQuery, (classe) => classe.nom);
-                                    if (nextId) setActiveClasseId(nextId);
+                                    if (nextId !== null) setActiveClasseId(nextId);
                                 }}
                             />
                             <datalist id="classes-autoselect">
@@ -242,7 +244,7 @@ export default function NotesBulletinsIndex({ periodes, classes, matieres, confi
                                     const nextQuery = e.target.value;
                                     setCompositionQuery(nextQuery);
                                     const nextId = resolveIdFromQuery(compositions, nextQuery, (composition) => `${composition.libelle} (${composition.type})`);
-                                    if (nextId) setActiveCompositionId(nextId);
+                                    if (nextId !== null) setActiveCompositionId(nextId);
                                 }}
                             />
                             <datalist id="compositions-autoselect">
@@ -261,7 +263,7 @@ export default function NotesBulletinsIndex({ periodes, classes, matieres, confi
                                     const nextQuery = e.target.value;
                                     setMatiereQuery(nextQuery);
                                     const nextId = resolveIdFromQuery(matieres, nextQuery, (matiere) => matiere.libelle);
-                                    if (nextId) setActiveMatiereId(nextId);
+                                    if (nextId !== null) setActiveMatiereId(nextId);
                                 }}
                             />
                             <datalist id="matieres-autoselect">
@@ -273,7 +275,14 @@ export default function NotesBulletinsIndex({ periodes, classes, matieres, confi
                     </div>
 
                     {activeCompositionId && activeClasseId ? (
-                        <a href={route('notes-bulletins.compositions.export', { composition: activeCompositionId, classe_id: activeClasseId })} className="mt-3 inline-flex items-center justify-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white">Exporter CSV</a>
+                        <a
+                            href={route('notes-bulletins.compositions.export', { composition: activeCompositionId, classe_id: activeClasseId })}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-3 inline-flex items-center justify-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white"
+                        >
+                            Exporter CSV
+                        </a>
                     ) : null}
 
                     <form
@@ -295,9 +304,10 @@ export default function NotesBulletinsIndex({ periodes, classes, matieres, confi
                                 <tbody>
                                     {notesElevesForm.data.notes.map((entry, index) => {
                                         const eleve = elevesByClasse.find((inscription) => inscription.id === entry.inscription_id)?.eleve;
+                                        const eleveNomComplet = [eleve?.prenoms, eleve?.nom].filter(Boolean).join(' ').trim() || 'Élève introuvable';
                                         return (
                                             <tr key={entry.inscription_id} className="border-t border-slate-100">
-                                                <td className="px-4 py-2 font-medium text-slate-800">{eleve?.prenoms} {eleve?.nom}</td>
+                                                <td className="px-4 py-2 font-medium text-slate-800">{eleveNomComplet}</td>
                                                 <td className="px-4 py-2">
                                                     <Input
                                                         type="number"
