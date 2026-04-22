@@ -51,6 +51,7 @@ class Etablissement extends Model
         'pays',
         'code_postal',
         'devise',
+        'slogan',
         'langue_defaut',
         'fuseau_horaire',
         'format_date',

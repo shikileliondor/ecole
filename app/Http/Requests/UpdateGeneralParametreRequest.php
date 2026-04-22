@@ -29,6 +29,7 @@ class UpdateGeneralParametreRequest extends FormRequest
             'pays' => ['nullable', 'string', 'max:120'],
             'code_postal' => ['nullable', 'string', 'max:30'],
             'devise' => ['nullable', 'string', 'max:10'],
+            'slogan' => ['nullable', 'string', 'max:255'],
             'langue_defaut' => ['nullable', 'string', 'max:10'],
             'fuseau_horaire' => ['nullable', 'string', 'max:60'],
             'format_date' => ['nullable', 'string', 'max:30'],

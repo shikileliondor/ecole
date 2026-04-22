@@ -43,6 +43,7 @@ class UpdateGeneralParametreTest extends TestCase
                 'pays' => "Côte d'Ivoire",
                 'code_postal' => '',
                 'devise' => 'XOF',
+                'slogan' => "L'excellence avant tout",
                 'langue_defaut' => 'fr',
                 'fuseau_horaire' => 'Africa/Abidjan',
                 'format_date' => 'DD/MM/YYYY',
@@ -60,5 +61,6 @@ class UpdateGeneralParametreTest extends TestCase
         $this->assertNull($etablissement->contact_email);
         $this->assertNull($etablissement->site_web);
         $this->assertNull($etablissement->annee_creation);
+        $this->assertSame("L'excellence avant tout", $etablissement->slogan);
     }
 }
