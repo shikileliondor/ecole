@@ -27,6 +27,7 @@ class TypeFrais extends Model
         'etablissement_id',
         'annee_scolaire_id',
         'niveau_id',
+        'classe_id',
         'libelle',
         'montant',
         'est_obligatoire',
@@ -58,6 +59,12 @@ class TypeFrais extends Model
     public function niveau(): BelongsTo
     {
         return $this->belongsTo(Niveau::class);
+    }
+
+    /** Retourne la classe associée si définie. */
+    public function classe(): BelongsTo
+    {
+        return $this->belongsTo(Classe::class);
     }
 
     /** Retourne les paiements liés à ce type de frais. */

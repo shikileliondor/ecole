@@ -63,6 +63,8 @@ Route::middleware(['auth'])->prefix('parametres')->name('parametres.')->group(fu
     Route::delete('/periodes/{periode}', [ParametreController::class, 'destroyPeriode'])->name('periodes.destroy');
     Route::post('/modes-paiement', [ParametreController::class, 'storeModePaiement'])->name('modes-paiement.store');
     Route::delete('/modes-paiement/{modePaiement}', [ParametreController::class, 'destroyModePaiement'])->name('modes-paiement.destroy');
+    Route::post('/types-frais', [ParametreController::class, 'storeTypeFrais'])->name('types-frais.store');
+    Route::delete('/types-frais/{typeFrais}', [ParametreController::class, 'destroyTypeFrais'])->name('types-frais.destroy');
     Route::post('/statuts-inscription', [ParametreController::class, 'storeStatutInscription'])->name('statuts-inscription.store');
     Route::delete('/statuts-inscription/{statutInscription}', [ParametreController::class, 'destroyStatutInscription'])->name('statuts-inscription.destroy');
     Route::post('/roles', [ParametreController::class, 'storeRole'])->name('roles.store');
