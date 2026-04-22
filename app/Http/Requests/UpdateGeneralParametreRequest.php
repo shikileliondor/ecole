@@ -44,7 +44,8 @@ class UpdateGeneralParametreRequest extends FormRequest
 
         foreach ($input as $key => $value) {
             if (is_string($value)) {
-                $input[$key] = trim($value);
+                $trimmed = trim($value);
+                $input[$key] = $trimmed === '' ? null : $trimmed;
             }
         }
 
