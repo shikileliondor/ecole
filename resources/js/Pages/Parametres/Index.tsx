@@ -37,6 +37,7 @@ type Props = {
         pays?: string;
         code_postal?: string;
         devise?: string;
+        slogan?: string;
         langue_defaut?: string;
         fuseau_horaire?: string;
         format_date?: string;
@@ -70,6 +71,15 @@ export default function ParametresIndex(props: Props) {
     const [activeTab, setActiveTab] = useState<TabId>('general');
 
     const config = (key: string) => props.configs[key] ?? {};
+    const deviseInitiale =
+        props.etablissement.devise && props.etablissement.devise.length <= 10
+            ? props.etablissement.devise
+            : 'XOF';
+    const sloganInitial =
+        props.etablissement.slogan ??
+        (props.etablissement.devise && props.etablissement.devise.length > 10
+            ? props.etablissement.devise
+            : '');
 
     const generalForm = useForm({
         nom: props.etablissement.nom ?? '',
@@ -84,7 +94,8 @@ export default function ParametresIndex(props: Props) {
         adresse: props.etablissement.adresse ?? '',
         pays: props.etablissement.pays ?? "Côte d'Ivoire",
         code_postal: props.etablissement.code_postal ?? '',
-        devise: props.etablissement.devise ?? 'XOF',
+        devise: deviseInitiale,
+        slogan: sloganInitial,
         langue_defaut: props.etablissement.langue_defaut ?? 'fr',
         fuseau_horaire: props.etablissement.fuseau_horaire ?? 'Africa/Abidjan',
         format_date: props.etablissement.format_date ?? 'DD/MM/YYYY',
@@ -207,7 +218,8 @@ export default function ParametresIndex(props: Props) {
                                     <Input placeholder="Adresse" value={generalForm.data.adresse} onChange={(e) => generalForm.setData('adresse', e.target.value)} />
                                     <Input placeholder="Pays" value={generalForm.data.pays} onChange={(e) => generalForm.setData('pays', e.target.value)} />
                                     <Input placeholder="Code postal / BP" value={generalForm.data.code_postal} onChange={(e) => generalForm.setData('code_postal', e.target.value)} />
-                                    <Input placeholder="Devise (XOF)" value={generalForm.data.devise} onChange={(e) => generalForm.setData('devise', e.target.value)} />
+                                    <Input placeholder="Devise monétaire (XOF)" value={generalForm.data.devise} onChange={(e) => generalForm.setData('devise', e.target.value)} />
+                                    <Input placeholder="Slogan de l'établissement" value={generalForm.data.slogan} onChange={(e) => generalForm.setData('slogan', e.target.value)} />
                                     <Input placeholder="Langue (fr)" value={generalForm.data.langue_defaut} onChange={(e) => generalForm.setData('langue_defaut', e.target.value)} />
                                     <Input placeholder="Fuseau horaire" value={generalForm.data.fuseau_horaire} onChange={(e) => generalForm.setData('fuseau_horaire', e.target.value)} />
                                     <Input placeholder="Format date" value={generalForm.data.format_date} onChange={(e) => generalForm.setData('format_date', e.target.value)} />
