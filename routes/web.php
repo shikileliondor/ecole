@@ -34,6 +34,8 @@ Route::middleware(['auth'])->group(function () {
                 ->name('store');
 
             Route::get('/export/pdf', [EleveController::class, 'exportPdf'])->name('export.pdf');
+            Route::get('/export/word', [EleveController::class, 'exportWord'])->name('export.word');
+            Route::get('/export/excel', [EleveController::class, 'exportExcel'])->name('export.excel');
 
             Route::get('/{id}', [EleveController::class, 'show'])->name('show');
 

@@ -1,7 +1,7 @@
 import AppLayout from '@/Layouts/AppLayout';
 import { Head, Link, router } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
-import { AlertCircle, ArrowRightLeft, Award, Download, EllipsisVertical, Eye, Pencil, Search, Trash2, UserCheck, UserPlus, Users, MessageCircle } from 'lucide-react';
+import { AlertCircle, ArrowRightLeft, Award, Download, EllipsisVertical, Eye, FileSpreadsheet, FileText, Pencil, Search, Trash2, UserCheck, UserPlus, Users, MessageCircle } from 'lucide-react';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/Components/ui/select';
@@ -142,9 +142,11 @@ export default function ElevesIndex({ eleves, classes, niveaux, filters, stats }
                         </Select>
                     </div>
 
-                    <div className="mt-3 flex gap-2">
+                    <div className="mt-3 flex flex-wrap gap-2">
                         {hasActiveFilters ? <Button variant="outline" onClick={() => { setLocalFilters({}); router.get(route('eleves.index')); }}>Réinitialiser</Button> : null}
-                        <Button variant="outline" onClick={() => window.open(route('eleves.export.pdf'), '_blank')}><Download className="mr-2 h-4 w-4" />Exporter PDF</Button>
+                        <Button variant="outline" onClick={() => window.open(route('eleves.export.pdf', localFilters), '_blank')}><Download className="mr-2 h-4 w-4" />Exporter PDF</Button>
+                        <Button variant="outline" onClick={() => window.open(route('eleves.export.word', localFilters), '_blank')}><FileText className="mr-2 h-4 w-4" />Exporter Word</Button>
+                        <Button variant="outline" onClick={() => window.open(route('eleves.export.excel', localFilters), '_blank')}><FileSpreadsheet className="mr-2 h-4 w-4" />Exporter Excel</Button>
                     </div>
                 </section>
 
