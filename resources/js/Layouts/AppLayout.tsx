@@ -185,27 +185,34 @@ export default function AppLayout({
                                     return (
                                         <div key={item.label}>
                                             {hasChildren ? (
-                                                <button
-                                                    type="button"
-                                                    onClick={() =>
-                                                        setOpenedMenus((prev) => ({
-                                                            ...prev,
-                                                            [item.label]: !isOpen,
-                                                        }))
-                                                    }
-                                                    className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition ${
+                                                <div
+                                                    className={`flex w-full items-center gap-2 rounded-lg pr-2 text-sm transition ${
                                                         isActive || isOpen
                                                             ? 'bg-white/20 font-medium text-white'
                                                             : 'text-white/70 hover:bg-white/10 hover:text-white'
                                                     }`}
                                                 >
-                                                    <Icon size={16} />
-                                                    <span className="flex-1 text-left">{item.label}</span>
-                                                    <ChevronDown
-                                                        size={15}
-                                                        className={`transition-transform ${isOpen ? 'rotate-180' : ''}`}
-                                                    />
-                                                </button>
+                                                    <Link href={item.href} className="flex min-w-0 flex-1 items-center gap-3 px-3 py-2.5">
+                                                        <Icon size={16} />
+                                                        <span className="truncate">{item.label}</span>
+                                                    </Link>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            setOpenedMenus((prev) => ({
+                                                                ...prev,
+                                                                [item.label]: !isOpen,
+                                                            }))
+                                                        }
+                                                        className="rounded p-1 text-white/80 transition hover:bg-white/10 hover:text-white"
+                                                        aria-label={`Afficher les sous-menus de ${item.label}`}
+                                                    >
+                                                        <ChevronDown
+                                                            size={15}
+                                                            className={`transition-transform ${isOpen ? 'rotate-180' : ''}`}
+                                                        />
+                                                    </button>
+                                                </div>
                                             ) : (
                                                 <Link
                                                     href={item.href}
