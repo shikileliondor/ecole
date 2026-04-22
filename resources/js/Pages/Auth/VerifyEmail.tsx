@@ -1,4 +1,5 @@
 import PrimaryButton from '@/Components/PrimaryButton';
+import FeedbackAlert from '@/Components/ui/feedback-alert';
 import GuestLayout from '@/Layouts/GuestLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { FormEventHandler } from 'react';
@@ -24,10 +25,11 @@ export default function VerifyEmail({ status }: { status?: string }) {
             </div>
 
             {status === 'verification-link-sent' && (
-                <div className="mb-4 text-sm font-medium text-green-600">
-                    A new verification link has been sent to the email address
-                    you provided during registration.
-                </div>
+                <FeedbackAlert
+                    type="success"
+                    className="mb-4"
+                    message="A new verification link has been sent to the email address you provided during registration."
+                />
             )}
 
             <form onSubmit={submit}>
