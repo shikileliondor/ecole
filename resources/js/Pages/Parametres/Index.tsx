@@ -1,10 +1,13 @@
 import AppLayout from '@/Layouts/AppLayout';
 import { Head, router, useForm } from '@inertiajs/react';
-import { type ReactNode, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
 import { Checkbox } from '@/Components/ui/checkbox';
 import { Textarea } from '@/Components/ui/textarea';
+import Section from './components/Section';
+import Table from './components/Table';
+import TabButton from './components/TabButton';
 
 type Item = { id: number; [key: string]: unknown };
 
@@ -22,13 +25,20 @@ type Props = {
     etablissement: {
         nom: string;
         sigle?: string;
+        site_web?: string;
         contact_email?: string;
         contact_telephone: string;
         contact_whatsapp?: string;
         localisation_ville: string;
         localisation_commune?: string;
         localisation_quartier?: string;
+        adresse?: string;
+        pays?: string;
+        code_postal?: string;
         devise?: string;
+        langue_defaut?: string;
+        fuseau_horaire?: string;
+        format_date?: string;
         directeur_nom?: string;
         agrement_mena?: string;
         annee_creation?: number;
@@ -47,50 +57,6 @@ type Props = {
     modelesImpression: Array<Item & { type_document: string; nom: string; description?: string; est_defaut: boolean }>;
     typesDocument: string[];
 };
-
-function Section({ title, subtitle, children }: { title: string; subtitle?: string; children: ReactNode }) {
-    return (
-        <section className="rounded-xl border border-slate-200 bg-white p-5">
-            <h3 className="text-lg font-semibold text-slate-900">{title}</h3>
-            {subtitle ? <p className="mt-1 text-sm text-slate-500">{subtitle}</p> : null}
-            <div className="mt-4">{children}</div>
-        </section>
-    );
-}
-
-function TabButton({ active, label, onClick }: { active: boolean; label: string; onClick: () => void }) {
-    return (
-        <button
-            type="button"
-            onClick={onClick}
-            className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
-                active
-                    ? 'bg-blue-600 text-white shadow-sm'
-                    : 'bg-white text-slate-700 hover:bg-slate-100'
-            }`}
-        >
-            {label}
-        </button>
-    );
-}
-
-function Table({ headers, children }: { headers: string[]; children: ReactNode }) {
-    return (
-        <div className="overflow-x-auto rounded-xl border border-slate-200">
-            <table className="min-w-full text-sm">
-                <thead className="bg-slate-50 text-left text-slate-600">
-                    <tr>
-                        {headers.map((header) => (
-                            <th key={header} className="px-4 py-3 font-semibold">{header}</th>
-                        ))}
-                    </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 bg-white">{children}</tbody>
-            </table>
-        </div>
-    );
-}
-
 const formatDate = (value: string): string => {
     if (!value) return '-';
     const date = new Date(value);
@@ -110,10 +76,17 @@ export default function ParametresIndex(props: Props) {
         contact_email: props.etablissement.contact_email ?? '',
         contact_telephone: props.etablissement.contact_telephone ?? '',
         contact_whatsapp: props.etablissement.contact_whatsapp ?? '',
+        site_web: props.etablissement.site_web ?? '',
         localisation_ville: props.etablissement.localisation_ville ?? '',
         localisation_commune: props.etablissement.localisation_commune ?? '',
         localisation_quartier: props.etablissement.localisation_quartier ?? '',
+        adresse: props.etablissement.adresse ?? '',
+        pays: props.etablissement.pays ?? "Côte d'Ivoire",
+        code_postal: props.etablissement.code_postal ?? '',
         devise: props.etablissement.devise ?? 'XOF',
+        langue_defaut: props.etablissement.langue_defaut ?? 'fr',
+        fuseau_horaire: props.etablissement.fuseau_horaire ?? 'Africa/Abidjan',
+        format_date: props.etablissement.format_date ?? 'DD/MM/YYYY',
         directeur_nom: props.etablissement.directeur_nom ?? '',
         agrement_mena: props.etablissement.agrement_mena ?? '',
         annee_creation: props.etablissement.annee_creation ? String(props.etablissement.annee_creation) : '',
@@ -141,10 +114,10 @@ export default function ParametresIndex(props: Props) {
 
     const evalConfigForm = useForm({
         donnees: {
-            bareme_principal: String(config('evaluations').bareme_principal ?? '/20'),
-            mode_arrondi: String(config('evaluations').mode_arrondi ?? 'au_dixieme_superieur'),
+            bareme_principal: Number(config('evaluations').bareme_principal ?? 20),
+            mode_arrondi: String(config('evaluations').mode_arrondi ?? 'dixieme_superieur'),
             seuil_validation: String(config('evaluations').seuil_validation ?? '10'),
-            regle_moyenne: String(config('evaluations').regle_moyenne ?? 'Moyenne pondérée par coefficient'),
+            regle_moyenne: String(config('evaluations').regle_moyenne ?? 'ponderee_coefficient'),
             appreciations_auto: String(config('evaluations').appreciations_auto ?? '>=16: Très bien\n>=14: Bien\n>=12: Assez bien\n>=10: Passable\n<10: Insuffisant'),
         },
     });
@@ -155,6 +128,8 @@ export default function ParametresIndex(props: Props) {
             motifs: String(config('absences').motifs ?? 'Médical\nFamilial\nTransport\nAdministratif'),
             statuts_justification: String(config('absences').statuts_justification ?? 'En attente\nJustifiée\nNon justifiée'),
             sanctions: String(config('absences').sanctions ?? 'Avertissement\nBlâme\nConvocation parent'),
+            types_incident: String(config('absences').types_incident ?? 'Indiscipline\nViolence\nDégradation'),
+            niveaux_gravite: String(config('absences').niveaux_gravite ?? 'Faible\nMoyenne\nÉlevée'),
         },
     });
 
@@ -224,10 +199,17 @@ export default function ParametresIndex(props: Props) {
                                     <Input placeholder="Email" value={generalForm.data.contact_email} onChange={(e) => generalForm.setData('contact_email', e.target.value)} />
                                     <Input placeholder="Téléphone" value={generalForm.data.contact_telephone} onChange={(e) => generalForm.setData('contact_telephone', e.target.value)} />
                                     <Input placeholder="WhatsApp" value={generalForm.data.contact_whatsapp} onChange={(e) => generalForm.setData('contact_whatsapp', e.target.value)} />
+                                    <Input placeholder="Site web" value={generalForm.data.site_web} onChange={(e) => generalForm.setData('site_web', e.target.value)} />
                                     <Input placeholder="Ville" value={generalForm.data.localisation_ville} onChange={(e) => generalForm.setData('localisation_ville', e.target.value)} />
                                     <Input placeholder="Commune" value={generalForm.data.localisation_commune} onChange={(e) => generalForm.setData('localisation_commune', e.target.value)} />
                                     <Input placeholder="Quartier / adresse" value={generalForm.data.localisation_quartier} onChange={(e) => generalForm.setData('localisation_quartier', e.target.value)} />
+                                    <Input placeholder="Adresse" value={generalForm.data.adresse} onChange={(e) => generalForm.setData('adresse', e.target.value)} />
+                                    <Input placeholder="Pays" value={generalForm.data.pays} onChange={(e) => generalForm.setData('pays', e.target.value)} />
+                                    <Input placeholder="Code postal / BP" value={generalForm.data.code_postal} onChange={(e) => generalForm.setData('code_postal', e.target.value)} />
                                     <Input placeholder="Devise (XOF)" value={generalForm.data.devise} onChange={(e) => generalForm.setData('devise', e.target.value)} />
+                                    <Input placeholder="Langue (fr)" value={generalForm.data.langue_defaut} onChange={(e) => generalForm.setData('langue_defaut', e.target.value)} />
+                                    <Input placeholder="Fuseau horaire" value={generalForm.data.fuseau_horaire} onChange={(e) => generalForm.setData('fuseau_horaire', e.target.value)} />
+                                    <Input placeholder="Format date" value={generalForm.data.format_date} onChange={(e) => generalForm.setData('format_date', e.target.value)} />
                                     <Input placeholder="Directeur" value={generalForm.data.directeur_nom} onChange={(e) => generalForm.setData('directeur_nom', e.target.value)} />
                                     <Input placeholder="Agrément MENA" value={generalForm.data.agrement_mena} onChange={(e) => generalForm.setData('agrement_mena', e.target.value)} />
                                     <Input placeholder="Année de création" value={generalForm.data.annee_creation} onChange={(e) => generalForm.setData('annee_creation', e.target.value)} />
@@ -235,6 +217,11 @@ export default function ParametresIndex(props: Props) {
                                 <div className="flex justify-end">
                                     <Button type="submit">Enregistrer</Button>
                                 </div>
+                                {Object.keys(generalForm.errors).length > 0 ? (
+                                    <p className="text-sm text-red-600">
+                                        {Object.values(generalForm.errors)[0]}
+                                    </p>
+                                ) : null}
                             </form>
                         </Section>
                     </div>
@@ -250,7 +237,7 @@ export default function ParametresIndex(props: Props) {
                                 <Button type="submit">Ajouter l'année</Button>
                             </form>
                             <div className="mt-3">
-                                <Table headers={['Libellé', 'Début', 'Fin', 'Statut']}>
+                                <Table headers={['Libellé', 'Début', 'Fin', 'Statut', 'Actions']}>
                                     {props.annees.map((annee) => (
                                         <tr key={annee.id}>
                                             <td className="px-4 py-3">{annee.libelle}</td>
@@ -260,8 +247,17 @@ export default function ParametresIndex(props: Props) {
                                                 {annee.est_active ? (
                                                     <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-700">Active</span>
                                                 ) : (
-                                                    <Button size="sm" variant="outline" onClick={() => router.patch(route('parametres.annees.activate', annee.id))}>Activer</Button>
+                                                    <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">Inactive</span>
                                                 )}
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <div className="flex flex-wrap gap-2">
+                                                    {!annee.est_active ? (
+                                                        <Button size="sm" variant="outline" onClick={() => router.patch(route('parametres.annees.activate', annee.id))}>Activer</Button>
+                                                    ) : null}
+                                                    <Button size="sm" variant="outline" onClick={() => router.patch(route('parametres.annees.close', annee.id))}>Clôturer</Button>
+                                                    <Button size="sm" variant="outline" onClick={() => router.patch(route('parametres.annees.reopen', annee.id))}>Réouvrir</Button>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))}
@@ -316,13 +312,18 @@ export default function ParametresIndex(props: Props) {
                                 <Button type="submit">Ajouter le statut</Button>
                             </form>
                             <div className="mt-3">
-                                <Table headers={['Statut', 'Code', 'Ordre', 'Actif']}>
+                                <Table headers={['Statut', 'Code', 'Ordre', 'Actif', 'Action']}>
                                     {props.statutsInscription.map((item) => (
                                         <tr key={item.id}>
                                             <td className="px-4 py-3">{item.libelle}</td>
                                             <td className="px-4 py-3">{item.code || '-'}</td>
                                             <td className="px-4 py-3">{item.ordre}</td>
                                             <td className="px-4 py-3">{item.est_actif ? 'Oui' : 'Non'}</td>
+                                            <td className="px-4 py-3">
+                                                <Button size="sm" variant="outline" onClick={() => router.patch(route('parametres.statuts-inscription.toggle', item.id))}>
+                                                    {item.est_actif ? 'Désactiver' : 'Activer'}
+                                                </Button>
+                                            </td>
                                         </tr>
                                     ))}
                                 </Table>
@@ -354,13 +355,18 @@ export default function ParametresIndex(props: Props) {
                                 <Button type="submit">Ajouter</Button>
                             </form>
                             <div className="mt-3">
-                                <Table headers={['Libellé', 'Code', 'Ordre', 'Actif']}>
+                                <Table headers={['Libellé', 'Code', 'Ordre', 'Actif', 'Action']}>
                                     {props.modesPaiement.map((item) => (
                                         <tr key={item.id}>
                                             <td className="px-4 py-3">{item.libelle}</td>
                                             <td className="px-4 py-3">{item.code || '-'}</td>
                                             <td className="px-4 py-3">{item.ordre}</td>
                                             <td className="px-4 py-3">{item.est_actif ? 'Oui' : 'Non'}</td>
+                                            <td className="px-4 py-3">
+                                                <Button size="sm" variant="outline" onClick={() => router.patch(route('parametres.modes-paiement.toggle', item.id))}>
+                                                    {item.est_actif ? 'Désactiver' : 'Activer'}
+                                                </Button>
+                                            </td>
                                         </tr>
                                     ))}
                                 </Table>
@@ -396,10 +402,19 @@ export default function ParametresIndex(props: Props) {
                     <Section title="Paramètres de notation" subtitle="Barèmes, arrondis, seuils et appréciations automatiques.">
                         <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); evalConfigForm.patch(route('parametres.config.update', 'evaluations')); }}>
                             <div className="grid gap-3 md:grid-cols-2">
-                                <Input value={String(evalConfigForm.data.donnees.bareme_principal)} onChange={(e) => evalConfigForm.setData('donnees', { ...evalConfigForm.data.donnees, bareme_principal: e.target.value })} placeholder="Barème principal" />
-                                <Input value={String(evalConfigForm.data.donnees.mode_arrondi)} onChange={(e) => evalConfigForm.setData('donnees', { ...evalConfigForm.data.donnees, mode_arrondi: e.target.value })} placeholder="Mode d'arrondi" />
+                                <Input type="number" min={1} value={Number(evalConfigForm.data.donnees.bareme_principal)} onChange={(e) => evalConfigForm.setData('donnees', { ...evalConfigForm.data.donnees, bareme_principal: Number(e.target.value || 20) })} placeholder="Barème principal" />
+                                <select className="rounded-md border border-slate-200 p-2 text-sm" value={String(evalConfigForm.data.donnees.mode_arrondi)} onChange={(e) => evalConfigForm.setData('donnees', { ...evalConfigForm.data.donnees, mode_arrondi: e.target.value })}>
+                                    <option value="dixieme_superieur">Dixième supérieur</option>
+                                    <option value="dixieme_inferieur">Dixième inférieur</option>
+                                    <option value="demi_point">Demi-point</option>
+                                    <option value="unite_superieure">Unité supérieure</option>
+                                    <option value="unite_inferieure">Unité inférieure</option>
+                                </select>
                                 <Input value={String(evalConfigForm.data.donnees.seuil_validation)} onChange={(e) => evalConfigForm.setData('donnees', { ...evalConfigForm.data.donnees, seuil_validation: e.target.value })} placeholder="Seuil de validation" />
-                                <Input value={String(evalConfigForm.data.donnees.regle_moyenne)} onChange={(e) => evalConfigForm.setData('donnees', { ...evalConfigForm.data.donnees, regle_moyenne: e.target.value })} placeholder="Règle de moyenne" />
+                                <select className="rounded-md border border-slate-200 p-2 text-sm" value={String(evalConfigForm.data.donnees.regle_moyenne)} onChange={(e) => evalConfigForm.setData('donnees', { ...evalConfigForm.data.donnees, regle_moyenne: e.target.value })}>
+                                    <option value="ponderee_coefficient">Moyenne pondérée par coefficient</option>
+                                    <option value="simple">Moyenne simple</option>
+                                </select>
                             </div>
                             <Textarea rows={6} value={String(evalConfigForm.data.donnees.appreciations_auto)} onChange={(e) => evalConfigForm.setData('donnees', { ...evalConfigForm.data.donnees, appreciations_auto: e.target.value })} />
                             <div className="flex justify-end"><Button type="submit">Enregistrer</Button></div>
@@ -415,6 +430,8 @@ export default function ParametresIndex(props: Props) {
                                 <Textarea rows={5} value={String(absencesConfigForm.data.donnees.motifs)} onChange={(e) => absencesConfigForm.setData('donnees', { ...absencesConfigForm.data.donnees, motifs: e.target.value })} placeholder="Motifs" />
                                 <Textarea rows={5} value={String(absencesConfigForm.data.donnees.statuts_justification)} onChange={(e) => absencesConfigForm.setData('donnees', { ...absencesConfigForm.data.donnees, statuts_justification: e.target.value })} placeholder="Statuts de justification" />
                                 <Textarea rows={5} value={String(absencesConfigForm.data.donnees.sanctions)} onChange={(e) => absencesConfigForm.setData('donnees', { ...absencesConfigForm.data.donnees, sanctions: e.target.value })} placeholder="Types de sanctions" />
+                                <Textarea rows={5} value={String(absencesConfigForm.data.donnees.types_incident)} onChange={(e) => absencesConfigForm.setData('donnees', { ...absencesConfigForm.data.donnees, types_incident: e.target.value })} placeholder="Types d'incidents disciplinaires" />
+                                <Textarea rows={5} value={String(absencesConfigForm.data.donnees.niveaux_gravite)} onChange={(e) => absencesConfigForm.setData('donnees', { ...absencesConfigForm.data.donnees, niveaux_gravite: e.target.value })} placeholder="Niveaux de gravité" />
                             </div>
                             <div className="flex justify-end"><Button type="submit">Enregistrer</Button></div>
                         </form>
