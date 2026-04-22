@@ -42,8 +42,7 @@ class SecurityHeaders
             return $policy;
         }
 
-        $viteUrl = (string) config('app.vite_dev_server_url', env('VITE_DEV_SERVER_URL', 'http://localhost:5173'));
-        $origin = $this->originFromUrl($viteUrl);
+        $origin = $this->hotViteOrigin();
 
         if ($origin === null) {
             return $policy;
@@ -63,6 +62,49 @@ class SecurityHeaders
         $policy = $this->appendDirectiveSources($policy, 'script-src', $origins);
 
         return $this->appendDirectiveSources($policy, 'connect-src', $connectOrigins);
+    }
+
+    private function hotViteOrigin(): ?string
+    {
+        $clientUrl = Vite::asset('@vite/client');
+        $origin = $this->originFromUrl($clientUrl);
+
+        if ($origin !== null) {
+            return $origin;
+        }
+
+        $viteUrl = (string) config('app.vite_dev_server_url', env('VITE_DEV_SERVER_URL', 'http://localhost:5173'));
+
+        return $this->originFromUrl($viteUrl);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function expandLoopbackOrigins(string $origin): array
+    {
+        $parts = parse_url($origin);
+        $scheme = $parts['scheme'] ?? null;
+        $host = $parts['host'] ?? null;
+        $port = $parts['port'] ?? null;
+
+        if (! is_string($scheme) || ! is_string($host)) {
+            return [$origin];
+        }
+
+        $hosts = [$host];
+
+        if ($host === 'localhost' || $host === '127.0.0.1' || $host === '::1') {
+            $hosts = ['localhost', '127.0.0.1', '::1'];
+        }
+
+        return array_values(array_unique(array_map(function (string $loopbackHost) use ($scheme, $port): string {
+            if (str_contains($loopbackHost, ':')) {
+                $loopbackHost = '['.$loopbackHost.']';
+            }
+
+            return $port ? "{$scheme}://{$loopbackHost}:{$port}" : "{$scheme}://{$loopbackHost}";
+        }, $hosts)));
     }
 
     /**

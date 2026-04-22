@@ -25,6 +25,7 @@ class SecurityHeadersTest extends TestCase
         config()->set('app.vite_dev_server_url', 'http://localhost:5173');
 
         Vite::shouldReceive('isRunningHot')->once()->andReturnTrue();
+        Vite::shouldReceive('asset')->once()->with('@vite/client')->andReturn('http://[::1]:5173/@vite/client');
 
         $response = $this->get('/login');
 
