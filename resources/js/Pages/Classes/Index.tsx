@@ -1,7 +1,7 @@
 import AppLayout from '@/Layouts/AppLayout';
 import { Head, router } from '@inertiajs/react';
 import type { ReactNode } from 'react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Users, Percent, Trophy, CalendarDays } from 'lucide-react';
 import Pagination from '@/Components/Shared/Pagination';
 import { Input } from '@/Components/ui/input';
@@ -88,6 +88,11 @@ export default function ClassesIndex({ classes, selectedClasseId, detail, filter
         statut: filters.statut ?? 'all',
     });
     const [searchTimeout, setSearchTimeout] = useState<number | null>(null);
+    const [isScheduleCollapsed, setIsScheduleCollapsed] = useState(true);
+
+    useEffect(() => {
+        setIsScheduleCollapsed(true);
+    }, [selectedClasseId]);
 
     const submitFilters = (nextFilters: { search: string; statut: string }) => {
         router.get(route('classes.index'), {
@@ -277,36 +282,48 @@ export default function ClassesIndex({ classes, selectedClasseId, detail, filter
                                 </div>
 
                                 <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-                                    <div className="mb-4 flex items-center gap-2">
-                                        <CalendarDays size={18} className="text-blue-600" />
-                                        <h3 className="font-semibold text-gray-900">Emploi du temps</h3>
+                                    <div className="mb-4 flex items-center justify-between gap-2">
+                                        <div className="flex items-center gap-2">
+                                            <CalendarDays size={18} className="text-blue-600" />
+                                            <h3 className="font-semibold text-gray-900">Emploi du temps</h3>
+                                        </div>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => setIsScheduleCollapsed((current) => !current)}
+                                        >
+                                            {isScheduleCollapsed ? 'Déplier' : 'Replier'}
+                                        </Button>
                                     </div>
-                                    <div className="overflow-x-auto">
-                                        <table className="w-full min-w-[680px] border-collapse text-sm">
-                                            <thead>
-                                                <tr className="bg-gray-50 text-left text-gray-600">
-                                                    <th className="border border-gray-200 p-2">Jour</th>
-                                                    <th className="border border-gray-200 p-2">Créneau</th>
-                                                    <th className="border border-gray-200 p-2">Cours</th>
-                                                    <th className="border border-gray-200 p-2">Enseignant</th>
-                                                    <th className="border border-gray-200 p-2">Salle</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {detail.emploiDuTemps.flatMap((jour) =>
-                                                    jour.creneaux.map((creneau, index) => (
-                                                        <tr key={`${jour.jour}-${creneau.heure}`}>
-                                                            {index === 0 ? <td rowSpan={jour.creneaux.length} className="border border-gray-200 p-2 font-medium text-gray-800">{jour.jour}</td> : null}
-                                                            <td className="border border-gray-200 p-2 text-gray-700">{creneau.heure}</td>
-                                                            <td className="border border-gray-200 p-2">{creneau.matiere ?? <span className="text-gray-400">Aucun cours</span>}</td>
-                                                            <td className="border border-gray-200 p-2">{creneau.enseignant ?? <span className="text-gray-400">--</span>}</td>
-                                                            <td className="border border-gray-200 p-2">{creneau.salle ?? <span className="text-gray-400">--</span>}</td>
-                                                        </tr>
-                                                    )),
-                                                )}
-                                            </tbody>
-                                        </table>
-                                    </div>
+                                    {!isScheduleCollapsed && (
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full min-w-[680px] border-collapse text-sm">
+                                                <thead>
+                                                    <tr className="bg-gray-50 text-left text-gray-600">
+                                                        <th className="border border-gray-200 p-2">Jour</th>
+                                                        <th className="border border-gray-200 p-2">Créneau</th>
+                                                        <th className="border border-gray-200 p-2">Cours</th>
+                                                        <th className="border border-gray-200 p-2">Enseignant</th>
+                                                        <th className="border border-gray-200 p-2">Salle</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {detail.emploiDuTemps.flatMap((jour) =>
+                                                        jour.creneaux.map((creneau, index) => (
+                                                            <tr key={`${jour.jour}-${creneau.heure}`}>
+                                                                {index === 0 ? <td rowSpan={jour.creneaux.length} className="border border-gray-200 p-2 font-medium text-gray-800">{jour.jour}</td> : null}
+                                                                <td className="border border-gray-200 p-2 text-gray-700">{creneau.heure}</td>
+                                                                <td className="border border-gray-200 p-2">{creneau.matiere ?? <span className="text-gray-400">Aucun cours</span>}</td>
+                                                                <td className="border border-gray-200 p-2">{creneau.enseignant ?? <span className="text-gray-400">--</span>}</td>
+                                                                <td className="border border-gray-200 p-2">{creneau.salle ?? <span className="text-gray-400">--</span>}</td>
+                                                            </tr>
+                                                        )),
+                                                    )}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
                                 </div>
                             </>
                         )}
