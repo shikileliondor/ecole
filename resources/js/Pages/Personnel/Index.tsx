@@ -137,7 +137,15 @@ export default function PersonnelIndex({ personnel, filters, options, classes }:
                             <h2 className="font-semibold">Nouveau personnel</h2>
 
                             <div className="grid gap-3 md:grid-cols-2">
-                                <div><Label>Matricule</Label><Input value={data.matricule_interne} onChange={(e) => setData('matricule_interne', e.target.value)} /></div>
+                                <div className="md:col-span-2">
+                                    <Label>Matricule</Label>
+                                    <Input
+                                        value={data.matricule_interne || 'Généré automatiquement après enregistrement'}
+                                        readOnly
+                                        disabled
+                                        className="bg-gray-50 text-gray-500"
+                                    />
+                                </div>
                                 <div><Label>Nom</Label><Input value={data.nom} onChange={(e) => setData('nom', e.target.value)} /></div>
                                 <div><Label>Prénoms</Label><Input value={data.prenoms} onChange={(e) => setData('prenoms', e.target.value)} /></div>
                                 <div><Label>Téléphone</Label><Input value={data.telephone} onChange={(e) => setData('telephone', e.target.value)} /></div>

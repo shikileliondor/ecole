@@ -95,6 +95,20 @@ class Personnel extends Model
         ];
     }
 
+    /** Génère automatiquement le matricule interne à la création. */
+    protected static function booted(): void
+    {
+        static::creating(function (self $personnel): void {
+            if (! empty($personnel->matricule_interne)) {
+                return;
+            }
+
+            $annee = now()->year;
+            $nextId = (static::withTrashed()->max('id') ?? 0) + 1;
+            $personnel->matricule_interne = sprintf('PERS-%d-%05d', $annee, $nextId);
+        });
+    }
+
     /** Retourne l'établissement du membre du personnel. */
     public function etablissement(): BelongsTo
     {
