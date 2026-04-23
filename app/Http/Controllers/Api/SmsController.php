@@ -64,12 +64,12 @@ class SmsController extends Controller
     {
         $digits = preg_replace('/\D+/', '', $number) ?? '';
 
-        if (str_starts_with($digits, '225')) {
-            return substr($digits, 3);
+        if (str_starts_with($digits, '225') && strlen($digits) === 13) {
+            return $digits;
         }
 
-        if (str_starts_with($digits, '0') && strlen($digits) === 10) {
-            return substr($digits, 1);
+        if (strlen($digits) === 10) {
+            return '225'.$digits;
         }
 
         return $digits;

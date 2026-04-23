@@ -46,7 +46,7 @@ class SendSmsTest extends TestCase
             ->assertJsonPath('providerMessageId', 'abc-123');
 
         $this->assertDatabaseHas('sms_messages', [
-            'recipient_phone_number' => '0701020304',
+            'recipient_phone_number' => '2250701020304',
             'sender_name' => 'MonService',
             'status_local' => 'accepted',
         ]);
@@ -86,7 +86,7 @@ class SendSmsTest extends TestCase
             ->assertJsonPath('error.code', 'SVC0001');
 
         $this->assertDatabaseHas('sms_messages', [
-            'recipient_phone_number' => '0701020304',
+            'recipient_phone_number' => '2250701020304',
             'status_local' => 'failed',
             'error_code' => 'SVC0001',
         ]);

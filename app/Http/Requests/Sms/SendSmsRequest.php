@@ -16,7 +16,7 @@ class SendSmsRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'to' => ['required', 'string', 'regex:/^(\+?225)?0?[0-9]{8,10}$/'],
+            'to' => ['required', 'string', 'regex:/^(\+?225)?[0-9]{10}$/'],
             'message' => ['required', 'string', 'max:1000'],
             'senderName' => ['required', 'string', 'max:11', 'regex:/^[A-Za-z0-9 ]+$/'],
         ];
