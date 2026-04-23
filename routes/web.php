@@ -4,6 +4,7 @@ use App\Http\Controllers\EleveController;
 use App\Http\Controllers\InscriptionController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\Api\SmsController;
 use App\Http\Controllers\ParametreController;
 use App\Http\Controllers\ClasseController;
 use App\Http\Controllers\NoteBulletinController;
@@ -118,6 +119,10 @@ Route::middleware(['auth'])->prefix('personnel')->name('personnel.')->group(func
     Route::post('/', [PersonnelController::class, 'store'])->name('store');
 });
 
+
+Route::middleware(['auth'])->prefix('api')->name('api.')->group(function (): void {
+    Route::post('/sms/send', [SmsController::class, 'send'])->name('sms.send');
+});
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
