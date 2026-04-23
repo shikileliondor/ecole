@@ -35,7 +35,6 @@ class SendSmsTest extends TestCase
 
         $response = $this->actingAs($user)->postJson(route('api.sms.send'), [
             'to' => '+2250701020304',
-            'senderName' => 'MonService',
             'message' => 'Bonjour',
         ]);
 
@@ -47,9 +46,21 @@ class SendSmsTest extends TestCase
 
         $this->assertDatabaseHas('sms_messages', [
             'recipient_phone_number' => '2250701020304',
-            'sender_name' => 'MonService',
+            'sender_name' => null,
             'status_local' => 'accepted',
         ]);
+
+
+        Http::assertSent(function (\Illuminate\Http\Client\Request $request): bool {
+            if (! str_contains($request->url(), '/smsmessaging/v1/outbound/')) {
+                return true;
+            }
+
+            $payload = $request->data();
+
+            return ! array_key_exists('senderName', $payload['outboundSMSMessageRequest'] ?? []);
+        });
+
     }
 
     public function test_failed_send_is_persisted_with_failed_status(): void
@@ -76,7 +87,6 @@ class SendSmsTest extends TestCase
 
         $response = $this->actingAs($user)->postJson(route('api.sms.send'), [
             'to' => '0701020304',
-            'senderName' => 'MonService',
             'message' => 'Bonjour',
         ]);
 

@@ -17,7 +17,8 @@ class SmsController extends Controller
     public function send(SendSmsRequest $request): JsonResponse
     {
         $normalizedPhone = $this->normalizeIvorianNumber((string) $request->string('to'));
-        $senderName = trim((string) $request->string('senderName'));
+        $senderNameInput = $request->input('senderName');
+        $senderName = is_string($senderNameInput) && trim($senderNameInput) !== '' ? trim($senderNameInput) : null;
         $message = trim((string) $request->string('message'));
 
         $result = $this->orangeSmsService->send(

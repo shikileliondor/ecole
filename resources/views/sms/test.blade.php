@@ -63,8 +63,8 @@
         </div>
 
         <div class="field">
-            <label for="senderName">Sender name</label>
-            <input id="senderName" name="senderName" value="{{ old('senderName', 'MonService') }}" maxlength="11" required>
+            <label for="senderName">Sender name personnalisé (optionnel)</label>
+            <input id="senderName" name="senderName" value="{{ old('senderName') }}" maxlength="11" placeholder="Laisser vide pour sender par défaut">
         </div>
 
         <div class="field">

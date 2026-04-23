@@ -22,7 +22,8 @@ class SmsTestController extends Controller
     public function store(SendSmsRequest $request): RedirectResponse
     {
         $normalizedPhone = $this->normalizeIvorianNumber((string) $request->string('to'));
-        $senderName = trim((string) $request->string('senderName'));
+        $senderNameInput = $request->input('senderName');
+        $senderName = is_string($senderNameInput) && trim($senderNameInput) !== '' ? trim($senderNameInput) : null;
         $message = trim((string) $request->string('message'));
 
         $result = $this->orangeSmsService->send(

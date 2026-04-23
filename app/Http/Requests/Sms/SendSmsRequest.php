@@ -18,7 +18,7 @@ class SendSmsRequest extends FormRequest
         return [
             'to' => ['required', 'string', 'regex:/^(\+?225)?[0-9]{10}$/'],
             'message' => ['required', 'string', 'max:1000'],
-            'senderName' => ['required', 'string', 'max:11', 'regex:/^[A-Za-z0-9 ]+$/'],
+            'senderName' => ['nullable', 'string', 'max:11', 'regex:/^[A-Za-z0-9 ]+$/'],
         ];
     }
 }

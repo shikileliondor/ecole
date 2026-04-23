@@ -14,7 +14,7 @@ class OrangeSmsService
     /**
      * @return array{status: string, provider_message_id?: string, payload: array<mixed>, error_code?: string, error_message?: string}
      */
-    public function send(string $recipientPhoneNumber, string $senderName, string $message): array
+    public function send(string $recipientPhoneNumber, ?string $senderName, string $message): array
     {
         $token = $this->tokenService->getAccessToken();
 
@@ -51,25 +51,30 @@ class OrangeSmsService
         }
     }
 
-    private function performSendRequest(string $token, string $recipientPhoneNumber, string $senderName, string $message)
+    private function performSendRequest(string $token, string $recipientPhoneNumber, ?string $senderName, string $message)
     {
         $senderAddress = (string) config('services.orange_sms.civ_sender_address');
         $encodedSenderAddress = rawurlencode($senderAddress);
+
+        $payload = [
+            'outboundSMSMessageRequest' => [
+                'address' => 'tel:+'.$recipientPhoneNumber,
+                'senderAddress' => $senderAddress,
+                'outboundSMSTextMessage' => [
+                    'message' => $message,
+                ],
+            ],
+        ];
+
+        if (is_string($senderName) && trim($senderName) !== '') {
+            $payload['outboundSMSMessageRequest']['senderName'] = trim($senderName);
+        }
 
         return Http::withToken($token)
             ->acceptJson()
             ->contentType('application/json')
             ->timeout((int) config('services.orange_sms.timeout_seconds', 10))
-            ->post(rtrim((string) config('services.orange_sms.messaging_base_url'), '/')."/outbound/{$encodedSenderAddress}/requests", [
-                'outboundSMSMessageRequest' => [
-                    'address' => 'tel:+'.$recipientPhoneNumber,
-                    'senderAddress' => $senderAddress,
-                    'senderName' => $senderName,
-                    'outboundSMSTextMessage' => [
-                        'message' => $message,
-                    ],
-                ],
-            ])
+            ->post(rtrim((string) config('services.orange_sms.messaging_base_url'), '/')."/outbound/{$encodedSenderAddress}/requests", $payload)
             ->throw();
     }
 

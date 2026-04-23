@@ -15,7 +15,7 @@ return new class extends Migration
             $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('etablissement_id')->nullable()->constrained()->nullOnDelete();
             $table->string('recipient_phone_number', 20);
-            $table->string('sender_name', 11);
+            $table->string('sender_name', 11)->nullable();
             $table->text('message');
             $table->string('provider')->default('orange');
             $table->string('provider_message_id')->nullable()->index();
