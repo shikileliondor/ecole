@@ -4,9 +4,12 @@ use App\Http\Controllers\EleveController;
 use App\Http\Controllers\InscriptionController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\Api\SmsController;
+use App\Http\Controllers\Api\OrangeSmsDeliveryReceiptController;
 use App\Http\Controllers\ParametreController;
 use App\Http\Controllers\ClasseController;
 use App\Http\Controllers\NoteBulletinController;
+use App\Http\Controllers\SmsTestController;
 use App\Http\Controllers\PersonnelController;
 use Illuminate\Support\Facades\Route;
 
@@ -116,6 +119,19 @@ Route::middleware(['auth'])->prefix('inscriptions')->name('inscriptions.')->grou
 Route::middleware(['auth'])->prefix('personnel')->name('personnel.')->group(function (): void {
     Route::get('/', [PersonnelController::class, 'index'])->name('index');
     Route::post('/', [PersonnelController::class, 'store'])->name('store');
+});
+
+
+Route::middleware(['auth'])->prefix('api')->name('api.')->group(function (): void {
+    Route::post('/sms/send', [SmsController::class, 'send'])->name('sms.send');
+});
+
+Route::post('/api/sms/dr', OrangeSmsDeliveryReceiptController::class)->name('api.sms.dr');
+
+
+Route::middleware(['auth'])->prefix('sms')->name('sms.')->group(function (): void {
+    Route::get('/test', [SmsTestController::class, 'create'])->name('test');
+    Route::post('/test', [SmsTestController::class, 'store'])->name('test.store');
 });
 
 Route::middleware('auth')->group(function () {

@@ -35,4 +35,16 @@ return [
         ],
     ],
 
+
+
+    'orange_sms' => [
+        'client_id' => env('ORANGE_SMS_CLIENT_ID'),
+        'client_secret' => env('ORANGE_SMS_CLIENT_SECRET'),
+        'token_url' => env('ORANGE_SMS_TOKEN_URL', 'https://api.orange.com/oauth/v3/token'),
+        'messaging_base_url' => env('ORANGE_SMS_MESSAGING_BASE_URL', 'https://api.orange.com/smsmessaging/v1'),
+        'civ_sender_address' => env('ORANGE_SMS_CIV_SENDER_ADDRESS', 'tel:+2250000'),
+        'timeout_seconds' => env('ORANGE_SMS_TIMEOUT_SECONDS', 10),
+        'dr_shared_secret' => env('ORANGE_SMS_DR_SHARED_SECRET'),
+    ],
+
 ];
