@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\SmsController;
 use App\Http\Controllers\ParametreController;
 use App\Http\Controllers\ClasseController;
 use App\Http\Controllers\NoteBulletinController;
+use App\Http\Controllers\SmsTestController;
 use App\Http\Controllers\PersonnelController;
 use Illuminate\Support\Facades\Route;
 
@@ -123,6 +124,13 @@ Route::middleware(['auth'])->prefix('personnel')->name('personnel.')->group(func
 Route::middleware(['auth'])->prefix('api')->name('api.')->group(function (): void {
     Route::post('/sms/send', [SmsController::class, 'send'])->name('sms.send');
 });
+
+
+Route::middleware(['auth'])->prefix('sms')->name('sms.')->group(function (): void {
+    Route::get('/test', [SmsTestController::class, 'create'])->name('test');
+    Route::post('/test', [SmsTestController::class, 'store'])->name('test.store');
+});
+
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
