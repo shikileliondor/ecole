@@ -36,10 +36,10 @@ class SecurityHeaders
     {
         return implode('; ', [
             "default-src 'self'",
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:8000 http://127.0.0.1:8000 http://localhost:5173 http://127.0.0.1:5173",
-            "script-src-elem 'self' 'unsafe-inline' http://localhost:5173 http://127.0.0.1:5173",
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:8000 http://127.0.0.1:8000 http://[::1]:8000 http://localhost:5173 http://127.0.0.1:5173 http://[::1]:5173",
+            "script-src-elem 'self' 'unsafe-inline' http://localhost:5173 http://127.0.0.1:5173 http://[::1]:5173",
             "style-src 'self' 'unsafe-inline'",
-            "connect-src 'self' http://localhost:8000 http://127.0.0.1:8000 http://localhost:5173 http://127.0.0.1:5173 ws://localhost:5173 ws://127.0.0.1:5173 wss://localhost:5173 wss://127.0.0.1:5173",
+            "connect-src 'self' http://localhost:8000 http://127.0.0.1:8000 http://[::1]:8000 http://localhost:5173 http://127.0.0.1:5173 http://[::1]:5173 ws://localhost:5173 ws://127.0.0.1:5173 ws://[::1]:5173 wss://localhost:5173 wss://127.0.0.1:5173 wss://[::1]:5173",
             "img-src 'self' data: blob:",
             "font-src 'self' data:",
             "frame-ancestors 'none'",
