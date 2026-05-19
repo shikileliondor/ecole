@@ -33,10 +33,8 @@ class EleveService
             ->when(! empty($filters['niveau_id']), fn (Builder $builder): Builder => $builder->whereHas('inscriptions.classe', fn (Builder $q): Builder => $q->where('niveau_id', (int) $filters['niveau_id'])))
             ->when(! empty($filters['statut']), fn (Builder $builder): Builder => $builder->where('statut', (string) $filters['statut']))
             ->when(! empty($filters['sexe']), fn (Builder $builder): Builder => $builder->where('sexe', (string) $filters['sexe']))
-            ->with([
-                'inscriptions' => fn ($builder) => $builder->actives()->with(['classe.niveau'])->latest('date_inscription'),
-                'parentsTuteurs' => fn ($builder) => $builder->orderByDesc('eleve_parents.est_principal'),
-            ])
+            ->select(['id','ulid','etablissement_id','matricule','nom','prenoms','sexe','statut','photo'])
+            ->with(['inscriptionActiveRelation.classe.niveau'])
             ->latest('id')
             ->paginate(20)
             ->appends($filters);
@@ -61,6 +59,7 @@ class EleveService
         $eleve = Eleve::query()
             ->where('etablissement_id', $etablissementId)
             ->with([
+                'inscriptionActiveRelation' => fn ($builder) => $builder->with(['classe.niveau', 'anneeScolaire', 'notes.matiere', 'paiements.typeFrais', 'absences']),
                 'inscriptions' => fn ($builder) => $builder->with(['classe.niveau', 'anneeScolaire', 'notes.matiere', 'paiements.typeFrais', 'absences'])->latest('date_inscription'),
                 'parentsTuteurs',
             ])

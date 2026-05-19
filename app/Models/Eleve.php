@@ -12,8 +12,10 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 
 class Eleve extends Model
 {
@@ -39,6 +41,7 @@ class Eleve extends Model
     ];
 
     protected $fillable = [
+        'ulid',
         'etablissement_id',
         'nom',
         'prenoms',
@@ -67,6 +70,10 @@ class Eleve extends Model
     protected static function booted(): void
     {
         static::creating(function (self $eleve): void {
+            if (empty($eleve->ulid)) {
+                $eleve->ulid = (string) Str::ulid();
+            }
+
             if (! empty($eleve->matricule)) {
                 return;
             }
@@ -81,6 +88,17 @@ class Eleve extends Model
     public function etablissement(): BelongsTo
     {
         return $this->belongsTo(Etablissement::class);
+    }
+
+
+    public function getRouteKeyName(): string
+    {
+        return 'ulid';
+    }
+
+    public function inscriptionActiveRelation(): HasOne
+    {
+        return $this->hasOne(Inscription::class)->where('statut', Inscription::STATUTS['inscrit'])->latestOfMany('date_inscription');
     }
 
     /** Retourne les inscriptions de l'élève. */

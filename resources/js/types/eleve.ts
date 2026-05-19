@@ -1,5 +1,5 @@
 export interface Eleve {
-    id: number;
+    id: string;
     matricule: string;
     nom: string;
     prenoms: string;

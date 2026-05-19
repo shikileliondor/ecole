@@ -24,6 +24,9 @@ class RolesAndPermissionsSeeder extends Seeder
                 'eleves.creer',
                 'eleves.modifier',
                 'eleves.supprimer',
+                'eleves.voir_details',
+                'eleves.voir_contacts',
+                'eleves.gerer_portail',
             ];
 
             foreach ($permissions as $permissionName) {
