@@ -129,9 +129,9 @@ class RapportController extends Controller
                 'elevesExcellents' => CompositionNote::query()->where('moyenne', '>=', 16)->count(),
                 'elevesFaibles' => CompositionNote::query()->where('moyenne', '<', 10)->count(),
                 'matieresFaibles' => CompositionNote::query()
-                    ->select('matieres.nom', DB::raw('ROUND(AVG(composition_notes.moyenne),2) as moyenne'))
+                    ->select('matieres.libelle', DB::raw('ROUND(AVG(composition_notes.moyenne),2) as moyenne'))
                     ->join('matieres', 'matieres.id', '=', 'composition_notes.matiere_id')
-                    ->groupBy('matieres.nom')
+                    ->groupBy('matieres.libelle')
                     ->havingRaw('AVG(composition_notes.moyenne) < 10')
                     ->orderBy('moyenne')
                     ->limit(10)
