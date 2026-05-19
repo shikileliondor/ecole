@@ -468,4 +468,3 @@ export default function AppLayout({
         </div>
     );
 }
-    FileBarChart,
