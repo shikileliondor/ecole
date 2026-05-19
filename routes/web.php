@@ -131,13 +131,13 @@ Route::middleware(['auth'])->prefix('personnel')->name('personnel.')->group(func
     Route::post('/', [PersonnelController::class, 'store'])->name('store');
 });
 
-Route::middleware(['auth'])->prefix('finances')->name('finances.')->group(function (): void {
+Route::middleware(['auth', 'permission:finance.access'])->prefix('finances')->name('finances.')->group(function (): void {
     Route::get('/dashboard', [FinanceController::class, 'dashboard'])->name('dashboard');
     Route::get('/paiements', [FinanceController::class, 'paiements'])->name('paiements');
     Route::get('/impayes', [FinanceController::class, 'impayes'])->name('impayes');
-    Route::post('/paiements', [FinanceController::class, 'storePaiement'])->name('paiements.store');
+    Route::post('/paiements', [FinanceController::class, 'storePaiement'])->middleware('throttle:payment-write')->name('paiements.store');
     Route::put('/paiements/{paiement}', [FinanceController::class, 'updatePaiement'])->name('paiements.update');
-    Route::post('/paiements/{paiement}/annulation', [FinanceController::class, 'annulerPaiement'])->name('paiements.cancel');
+    Route::post('/paiements/{paiement}/annulation', [FinanceController::class, 'annulerPaiement'])->middleware('throttle:payment-cancel')->name('paiements.cancel');
     Route::get('/depenses', [FinanceController::class, 'depenses'])->name('depenses');
     Route::post('/depenses', [FinanceController::class, 'storeDepense'])->name('depenses.store');
     Route::put('/depenses/{depense}', [FinanceController::class, 'updateDepense'])->name('depenses.update');
@@ -149,7 +149,7 @@ Route::middleware(['auth'])->prefix('finances')->name('finances.')->group(functi
 
 
 Route::middleware(['auth'])->prefix('api')->name('api.')->group(function (): void {
-    Route::post('/sms/send', [SmsController::class, 'send'])->name('sms.send');
+    Route::post('/sms/send', [SmsController::class, 'send'])->middleware('throttle:sms-send')->name('sms.send');
 });
 
 
