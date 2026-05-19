@@ -6,7 +6,7 @@ type Option = { id: number; libelle?: string; nom?: string };
 
 export default function RapportsIndex({ filters, filterOptions, kpis, data, exports }: any) {
     const onFilterChange = (key: string, value: string) => {
-        router.get(route('rapports.index'), { ...filters, [key]: value || null }, { preserveState: true, replace: true });
+        router.get(route('finances.rapports.index'), { ...filters, [key]: value || null }, { preserveState: true, replace: true });
     };
 
     const cards = [

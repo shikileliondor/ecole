@@ -108,7 +108,7 @@ const navGroups: NavGroup[] = [
     {
         label: 'RAPPORTS',
         items: [
-            { label: 'Rapports', href: route('rapports.index'), icon: BarChart3 },
+            { label: 'Rapports', href: route('finances.rapports.index'), icon: BarChart3 },
             {
                 label: 'Paramètres',
                 href: route('parametres.index'),
