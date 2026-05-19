@@ -129,10 +129,9 @@ Route::middleware(['auth'])->prefix('finances')->name('finances.')->group(functi
     Route::post('/paiements', [FinanceController::class, 'storePaiement'])->name('paiements.store');
     Route::put('/paiements/{paiement}', [FinanceController::class, 'updatePaiement'])->name('paiements.update');
     Route::post('/paiements/{paiement}/annulation', [FinanceController::class, 'annulerPaiement'])->name('paiements.cancel');
-    Route::get('/depenses', fn () => Inertia::render('Finances/Depenses'))->name('depenses');
-    Route::get('/salaires', fn () => Inertia::render('Finances/Salaires'))->name('salaires');
-    Route::get('/rapports', [\App\Http\Controllers\RapportController::class, 'index'])->name('rapports.index');
-    Route::get('/rapports-financiers', fn () => Inertia::render('Finances/Rapports'))->name('rapports.financiers');
+    Route::get('/depenses', [FinanceController::class, 'depenses'])->name('depenses');
+    Route::get('/salaires', [FinanceController::class, 'salaires'])->name('salaires');
+    Route::get('/rapports', [FinanceController::class, 'rapports'])->name('rapports');
 });
 
 
