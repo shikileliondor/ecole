@@ -16,26 +16,9 @@ use Inertia\Response;
 
 class FinanceController extends Controller
 {
-    public function dashboard(Request $request): Response
-    {
-        $data = $this->buildFinanceDataset($request);
-
-        return Inertia::render('Finances/Dashboard', $data);
-    }
-
-    public function paiements(Request $request): Response
-    {
-        $data = $this->buildFinanceDataset($request);
-
-        return Inertia::render('Finances/Paiements', $data);
-    }
-
-    public function impayes(Request $request): Response
-    {
-        $data = $this->buildFinanceDataset($request);
-
-        return Inertia::render('Finances/Impayes', $data);
-    }
+    public function dashboard(Request $request): Response { return Inertia::render('Finances/Dashboard', $this->buildFinanceDataset($request)); }
+    public function paiements(Request $request): Response { return Inertia::render('Finances/Paiements', $this->buildFinanceDataset($request)); }
+    public function impayes(Request $request): Response { return Inertia::render('Finances/Impayes', $this->buildFinanceDataset($request)); }
 
     public function storePaiement(Request $request): JsonResponse
     {
@@ -49,97 +32,47 @@ class FinanceController extends Controller
             'reference_transaction' => ['nullable', 'string', 'max:255'],
             'note_caissier' => ['nullable', 'string'],
         ]);
-
-        $paiement = Paiement::query()->create([
-            ...$payload,
-            'encaisse_par' => $request->user()?->id,
-        ]);
-
+        $paiement = Paiement::query()->create([...$payload, 'encaisse_par' => $request->user()?->id]);
         return response()->json(['message' => 'Paiement enregistré.', 'id' => $paiement->id], 201);
+    }
+
+    public function annulerPaiement(Request $request, Paiement $paiement): JsonResponse
+    {
+        $payload = $request->validate(['motif_annulation' => ['required', 'string', 'min:3']]);
+        $paiement->update(['statut' => 'annule', 'note_caissier' => $payload['motif_annulation']]);
+        return response()->json(['message' => 'Paiement annulé.']);
     }
 
     private function buildFinanceDataset(Request $request): array
     {
         $etablissementId = (int) $request->user()->etablissement_id;
-
-        $paiements = Paiement::query()
-            ->whereHas('inscription.classe', fn ($q) => $q->where('etablissement_id', $etablissementId))
-            ->with(['inscription.eleve', 'inscription.classe', 'typeFrais'])
-            ->latest('date_paiement')
-            ->get();
-
-        $inscriptions = Inscription::query()
-            ->whereHas('classe', fn ($q) => $q->where('etablissement_id', $etablissementId))
-            ->with(['eleve', 'classe', 'paiements', 'anneeScolaire'])
-            ->get();
-
+        $paiements = Paiement::query()->whereHas('inscription.classe', fn ($q) => $q->where('etablissement_id', $etablissementId))->with(['inscription.eleve', 'inscription.classe', 'typeFrais', 'encaissePar'])->latest('date_paiement')->get();
+        $inscriptions = Inscription::query()->whereHas('classe', fn ($q) => $q->where('etablissement_id', $etablissementId))->with(['eleve', 'classe', 'paiements', 'anneeScolaire'])->get();
         $classes = Classe::query()->where('etablissement_id', $etablissementId)->orderBy('nom')->get(['id', 'nom']);
-        $annees = AnneeScolaire::query()->orderByDesc('date_debut')->get(['id', 'libelle']);
+        $annees = AnneeScolaire::query()->where('etablissement_id', $etablissementId)->orderByDesc('date_debut')->get(['id', 'libelle']);
         $typesFrais = TypeFrais::query()->where('etablissement_id', $etablissementId)->orderBy('ordre')->get(['id', 'libelle', 'montant', 'classe_id', 'annee_scolaire_id']);
 
         $totalAttendu = (int) $paiements->sum('montant_attendu');
-        $totalEncaisse = (int) $paiements->where('statut', '!=', 'impaye')->sum('montant_paye');
+        $totalEncaisse = (int) $paiements->whereNotIn('statut', ['impaye', 'annule'])->sum('montant_paye');
         $reste = max(0, $totalAttendu - $totalEncaisse);
-        $paiementsMois = (int) $paiements->filter(fn ($p) => $p->date_paiement?->isCurrentMonth() && $p->statut !== 'impaye')->sum('montant_paye');
+        $paiementsMois = (int) $paiements->filter(fn ($p) => $p->date_paiement?->isCurrentMonth() && !in_array($p->statut, ['impaye', 'annule'], true))->sum('montant_paye');
 
-        $latestPayments = $paiements->take(10)->map(fn (Paiement $p) => [
-            'id' => $p->id,
-            'date' => $p->date_paiement?->format('d/m/Y') ?? '—',
-            'eleve' => $p->inscription?->eleve?->nom_complet ?? '—',
-            'classe' => $p->inscription?->classe?->nom ?? '—',
-            'montant' => (int) $p->montant_paye,
-            'mode' => $p->mode_paiement,
-            'type_frais' => $p->typeFrais?->libelle ?? '—',
-            'reference' => $p->reference_transaction,
-            'statut' => $p->statut,
-            'inscription_id' => $p->inscription_id,
-            'type_frais_id' => $p->type_frais_id,
+        $payments = $paiements->map(fn (Paiement $p) => [
+            'id' => $p->id, 'date' => $p->date_paiement?->format('d/m/Y') ?? '—', 'eleve' => $p->inscription?->eleve?->nom_complet ?? 'Non renseigné',
+            'classe' => $p->inscription?->classe?->nom ?? 'Non renseigné', 'montant' => (int) $p->montant_paye, 'mode' => $p->mode_paiement,
+            'type_frais' => $p->typeFrais?->libelle ?? 'Non renseigné', 'reference' => $p->reference_transaction, 'statut' => $p->statut,
+            'inscription_id' => $p->inscription_id, 'type_frais_id' => $p->type_frais_id, 'recu_numero' => $p->recu_numero,
+            'note_caissier' => $p->note_caissier, 'motif_annulation' => $p->statut === 'annule' ? $p->note_caissier : null,
+            'encaisse_par_nom' => $p->encaissePar?->name,
         ])->values();
 
         $impayes = $inscriptions->map(function (Inscription $i) {
             $attendu = (int) $i->paiements->sum('montant_attendu');
-            $paye = (int) $i->paiements->sum('montant_paye');
-            $reste = max(0, $attendu - $paye);
+            $paye = (int) $i->paiements->whereNotIn('statut', ['annule'])->sum('montant_paye');
             $last = $i->paiements->sortByDesc('date_paiement')->first();
+            return ['inscription_id' => $i->id,'eleve' => $i->eleve?->nom_complet ?? 'Non renseigné','classe' => $i->classe?->nom ?? 'Non renseigné','type_frais' => $last?->typeFrais?->libelle ?? 'Non renseigné','type_frais_id' => $last?->type_frais_id,'montant_du' => $attendu,'montant_paye' => $paye,'reste' => max(0, $attendu - $paye),'dernier_paiement' => $last?->date_paiement?->format('d/m/Y') ?? 'Non renseigné','statut' => $last?->statut ?? 'impaye','annee_scolaire' => $i->anneeScolaire?->libelle];
+        })->filter(fn (array $r) => $r['reste'] > 0)->values();
 
-            return [
-                'inscription_id' => $i->id,
-                'eleve' => $i->eleve?->nom_complet ?? '—',
-                'classe' => $i->classe?->nom ?? '—',
-                'type_frais' => $last?->typeFrais?->libelle ?? '—',
-                'type_frais_id' => $last?->type_frais_id,
-                'montant_du' => $attendu,
-                'montant_paye' => $paye,
-                'reste' => $reste,
-                'dernier_paiement' => $last?->date_paiement?->format('d/m/Y') ?? '—',
-                'statut' => $last?->statut ?? ($reste > 0 ? 'impaye' : 'paye'),
-                'annee_scolaire' => $i->anneeScolaire?->libelle,
-            ];
-        })->filter(fn (array $row) => $row['reste'] > 0)->values();
-
-        return [
-            'metrics' => [
-                'totalAttendu' => $totalAttendu,
-                'totalEncaisse' => $totalEncaisse,
-                'resteAPayer' => $reste,
-                'impayesEnCours' => $impayes->count(),
-                'tauxRecouvrement' => $totalAttendu > 0 ? round(($totalEncaisse / $totalAttendu) * 100, 2) : 0,
-                'paiementsDuMois' => $paiementsMois,
-                'paiementsAnnules' => 0,
-                'nombrePaiements' => $paiements->count(),
-            ],
-            'payments' => $latestPayments,
-            'impayes' => $impayes,
-            'classes' => $classes,
-            'anneesScolaires' => $annees,
-            'typesFrais' => $typesFrais,
-            'eleves' => $inscriptions->map(fn (Inscription $i) => [
-                'inscription_id' => $i->id,
-                'eleve_id' => $i->eleve_id,
-                'nom' => $i->eleve?->nom_complet,
-                'classe' => $i->classe?->nom,
-                'classe_id' => $i->classe_id,
-            ])->values(),
-        ];
+        return ['metrics' => ['totalAttendu' => $totalAttendu, 'totalEncaisse' => $totalEncaisse, 'resteAPayer' => $reste, 'impayesEnCours' => $impayes->count(), 'tauxRecouvrement' => $totalAttendu > 0 ? round(($totalEncaisse / $totalAttendu) * 100, 2) : 0, 'paiementsDuMois' => $paiementsMois, 'paiementsAnnules' => $paiements->where('statut', 'annule')->count(), 'nombrePaiements' => $paiements->count()], 'payments' => $payments, 'impayes' => $impayes, 'classes' => $classes, 'anneesScolaires' => $annees, 'typesFrais' => $typesFrais, 'modesPaiement' => array_values(Paiement::MODES_PAIEMENT), 'eleves' => $inscriptions->map(fn (Inscription $i) => ['inscription_id' => $i->id, 'eleve_id' => $i->eleve_id, 'nom' => $i->eleve?->nom_complet ?? 'Non renseigné', 'classe' => $i->classe?->nom ?? 'Non renseigné', 'classe_id' => $i->classe_id])->values()];
     }
 }

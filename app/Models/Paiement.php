@@ -28,6 +28,7 @@ class Paiement extends Model
         'paye' => 'paye',
         'partiel' => 'partiel',
         'impaye' => 'impaye',
+        'annule' => 'annule',
     ];
 
     protected $fillable = [

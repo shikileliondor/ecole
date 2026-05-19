@@ -127,6 +127,7 @@ Route::middleware(['auth'])->prefix('finances')->name('finances.')->group(functi
     Route::get('/paiements', [FinanceController::class, 'paiements'])->name('paiements');
     Route::get('/impayes', [FinanceController::class, 'impayes'])->name('impayes');
     Route::post('/paiements', [FinanceController::class, 'storePaiement'])->name('paiements.store');
+    Route::post('/paiements/{paiement}/annulation', [FinanceController::class, 'annulerPaiement'])->name('paiements.cancel');
     Route::get('/depenses', fn () => Inertia::render('Finances/Depenses'))->name('depenses');
     Route::get('/salaires', fn () => Inertia::render('Finances/Salaires'))->name('salaires');
     Route::get('/rapports', fn () => Inertia::render('Finances/Rapports'))->name('rapports');
