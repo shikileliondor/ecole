@@ -7,9 +7,10 @@ import { Input } from '@/Components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/Components/ui/select';
 import { Switch } from '@/Components/ui/switch';
 import { Checkbox } from '@/Components/ui/checkbox';
-import type { Classe, Niveau } from '@/types/eleve';
+type ClasseOption = { value: string; label: string; niveau: string | null; places_disponibles: number };
+type NiveauOption = { value: string; label: string };
 
-type Props = { classes: Classe[]; niveaux: Niveau[]; annee_active: { id: number; libelle: string } | null };
+type Props = { classes: ClasseOption[]; niveaux: NiveauOption[]; annee_active: { value: string; label: string } | null };
 
 export default function ElevesCreate({ classes, niveaux, annee_active }: Props) {
     const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
@@ -34,11 +35,8 @@ export default function ElevesCreate({ classes, niveaux, annee_active }: Props) 
         return years;
     }, [data.date_naissance]);
 
-    const classesFiltrees = useMemo(() => classes.filter((c) => !data.niveau_id || String(c.niveau?.id ?? '') === data.niveau_id), [classes, data.niveau_id]);
-    const selectedClasse = classes.find((c) => String(c.id) === data.classe_id);
-    const capacite = selectedClasse?.capacite_max ?? 0;
-    const inscrits = selectedClasse?.inscriptions_count ?? 0;
-    const ratio = capacite > 0 ? Math.round((inscrits / capacite) * 100) : 0;
+    const classesFiltrees = useMemo(() => classes.filter((c) => !data.niveau_id || c.niveau === niveaux.find((n) => n.value === data.niveau_id)?.label), [classes, data.niveau_id, niveaux]);
+    const selectedClasse = classes.find((c) => c.value === data.classe_id);
 
     const validateStepOne = () => {
         const errors: Record<string, string> = {};
@@ -125,12 +123,12 @@ export default function ElevesCreate({ classes, niveaux, annee_active }: Props) 
                 {currentStep === 3 ? <div className="space-y-4 rounded-xl border border-gray-100 bg-white p-6">
                     <h2 className="font-medium">Affectation</h2>
                     <div className="grid gap-4 md:grid-cols-2">
-                        <Select value={data.niveau_id || 'none'} onValueChange={(value) => { setData('niveau_id', value === 'none' ? '' : value); setData('classe_id', ''); }}><SelectTrigger className="w-full"><SelectValue placeholder="Niveau" /></SelectTrigger><SelectContent><SelectItem value="none">Sélectionner</SelectItem>{niveaux.map((niveau) => <SelectItem key={niveau.id} value={String(niveau.id)}>{niveau.libelle}</SelectItem>)}</SelectContent></Select>
-                        <Select value={data.classe_id || 'none'} onValueChange={(value) => setData('classe_id', value === 'none' ? '' : value)}><SelectTrigger className="w-full"><SelectValue placeholder="Classe" /></SelectTrigger><SelectContent><SelectItem value="none">Sélectionner</SelectItem>{classesFiltrees.map((classe) => <SelectItem key={classe.id} value={String(classe.id)}>{classe.nom}</SelectItem>)}</SelectContent></Select>
+                        <Select value={data.niveau_id || 'none'} onValueChange={(value) => { setData('niveau_id', value === 'none' ? '' : value); setData('classe_id', ''); }}><SelectTrigger className="w-full"><SelectValue placeholder="Niveau" /></SelectTrigger><SelectContent><SelectItem value="none">Sélectionner</SelectItem>{niveaux.map((niveau) => <SelectItem key={niveau.value} value={niveau.value}>{niveau.label}</SelectItem>)}</SelectContent></Select>
+                        <Select value={data.classe_id || 'none'} onValueChange={(value) => setData('classe_id', value === 'none' ? '' : value)}><SelectTrigger className="w-full"><SelectValue placeholder="Classe" /></SelectTrigger><SelectContent><SelectItem value="none">Sélectionner</SelectItem>{classesFiltrees.map((classe) => <SelectItem key={classe.value} value={classe.value}>{classe.label}</SelectItem>)}</SelectContent></Select>
                     </div>
-                    {selectedClasse ? <div className="rounded-xl border p-4 text-sm"><p><strong>Classe:</strong> {selectedClasse.nom}</p><p><strong>Enseignant titulaire:</strong> {selectedClasse.enseignant_titulaire?.nom_complet ?? 'Non renseigné'}</p><p><strong>Nb élèves actuels:</strong> {inscrits} / {capacite}</p><div className="mt-2 h-2 rounded-full bg-gray-100"><div className={`h-full rounded-full ${ratio > 95 ? 'bg-red-500' : ratio >= 80 ? 'bg-orange-500' : 'bg-green-500'}`} style={{ width: `${Math.min(ratio, 100)}%` }} /></div>{ratio > 95 ? <p className="mt-2 text-xs text-red-600">Classe presque pleine</p> : null}</div> : null}
+                    {selectedClasse ? <div className="rounded-xl border p-4 text-sm"><p><strong>Classe:</strong> {selectedClasse.label}</p><p><strong>Niveau:</strong> {selectedClasse.niveau ?? 'Non renseigné'}</p><p><strong>Places disponibles:</strong> {selectedClasse.places_disponibles}</p></div> : null}
 
-                    <div className="rounded-xl border bg-gray-50 p-4"><h3 className="mb-3 font-medium">Récapitulatif</h3><div className="grid gap-3 md:grid-cols-2 text-sm"><div><p><strong>Élève:</strong> {data.nom} {data.prenoms}</p><p><strong>Sexe:</strong> {data.sexe || '—'}</p><p><strong>Âge:</strong> {age ?? '—'} ans</p><p><strong>Classe:</strong> {selectedClasse?.nom ?? '—'}</p></div><div><p><strong>Parent:</strong> {data.parent_nom} {data.parent_prenoms}</p><p><strong>Lien:</strong> {data.parent_lien || '—'}</p><p><strong>Téléphone:</strong> {data.parent_telephone_1 || '—'}</p><p><strong>Année:</strong> {annee_active?.libelle ?? 'Non définie'}</p></div></div></div>
+                    <div className="rounded-xl border bg-gray-50 p-4"><h3 className="mb-3 font-medium">Récapitulatif</h3><div className="grid gap-3 md:grid-cols-2 text-sm"><div><p><strong>Élève:</strong> {data.nom} {data.prenoms}</p><p><strong>Sexe:</strong> {data.sexe || '—'}</p><p><strong>Âge:</strong> {age ?? '—'} ans</p><p><strong>Classe:</strong> {selectedClasse?.label ?? '—'}</p></div><div><p><strong>Parent:</strong> {data.parent_nom} {data.parent_prenoms}</p><p><strong>Lien:</strong> {data.parent_lien || '—'}</p><p><strong>Téléphone:</strong> {data.parent_telephone_1 || '—'}</p><p><strong>Année:</strong> {annee_active?.label ?? 'Non définie'}</p></div></div></div>
                     <div className="flex justify-between"><Button variant="outline" onClick={() => setCurrentStep(2)}><ChevronLeft className="mr-2 h-4 w-4" />Précédent</Button><Button className="bg-[#1a56a0]" disabled={processing} onClick={submit}>{processing ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <UserPlus className="mr-2 h-4 w-4" />}Inscrire l'élève</Button></div>
                 </div> : null}
             </div>

@@ -12,6 +12,7 @@ return [
         'eleves.export.excel',
         'eleves.transferer',
         'eleves.destroy',
+        'inscriptions.create',
         'logout',
         'profile.edit',
     ],
