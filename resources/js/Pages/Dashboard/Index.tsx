@@ -172,7 +172,7 @@ export default function DashboardIndex() {
                         <Link href={route('finances.paiements')} className="rounded-xl border border-gray-100 bg-white p-4 text-sm font-medium text-[#1a56a0] shadow-sm hover:bg-[#1a56a0]/5">Paiements / Encaissements</Link>
                         <Link href={route('finances.impayes')} className="rounded-xl border border-gray-100 bg-white p-4 text-sm font-medium text-[#1a56a0] shadow-sm hover:bg-[#1a56a0]/5">Impayés</Link>
                         <Link href={route('finances.depenses')} className="rounded-xl border border-gray-100 bg-white p-4 text-sm font-medium text-[#1a56a0] shadow-sm hover:bg-[#1a56a0]/5">Dépenses / Caisse</Link>
-                        <Link href={route('finances.rapports')} className="rounded-xl border border-gray-100 bg-white p-4 text-sm font-medium text-[#1a56a0] shadow-sm hover:bg-[#1a56a0]/5">Rapports financiers</Link>
+                        <Link href={route('finances.rapports.index')} className="rounded-xl border border-gray-100 bg-white p-4 text-sm font-medium text-[#1a56a0] shadow-sm hover:bg-[#1a56a0]/5">Rapports financiers</Link>
                     </section>
                 ) : null}
 
