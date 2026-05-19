@@ -93,7 +93,7 @@ const navGroups: NavGroup[] = [
         ],
     },
     {
-        label: 'FINANCES',
+        label: 'Finances',
         items: [
             { label: 'Tableau de bord finance', href: '/finances/dashboard', icon: BarChart3 },
             { label: 'Paiements / Encaissements', href: '/finances/paiements', icon: CreditCard },
