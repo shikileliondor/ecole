@@ -8,8 +8,8 @@ use App\Http\Requests\StoreEleveRequest;
 use App\Http\Requests\UpdateEleveRequest;
 use App\Models\AnneeScolaire;
 use App\Models\Classe;
-use App\Http\Resources\ClasseResource;
-use App\Http\Resources\EleveResource;
+use App\Http\Resources\EleveDetailResource;
+use App\Http\Resources\EleveListResource;
 use App\Http\Resources\InscriptionResource;
 use App\Models\Eleve;
 use App\Models\Inscription;
@@ -36,9 +36,9 @@ class EleveController extends Controller
         $anneeScolaireId = (int) (AnneeScolaire::query()->where('etablissement_id', $etablissementId)->active()->value('id') ?? 0);
 
         return Inertia::render('Eleves/Index', [
-            'eleves' => EleveResource::collection($this->eleveService->getElevesAvecFiltres($filters, $etablissementId)),
-            'classes' => ClasseResource::collection(Classe::query()->select(['id','nom','niveau_id'])->where('etablissement_id', $etablissementId)->with('niveau:id,libelle')->orderBy('nom')->get()),
-            'niveaux' => Niveau::query()->orderBy('ordre')->get(),
+            'eleves' => EleveListResource::collection($this->eleveService->getElevesAvecFiltres($filters, $etablissementId)),
+            'classes' => Classe::query()->select(['id','nom'])->where('etablissement_id', $etablissementId)->orderBy('nom')->get()->map(fn (Classe $classe): array => ['value' => (string) $classe->id, 'label' => $classe->nom]),
+            'niveaux' => Niveau::query()->orderBy('ordre')->get(['id', 'libelle'])->map(fn (Niveau $niveau): array => ['value' => (string) $niveau->id, 'label' => $niveau->libelle]),
             'filters' => $filters,
             'stats' => $this->eleveService->getStatsEleves($etablissementId, $anneeScolaireId),
         ]);
@@ -51,7 +51,7 @@ class EleveController extends Controller
 
         return Inertia::render('Eleves/Create', [
             'classes' => Classe::query()->where('etablissement_id', $etablissementId)->with('niveau')->withCount('inscriptions')->orderBy('nom')->get(),
-            'niveaux' => Niveau::query()->orderBy('ordre')->get(),
+            'niveaux' => Niveau::query()->orderBy('ordre')->get(['id', 'libelle'])->map(fn (Niveau $niveau): array => ['value' => (string) $niveau->id, 'label' => $niveau->libelle]),
             'annee_active' => $anneeActive,
         ]);
     }
@@ -75,7 +75,7 @@ class EleveController extends Controller
         $inscriptionActive = $eleve->inscriptions->firstWhere('statut', Inscription::STATUTS['inscrit']);
 
         return Inertia::render('Eleves/Show', [
-            'eleve' => EleveResource::make($eleve),
+            'eleve' => EleveDetailResource::make($eleve),
             'inscription_active' => $inscriptionActive ? InscriptionResource::make($inscriptionActive) : null,
             'notes_par_trimestre' => $inscriptionActive ? $this->eleveService->getNotesParTrimestre($inscriptionActive->id) : [1 => [], 2 => [], 3 => []],
             'paiements' => $inscriptionActive?->paiements ?? collect(),
@@ -88,9 +88,9 @@ class EleveController extends Controller
     {
         $etablissementId = (int) auth()->user()->etablissement_id;
         return Inertia::render('Eleves/Edit', [
-            'eleve' => EleveResource::make($this->eleveService->getFicheEleve($eleve->id, $etablissementId)),
-            'classes' => ClasseResource::collection(Classe::query()->select(['id','nom','niveau_id'])->where('etablissement_id', $etablissementId)->with('niveau:id,libelle')->orderBy('nom')->get()),
-            'niveaux' => Niveau::query()->orderBy('ordre')->get(),
+            'eleve' => EleveDetailResource::make($this->eleveService->getFicheEleve($eleve->id, $etablissementId)),
+            'classes' => Classe::query()->select(['id','nom'])->where('etablissement_id', $etablissementId)->orderBy('nom')->get()->map(fn (Classe $classe): array => ['value' => (string) $classe->id, 'label' => $classe->nom]),
+            'niveaux' => Niveau::query()->orderBy('ordre')->get(['id', 'libelle'])->map(fn (Niveau $niveau): array => ['value' => (string) $niveau->id, 'label' => $niveau->libelle]),
         ]);
     }
 

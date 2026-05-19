@@ -1,6 +1,18 @@
 <?php
+
 return [
     'only' => [
-        'dashboard','eleves.*','inscriptions.*','classes.index','emplois-du-temps.*','notes-bulletins.*','finances.*','personnel.*','parametres.*','rapports.*','profile.*','logout',
+        'dashboard',
+        'eleves.index',
+        'eleves.create',
+        'eleves.show',
+        'eleves.edit',
+        'eleves.export.pdf',
+        'eleves.export.word',
+        'eleves.export.excel',
+        'eleves.transferer',
+        'eleves.destroy',
+        'logout',
+        'profile.edit',
     ],
 ];

@@ -1,7 +1,7 @@
 import AppLayout from '@/Layouts/AppLayout';
 import { Head, Link, router } from '@inertiajs/react';
-import { useMemo, useState } from 'react';
-import { AlertCircle, ArrowRightLeft, Award, Download, EllipsisVertical, Eye, FileSpreadsheet, FileText, Pencil, Search, Trash2, UserCheck, UserPlus, Users } from 'lucide-react';
+import { useState } from 'react';
+import { AlertCircle, ArrowRightLeft, Download, EllipsisVertical, Eye, FileSpreadsheet, FileText, Pencil, Search, Trash2, UserCheck, UserPlus, Users } from 'lucide-react';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/Components/ui/select';
@@ -22,14 +22,14 @@ import EleveAvatar from '@/Components/Eleves/EleveAvatar';
 import NiveauBadge from '@/Components/Eleves/NiveauBadge';
 import StatutBadge from '@/Components/Eleves/StatutBadge';
 import Pagination from '@/Components/Shared/Pagination';
-import type { Classe, Eleve, Niveau, PaginationLink, PaginationMeta, Stats } from '@/types/eleve';
+import type { Eleve, PaginationLink, PaginationMeta, Stats, SelectOption } from '@/types/eleve';
 
 type Filters = { search?: string; classe_id?: string; niveau_id?: string; statut?: string; sexe?: string };
 
 type Props = {
     eleves: { data: Eleve[]; links: PaginationLink[]; meta?: PaginationMeta; from?: number | null; to?: number | null; total?: number };
-    classes: Classe[];
-    niveaux: Niveau[];
+    classes: SelectOption[];
+    niveaux: SelectOption[];
     filters: Filters;
     stats: Stats;
 };
@@ -43,10 +43,6 @@ export default function ElevesIndex({ eleves, classes, niveaux, filters, stats }
     const [ecoleDestination, setEcoleDestination] = useState('');
     const [eleveASupprimer, setEleveASupprimer] = useState<Eleve | null>(null);
 
-    const classesFiltrees = useMemo(() => {
-        if (!localFilters.niveau_id) return classesList;
-        return classesList.filter((c) => String(c.niveau?.id ?? '') === localFilters.niveau_id);
-    }, [classesList, localFilters.niveau_id]);
 
     const hasActiveFilters = Object.values(localFilters).some((value) => !!value);
 
@@ -62,7 +58,6 @@ export default function ElevesIndex({ eleves, classes, niveaux, filters, stats }
         setSearchTimeout(timeout);
     };
 
-    const currentClasse = (eleve: Eleve) => eleve.inscription_active?.classe ?? eleve.inscriptions?.[0]?.classe;
 
     return (
         <AppLayout title="Élèves">
@@ -84,7 +79,6 @@ export default function ElevesIndex({ eleves, classes, niveaux, filters, stats }
                     <StatCard icon={<Users className="h-5 w-5" />} label="Total élèves" value={stats.total_eleves} color="bg-blue-100 text-blue-700" />
                     <StatCard icon={<UserCheck className="h-5 w-5" />} label="Garçons" value={stats.total_garcons} color="bg-indigo-100 text-indigo-700" />
                     <StatCard icon={<UserCheck className="h-5 w-5" />} label="Filles" value={stats.total_filles} color="bg-pink-100 text-pink-700" />
-                    <StatCard icon={<Award className="h-5 w-5" />} label="Boursiers" value={stats.total_boursiers} color="bg-amber-100 text-amber-700" />
                     <StatCard icon={<UserPlus className="h-5 w-5" />} label="Nouveaux ce mois" value={stats.nouveaux_ce_mois} color="bg-green-100 text-green-700" />
                 </section>
 
@@ -103,7 +97,7 @@ export default function ElevesIndex({ eleves, classes, niveaux, filters, stats }
                             <SelectTrigger className="w-full"><SelectValue placeholder="Niveau" /></SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">Tous les niveaux</SelectItem>
-                                {niveaux.map((niveau) => <SelectItem key={niveau.id} value={String(niveau.id)}>{niveau.libelle}</SelectItem>)}
+                                {niveaux.map((niveau) => <SelectItem key={niveau.value} value={String(niveau.value)}>{niveau.label}</SelectItem>)}
                             </SelectContent>
                         </Select>
 
@@ -115,7 +109,7 @@ export default function ElevesIndex({ eleves, classes, niveaux, filters, stats }
                             <SelectTrigger className="w-full"><SelectValue placeholder="Classe" /></SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">Toutes les classes</SelectItem>
-                                {classesFiltrees.map((classe) => <SelectItem key={classe.id} value={String(classe.id)}>{classe.nom}</SelectItem>)}
+                                {classesList.map((classe) => <SelectItem key={classe.value} value={String(classe.value)}>{classe.label}</SelectItem>)}
                             </SelectContent>
                         </Select>
 
@@ -159,12 +153,11 @@ export default function ElevesIndex({ eleves, classes, niveaux, filters, stats }
                                 </tr></thead>
                                 <tbody>
                                     {eleves.data.map((eleve) => {
-                                        const classe = currentClasse(eleve);
                                         return (
                                             <tr key={eleve.id} className="border-t border-gray-100 transition hover:bg-gray-50">
-                                                <td className="px-4 py-3"><div className="flex items-center gap-3"><EleveAvatar photo={eleve.photo} nom={eleve.nom} prenoms={eleve.prenoms} /><div><p className="font-medium text-gray-800">{eleve.nom} {eleve.prenoms}</p><p className="text-xs text-gray-500">{classe?.nom ?? 'Non affecté'}</p></div></div></td>
+                                                <td className="px-4 py-3"><div className="flex items-center gap-3"><EleveAvatar photo={eleve.photo} nom={eleve.nom} prenoms={eleve.prenoms} /><div><p className="font-medium text-gray-800">{eleve.nom} {eleve.prenoms}</p><p className="text-xs text-gray-500">{eleve.classe ?? 'Non affecté'}</p></div></div></td>
                                                 <td className="px-4 py-3"><span className="rounded bg-gray-100 px-2 py-1 font-mono text-xs">{eleve.matricule}</span></td>
-                                                <td className="px-4 py-3">{classe?.niveau?.libelle ? <NiveauBadge niveau={classe.niveau.libelle} /> : '—'}</td>
+                                                <td className="px-4 py-3">{eleve.niveau ? <NiveauBadge niveau={eleve.niveau} /> : '—'}</td>
                                                 <td className="px-4 py-3 text-sm">{eleve.sexe === 'M' ? 'Garçon' : 'Fille'}</td>
                                                 <td className="px-4 py-3"><StatutBadge statut={eleve.statut} /></td>
                                                 <td className="px-4 py-3 text-right">
