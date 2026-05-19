@@ -1,32 +1,21 @@
 import { router } from '@inertiajs/react';
 import { Button } from '@/Components/ui/button';
-import type { PaginationLink, PaginationMeta } from '@/types/eleve';
+import type { PaginationLink } from '@/types/eleve';
 
 type PaginationProps = {
     links: PaginationLink[];
-    meta?: PaginationMeta;
 };
 
 function decodeLabel(label: string): string {
     return label.replace('&laquo;', '«').replace('&raquo;', '»');
 }
 
-export default function Pagination({ links, meta }: PaginationProps) {
+export default function Pagination({ links }: PaginationProps) {
     if (!links.length) {
         return null;
     }
-
-    const from = meta?.from ?? 0;
-    const to = meta?.to ?? 0;
-    const total = meta?.total ?? 0;
-
     return (
-        <div className="mt-4 flex flex-col items-center justify-between gap-3 border-t border-gray-100 pt-4 md:flex-row">
-            <p className="text-sm text-gray-500">
-                Affichage de {from} à {to} sur {total} résultats
-            </p>
-
-            <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
                 {links.map((link, index) => {
                     const isEdge = index === 0 || index === links.length - 1;
                     const baseClass = link.active
@@ -48,6 +37,5 @@ export default function Pagination({ links, meta }: PaginationProps) {
                     );
                 })}
             </div>
-        </div>
     );
 }
