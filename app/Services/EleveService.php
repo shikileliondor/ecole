@@ -48,7 +48,6 @@ class EleveService
             'total_eleves' => Eleve::query()->where('etablissement_id', $etablissementId)->where('statut', Eleve::STATUTS['actif'])->count(),
             'total_garcons' => Eleve::query()->where('etablissement_id', $etablissementId)->where('statut', Eleve::STATUTS['actif'])->where('sexe', Eleve::SEXES['M'])->count(),
             'total_filles' => Eleve::query()->where('etablissement_id', $etablissementId)->where('statut', Eleve::STATUTS['actif'])->where('sexe', Eleve::SEXES['F'])->count(),
-            'total_boursiers' => Eleve::query()->where('etablissement_id', $etablissementId)->where('est_boursier', true)->count(),
             'nouveaux_ce_mois' => Eleve::query()->where('etablissement_id', $etablissementId)->whereHas('inscriptions', fn (Builder $builder): Builder => $builder
                 ->where('annee_scolaire_id', $anneeScolaireId)
                 ->whereMonth('date_inscription', now()->month)
