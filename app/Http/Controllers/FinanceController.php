@@ -9,7 +9,7 @@ use App\Models\Classe;
 use App\Models\Inscription;
 use App\Models\Paiement;
 use App\Models\TypeFrais;
-use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -20,7 +20,7 @@ class FinanceController extends Controller
     public function paiements(Request $request): Response { return Inertia::render('Finances/Paiements', $this->buildFinanceDataset($request)); }
     public function impayes(Request $request): Response { return Inertia::render('Finances/Impayes', $this->buildFinanceDataset($request)); }
 
-    public function storePaiement(Request $request): JsonResponse
+    public function storePaiement(Request $request): RedirectResponse
     {
         $payload = $request->validate([
             'inscription_id' => ['required', 'integer', 'exists:inscriptions,id'],
@@ -32,15 +32,38 @@ class FinanceController extends Controller
             'reference_transaction' => ['nullable', 'string', 'max:255'],
             'note_caissier' => ['nullable', 'string'],
         ]);
-        $paiement = Paiement::query()->create([...$payload, 'encaisse_par' => $request->user()?->id]);
-        return response()->json(['message' => 'Paiement enregistré.', 'id' => $paiement->id], 201);
+        Paiement::query()->create([...$payload, 'encaisse_par' => $request->user()?->id]);
+
+        return back()->with('success', 'Paiement enregistré.');
     }
 
-    public function annulerPaiement(Request $request, Paiement $paiement): JsonResponse
+
+    public function updatePaiement(Request $request, Paiement $paiement): RedirectResponse
+    {
+        $payload = $request->validate([
+            'montant_attendu' => ['required', 'integer', 'min:0'],
+            'montant_paye' => ['required', 'integer', 'min:1'],
+            'mode_paiement' => ['required', 'string'],
+            'date_paiement' => ['required', 'date'],
+            'reference_transaction' => ['nullable', 'string', 'max:255'],
+            'note_caissier' => ['nullable', 'string'],
+        ]);
+
+        if ($paiement->statut === 'annule') {
+            return back()->withErrors(['paiement' => 'Un paiement annulé ne peut pas être modifié.']);
+        }
+
+        $paiement->update($payload);
+
+        return back()->with('success', 'Paiement modifié.');
+    }
+
+    public function annulerPaiement(Request $request, Paiement $paiement): RedirectResponse
     {
         $payload = $request->validate(['motif_annulation' => ['required', 'string', 'min:3']]);
         $paiement->update(['statut' => 'annule', 'note_caissier' => $payload['motif_annulation']]);
-        return response()->json(['message' => 'Paiement annulé.']);
+
+        return back()->with('success', 'Paiement annulé.');
     }
 
     private function buildFinanceDataset(Request $request): array
