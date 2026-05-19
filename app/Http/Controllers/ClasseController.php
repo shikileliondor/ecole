@@ -45,7 +45,7 @@ class ClasseController extends Controller
         }
 
         $classes = $classesQuery
-            ->paginate(12)
+            ->paginate(6)
             ->withQueryString();
 
         $classesItems = $classes->getCollection();
