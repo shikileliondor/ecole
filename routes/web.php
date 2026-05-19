@@ -3,6 +3,7 @@
 use App\Http\Controllers\EleveController;
 use App\Http\Controllers\InscriptionController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\EmploiDuTempsController;
 use App\Http\Controllers\FinanceController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Api\SmsController;
@@ -101,6 +102,14 @@ Route::middleware(['auth'])->prefix('notes-bulletins')->name('notes-bulletins.')
     Route::post('/compositions/{composition}/notes', [NoteBulletinController::class, 'storeNotes'])->name('compositions.notes.store');
     Route::post('/compositions/{composition}/notes-eleves', [NoteBulletinController::class, 'storeEleveNotes'])->name('compositions.notes-eleves.store');
     Route::get('/compositions/{composition}/export', [NoteBulletinController::class, 'exportComposition'])->name('compositions.export');
+});
+
+
+Route::middleware(['auth'])->prefix('scolarite/emplois-du-temps')->name('emplois-du-temps.')->group(function (): void {
+    Route::get('/', [EmploiDuTempsController::class, 'index'])->name('index');
+    Route::post('/', [EmploiDuTempsController::class, 'store'])->name('store');
+    Route::patch('/{id}', [EmploiDuTempsController::class, 'update'])->name('update');
+    Route::delete('/{id}', [EmploiDuTempsController::class, 'destroy'])->name('destroy');
 });
 
 Route::middleware(['auth'])->prefix('classes')->name('classes.')->group(function (): void {

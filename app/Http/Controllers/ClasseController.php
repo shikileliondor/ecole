@@ -128,8 +128,8 @@ class ClasseController extends Controller
      */
     private function resolveEmploiDuTemps(int $classeId, int $etablissementId): array
     {
-        $defaultCreneaux = ['07:30-09:00', '09:15-10:45', '11:00-12:30', '14:00-15:30'];
-        $base = collect(['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi'])
+        $defaultCreneaux = ['08:00-09:00', '09:00-10:00', '10:00-11:00', '11:00-12:00', '14:00-15:00', '15:00-16:00'];
+        $base = collect(['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'])
             ->map(fn (string $jour): array => [
                 'jour' => $jour,
                 'creneaux' => collect($defaultCreneaux)->map(fn (string $heure): array => [
@@ -149,38 +149,27 @@ class ClasseController extends Controller
             return $base->all();
         }
 
-        $rawEntries = $config['classes'][$classeId] ?? null;
+        $entries = collect(is_array($config) ? ($config['entries'] ?? []) : [])->filter(fn ($entry) => is_array($entry) && (int) ($entry['classe_id'] ?? 0) === $classeId);
 
-        if (! is_array($rawEntries)) {
+        if ($entries->isEmpty()) {
             return $base->all();
         }
 
-        return $base->map(function (array $jourData) use ($rawEntries): array {
+        return $base->map(function (array $jourData) use ($entries): array {
             $jour = $jourData['jour'];
-            $jourCreneaux = $rawEntries[$jour] ?? [];
-
-            if (! is_array($jourCreneaux)) {
-                return $jourData;
-            }
-
-            $creneaux = collect($jourData['creneaux'])->map(function (array $creneau) use ($jourCreneaux): array {
-                $rawCreneau = $jourCreneaux[$creneau['heure']] ?? null;
-
-                if (! is_array($rawCreneau)) {
-                    return $creneau;
-                }
-
-                return [
-                    'heure' => $creneau['heure'],
-                    'matiere' => $rawCreneau['matiere'] ?? null,
-                    'enseignant' => $rawCreneau['enseignant'] ?? null,
-                    'salle' => $rawCreneau['salle'] ?? null,
-                ];
-            })->all();
 
             return [
                 'jour' => $jour,
-                'creneaux' => $creneaux,
+                'creneaux' => collect($jourData['creneaux'])->map(function (array $creneau) use ($entries, $jour): array {
+                    $rawCreneau = $entries->first(fn (array $entry) => ($entry['jour'] ?? null) === $jour && (($entry['heure_debut'] ?? '') . '-' . ($entry['heure_fin'] ?? '')) === $creneau['heure']);
+
+                    return [
+                        'heure' => $creneau['heure'],
+                        'matiere' => $rawCreneau['matiere'] ?? null,
+                        'enseignant' => $rawCreneau['enseignant'] ?? null,
+                        'salle' => $rawCreneau['salle'] ?? null,
+                    ];
+                })->all(),
             ];
         })->all();
     }
