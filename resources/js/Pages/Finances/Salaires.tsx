@@ -1,13 +1,9 @@
 import AppLayout from '@/Layouts/AppLayout';
-
-export default function FinancesSalaires() {
-    return (
-        <AppLayout title="Salaires">
-            <div className="space-y-3">
-                <h1 className="text-2xl font-semibold text-gray-900">Salaires</h1>
-                <p className="text-sm text-gray-600">Gestion des paiements de salaires du personnel.</p>
-                <div className="rounded-xl border border-dashed border-gray-300 bg-white p-8" />
-            </div>
-        </AppLayout>
-    );
-}
+import { usePage } from '@inertiajs/react';
+import type { FinanceProps } from './types';
+const formatCurrency = (amount: number) => `${new Intl.NumberFormat('fr-FR').format(Math.round(amount || 0))} FCFA`;
+export default function FinancesSalaires(){ const { props } = usePage<{ props: FinanceProps }>() as any; const data = props as FinanceProps; const salaires = data.salaires ?? []; const payes = salaires.filter((s:any)=>s.statut==='paye'); const attente = salaires.filter((s:any)=>s.statut!=='paye');
+return <AppLayout title='Salaires'><div className='space-y-4 bg-[#F8FAFC] p-4'><div><h1 className='text-2xl font-bold'>Salaires</h1><p className='text-sm text-slate-500'>Préparez, suivez et historisez les salaires du personnel.</p></div>
+<div className='grid gap-3 md:grid-cols-4'>{[['Masse salariale du mois',salaires.reduce((s:any,r:any)=>s+r.net_a_payer,0)],['Salaires payés',payes.length],['Salaires en attente',attente.length],['Avances / retenues',salaires.reduce((s:any,r:any)=>s+(r.deductions||0),0)]].map(([l,v])=><div key={String(l)} className='rounded-2xl border border-slate-200 bg-white p-4 shadow-sm'><p className='text-sm text-slate-500'>{l}</p><p className='text-xl font-semibold'>{typeof v==='number'?formatCurrency(v):String(v)}</p></div>)}</div>
+<div className='rounded-2xl border border-slate-200 bg-white shadow-sm overflow-auto'><table className='min-w-full text-sm'><thead className='bg-slate-50'><tr><th className='p-3 text-left'>Employé</th><th>Poste</th><th>Mois</th><th>Salaire de base</th><th>Primes</th><th>Avances</th><th>Retenues</th><th>Net à payer</th><th>Statut</th></tr></thead><tbody>{salaires.map((s:any)=><tr key={s.id} className='border-t'><td className='p-3'>{s.employe || 'Non renseigné'}</td><td>{s.poste || 'Non renseigné'}</td><td>{s.mois}</td><td>{formatCurrency(s.salaire_base||0)}</td><td>{formatCurrency(s.primes||0)}</td><td>{formatCurrency(s.avances||0)}</td><td>{formatCurrency(s.retenues||0)}</td><td>{formatCurrency((s.salaire_base||0)+(s.primes||0)-(s.avances||0)-(s.retenues||0))}</td><td>{s.statut}</td></tr>)}{salaires.length===0&&<tr><td colSpan={9} className='p-8 text-center text-slate-500'>Aucune donnée disponible</td></tr>}</tbody></table></div>
+</div></AppLayout>; }
