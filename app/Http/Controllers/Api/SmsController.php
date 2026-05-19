@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Sms\SendSmsRequest;
+use App\Models\Eleve;
 use App\Models\SmsMessage;
 use App\Services\Sms\OrangeSmsService;
 use Illuminate\Http\JsonResponse;
@@ -16,10 +17,14 @@ class SmsController extends Controller
 
     public function send(SendSmsRequest $request): JsonResponse
     {
+        $eleve = Eleve::query()->where('ulid', (string) $request->string('eleve'))->where('etablissement_id', auth()->user()?->etablissement_id)->with('parentsTuteurs')->firstOrFail();
         $normalizedPhone = $this->normalizeIvorianNumber((string) $request->string('to'));
         $senderNameInput = $request->input('senderName');
         $senderName = is_string($senderNameInput) && trim($senderNameInput) !== '' ? trim($senderNameInput) : null;
         $message = trim((string) $request->string('message'));
+        $allowedPhones = $eleve->parentsTuteurs->flatMap(fn ($p) => [$this->normalizeIvorianNumber((string) $p->telephone_1), $this->normalizeIvorianNumber((string) ($p->telephone_2 ?? '')), $this->normalizeIvorianNumber((string) ($p->whatsapp ?? ''))])->filter()->unique()->values();
+        abort_unless($allowedPhones->contains($normalizedPhone), 403, "Numéro non autorisé pour cet élève");
+
 
         $result = $this->orangeSmsService->send(
             recipientPhoneNumber: $normalizedPhone,
