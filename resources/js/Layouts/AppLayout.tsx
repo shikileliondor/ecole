@@ -1,6 +1,7 @@
 import { Link, usePage } from '@inertiajs/react';
 import { type PropsWithChildren, useMemo, useState } from 'react';
 import {
+    AlertCircle,
     BarChart3,
     Bell,
     Banknote,
@@ -9,6 +10,7 @@ import {
     ChevronDown,
     ClipboardList,
     CreditCard,
+    FileBarChart,
     LayoutDashboard,
     Mail,
     MailCheck,
@@ -91,9 +93,12 @@ const navGroups: NavGroup[] = [
     {
         label: 'FINANCES',
         items: [
-            { label: 'Paiements', href: '#', icon: CreditCard },
-            { label: 'Frais scolaires', href: '#', icon: Receipt },
-            { label: 'Salaires', href: '#', icon: Banknote },
+            { label: 'Tableau de bord finance', href: '/finances/dashboard', icon: BarChart3 },
+            { label: 'Paiements / Encaissements', href: '/finances/paiements', icon: CreditCard },
+            { label: 'Impayés', href: '/finances/impayes', icon: AlertCircle },
+            { label: 'Dépenses / Caisse', href: '/finances/depenses', icon: Receipt },
+            { label: 'Salaires', href: '/finances/salaires', icon: Banknote },
+            { label: 'Rapports financiers', href: '/finances/rapports', icon: FileBarChart },
         ],
     },
     {
@@ -129,6 +134,7 @@ export default function AppLayout({
     const [isDarkMode, setIsDarkMode] = useState(false);
     const [openedMenus, setOpenedMenus] = useState<Record<string, boolean>>({
         Paramètres: window.location.pathname.startsWith('/parametres'),
+        FINANCES: window.location.pathname.startsWith('/finances'),
     });
 
     const userName = auth.user?.name ?? 'Utilisateur';
@@ -175,6 +181,60 @@ export default function AppLayout({
                             <p className="mb-1 mt-4 px-3 text-[10px] uppercase tracking-widest text-white/40">
                                 {group.label}
                             </p>
+                            {group.label === 'FINANCES' ? (
+                                <div className="space-y-1">
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            setOpenedMenus((prev) => ({
+                                                ...prev,
+                                                FINANCES: !(prev.FINANCES ?? false),
+                                            }))
+                                        }
+                                        className={`flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm transition ${
+                                            openedMenus.FINANCES
+                                                ? 'bg-white/20 font-medium text-white'
+                                                : 'text-white/70 hover:bg-white/10 hover:text-white'
+                                        }`}
+                                    >
+                                        <span>FINANCES</span>
+                                        <ChevronDown
+                                            size={15}
+                                            className={`transition-transform duration-200 ${openedMenus.FINANCES ? 'rotate-180' : ''}`}
+                                        />
+                                    </button>
+
+                                    <div
+                                        className={`overflow-hidden pl-3 transition-all duration-200 ${
+                                            openedMenus.FINANCES ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+                                        }`}
+                                    >
+                                        <div className="ml-4 space-y-1 border-l border-white/20 pl-3">
+                                            {group.items.map((item) => {
+                                                const Icon = item.icon;
+                                                const isActive =
+                                                    item.href !== '#' &&
+                                                    pathname.startsWith(new URL(item.href, window.location.origin).pathname);
+
+                                                return (
+                                                    <Link
+                                                        key={item.label}
+                                                        href={item.href}
+                                                        className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-xs transition ${
+                                                            isActive
+                                                                ? 'bg-white/15 text-white'
+                                                                : 'text-white/70 hover:bg-white/10 hover:text-white'
+                                                        }`}
+                                                    >
+                                                        <Icon size={14} />
+                                                        <span className="truncate">{item.label}</span>
+                                                    </Link>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
                             <div className="space-y-1">
                                 {group.items.map((item) => {
                                     const Icon = item.icon;
@@ -262,6 +322,7 @@ export default function AppLayout({
                                     );
                                 })}
                             </div>
+                            )}
                         </div>
                     ))}
                 </nav>
