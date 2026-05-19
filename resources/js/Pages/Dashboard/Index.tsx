@@ -166,6 +166,16 @@ export default function DashboardIndex() {
                     {canViewScolarite ? <SecondaryCard title="Bulletins générés ce trimestre" value={String(metrics.bulletinsTrimestre)} icon={FileText} /> : null}
                 </section>
 
+                {canViewFinance ? (
+                    <section className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
+                        <Link href={route('finances.dashboard')} className="rounded-xl border border-gray-100 bg-white p-4 text-sm font-medium text-[#1a56a0] shadow-sm hover:bg-[#1a56a0]/5">Tableau de bord finance</Link>
+                        <Link href={route('finances.paiements')} className="rounded-xl border border-gray-100 bg-white p-4 text-sm font-medium text-[#1a56a0] shadow-sm hover:bg-[#1a56a0]/5">Paiements / Encaissements</Link>
+                        <Link href={route('finances.impayes')} className="rounded-xl border border-gray-100 bg-white p-4 text-sm font-medium text-[#1a56a0] shadow-sm hover:bg-[#1a56a0]/5">Impayés</Link>
+                        <Link href={route('finances.depenses')} className="rounded-xl border border-gray-100 bg-white p-4 text-sm font-medium text-[#1a56a0] shadow-sm hover:bg-[#1a56a0]/5">Dépenses / Caisse</Link>
+                        <Link href={route('finances.rapports')} className="rounded-xl border border-gray-100 bg-white p-4 text-sm font-medium text-[#1a56a0] shadow-sm hover:bg-[#1a56a0]/5">Rapports financiers</Link>
+                    </section>
+                ) : null}
+
                 {/* Rangée 3 — Graphiques */}
                 <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
                     {canViewScolarite ? (
@@ -211,7 +221,7 @@ export default function DashboardIndex() {
                         <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
                             <div className="mb-4 flex items-center justify-between">
                                 <h2 className="text-base font-medium text-gray-800">Derniers paiements</h2>
-                                <Link href="#" className="text-sm text-[#1a56a0] hover:underline">
+                                <Link href={route('finances.paiements')} className="text-sm text-[#1a56a0] hover:underline">
                                     Voir tous les paiements
                                 </Link>
                             </div>
@@ -248,7 +258,7 @@ export default function DashboardIndex() {
                         <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
                             <div className="mb-4 flex items-center justify-between">
                                 <h2 className="text-base font-medium text-gray-800">Impayés critiques</h2>
-                                <Link href="#" className="text-sm text-[#1a56a0] hover:underline">
+                                <Link href={route('finances.impayes')} className="text-sm text-[#1a56a0] hover:underline">
                                     Voir tous les impayés
                                 </Link>
                             </div>
