@@ -11,6 +11,7 @@ use App\Http\Controllers\NoteBulletinController;
 use App\Http\Controllers\SmsTestController;
 use App\Http\Controllers\PersonnelController;
 use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
 
 Route::get('/', function () {
     if (auth()->check()) {
@@ -118,6 +119,15 @@ Route::middleware(['auth'])->prefix('inscriptions')->name('inscriptions.')->grou
 Route::middleware(['auth'])->prefix('personnel')->name('personnel.')->group(function (): void {
     Route::get('/', [PersonnelController::class, 'index'])->name('index');
     Route::post('/', [PersonnelController::class, 'store'])->name('store');
+});
+
+Route::middleware(['auth'])->prefix('finances')->name('finances.')->group(function (): void {
+    Route::get('/dashboard', fn () => Inertia::render('Finances/Dashboard'))->name('dashboard');
+    Route::get('/paiements', fn () => Inertia::render('Finances/Paiements'))->name('paiements');
+    Route::get('/impayes', fn () => Inertia::render('Finances/Impayes'))->name('impayes');
+    Route::get('/depenses', fn () => Inertia::render('Finances/Depenses'))->name('depenses');
+    Route::get('/salaires', fn () => Inertia::render('Finances/Salaires'))->name('salaires');
+    Route::get('/rapports', fn () => Inertia::render('Finances/Rapports'))->name('rapports');
 });
 
 
