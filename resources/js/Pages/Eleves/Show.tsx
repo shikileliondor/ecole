@@ -35,7 +35,7 @@ export default function ElevesShow({ eleve, inscription_active, notes_par_trimes
 
     const { auth } = usePage<AuthProps>().props;
 
-    const age = useMemo(() => new Date().getFullYear() - new Date(eleve.date_naissance).getFullYear(), [eleve.date_naissance]);
+    const age = useMemo(() => new Date().getFullYear() - eleve.date_naissance ? new Date(eleve.date_naissance).getFullYear() : new Date().getFullYear(), [eleve.date_naissance]);
 
     const moyenneT1 = useMemo(() => {
         const notes = notes_par_trimestre[1] ?? [];
@@ -53,7 +53,7 @@ export default function ElevesShow({ eleve, inscription_active, notes_par_trimes
                 day: 'numeric',
                 month: 'long',
                 year: 'numeric',
-            }).format(new Date(eleve.date_naissance)),
+            }).format(eleve.date_naissance ? new Date(eleve.date_naissance) : new Date()),
         [eleve.date_naissance],
     );
 
@@ -63,8 +63,8 @@ export default function ElevesShow({ eleve, inscription_active, notes_par_trimes
     const infoRowsLeft = [
         { label: 'Nom complet', value: `${eleve.nom} ${eleve.prenoms}` },
         { label: 'Genre', value: eleve.sexe === 'M' ? 'Garçon' : 'Fille' },
-        { label: 'Date de naissance', value: dateNaissance },
-        { label: 'Lieu de naissance', value: `${eleve.lieu_naissance}, ${eleve.pays_naissance}` },
+        { label: 'Date de naissance', value: eleve.date_naissance ? dateNaissance : 'Non renseignée' },
+        { label: 'Lieu de naissance', value: eleve.lieu_naissance ? `${eleve.lieu_naissance}, ${eleve.pays_naissance ?? ''}` : 'Non renseigné' },
     ];
 
     const infoRowsRight = [

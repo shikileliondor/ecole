@@ -1,7 +1,7 @@
 import AppLayout from '@/Layouts/AppLayout';
 import { Head, Link, router } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
-import { AlertCircle, ArrowRightLeft, Award, Download, EllipsisVertical, Eye, FileSpreadsheet, FileText, Pencil, Search, Trash2, UserCheck, UserPlus, Users, MessageCircle } from 'lucide-react';
+import { AlertCircle, ArrowRightLeft, Award, Download, EllipsisVertical, Eye, FileSpreadsheet, FileText, Pencil, Search, Trash2, UserCheck, UserPlus, Users } from 'lucide-react';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/Components/ui/select';
@@ -61,7 +61,6 @@ export default function ElevesIndex({ eleves, classes, niveaux, filters, stats }
         setSearchTimeout(timeout);
     };
 
-    const principalParent = (eleve: Eleve) => (eleve.parentsTuteurs ?? eleve.parents ?? []).find((p) => p.pivot?.est_principal);
     const currentClasse = (eleve: Eleve) => eleve.inscription_active?.classe ?? eleve.inscriptions?.[0]?.classe;
 
     return (
@@ -155,11 +154,10 @@ export default function ElevesIndex({ eleves, classes, niveaux, filters, stats }
                         <div className="overflow-x-auto">
                             <table className="min-w-full">
                                 <thead className="bg-gray-50 text-xs uppercase text-gray-500"><tr>
-                                    <th className="px-4 py-3 text-left">Élève</th><th className="px-4 py-3 text-left">Matricule</th><th className="px-4 py-3 text-left">Niveau</th><th className="px-4 py-3 text-left">Sexe</th><th className="px-4 py-3 text-left">Parent</th><th className="px-4 py-3 text-left">Statut</th><th className="px-4 py-3 text-right">Actions</th>
+                                    <th className="px-4 py-3 text-left">Élève</th><th className="px-4 py-3 text-left">Matricule</th><th className="px-4 py-3 text-left">Niveau</th><th className="px-4 py-3 text-left">Sexe</th><th className="px-4 py-3 text-left">Statut</th><th className="px-4 py-3 text-right">Actions</th>
                                 </tr></thead>
                                 <tbody>
                                     {eleves.data.map((eleve) => {
-                                        const parent = principalParent(eleve);
                                         const classe = currentClasse(eleve);
                                         return (
                                             <tr key={eleve.id} className="border-t border-gray-100 transition hover:bg-gray-50">
@@ -167,7 +165,6 @@ export default function ElevesIndex({ eleves, classes, niveaux, filters, stats }
                                                 <td className="px-4 py-3"><span className="rounded bg-gray-100 px-2 py-1 font-mono text-xs">{eleve.matricule}</span></td>
                                                 <td className="px-4 py-3">{classe?.niveau?.libelle ? <NiveauBadge niveau={classe.niveau.libelle} /> : '—'}</td>
                                                 <td className="px-4 py-3 text-sm">{eleve.sexe === 'M' ? 'Garçon' : 'Fille'}</td>
-                                                <td className="px-4 py-3 text-sm"><p>{parent ? `${parent.nom} ${parent.prenoms}` : '—'}</p><div className="flex items-center gap-2 text-xs text-gray-500"><span>{parent?.telephone_1 ?? 'N/A'}</span>{parent?.whatsapp ? <a href={`https://wa.me/${parent.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noreferrer"><MessageCircle className="h-4 w-4 text-green-600" /></a> : null}</div></td>
                                                 <td className="px-4 py-3"><StatutBadge statut={eleve.statut} /></td>
                                                 <td className="px-4 py-3 text-right">
                                                     <DropdownMenu>

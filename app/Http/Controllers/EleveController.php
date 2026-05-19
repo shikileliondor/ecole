@@ -8,6 +8,10 @@ use App\Http\Requests\StoreEleveRequest;
 use App\Http\Requests\UpdateEleveRequest;
 use App\Models\AnneeScolaire;
 use App\Models\Classe;
+use App\Http\Resources\ClasseResource;
+use App\Http\Resources\EleveResource;
+use App\Http\Resources\InscriptionResource;
+use App\Models\Eleve;
 use App\Models\Inscription;
 use App\Models\Niveau;
 use App\Services\EleveService;
@@ -32,8 +36,8 @@ class EleveController extends Controller
         $anneeScolaireId = (int) (AnneeScolaire::query()->where('etablissement_id', $etablissementId)->active()->value('id') ?? 0);
 
         return Inertia::render('Eleves/Index', [
-            'eleves' => $this->eleveService->getElevesAvecFiltres($filters, $etablissementId),
-            'classes' => Classe::query()->where('etablissement_id', $etablissementId)->with('niveau')->orderBy('nom')->get(),
+            'eleves' => EleveResource::collection($this->eleveService->getElevesAvecFiltres($filters, $etablissementId)),
+            'classes' => ClasseResource::collection(Classe::query()->select(['id','nom','niveau_id'])->where('etablissement_id', $etablissementId)->with('niveau:id,libelle')->orderBy('nom')->get()),
             'niveaux' => Niveau::query()->orderBy('ordre')->get(),
             'filters' => $filters,
             'stats' => $this->eleveService->getStatsEleves($etablissementId, $anneeScolaireId),
@@ -58,21 +62,21 @@ class EleveController extends Controller
         try {
             $eleve = $this->eleveService->creerEleve($request->validated() + ['photo' => $request->file('photo')], (int) auth()->user()->etablissement_id);
             Log::info('Eleve created', ['eleve_id' => $eleve->id]);
-            return redirect()->route('eleves.show', $eleve->id)->with('success', 'Élève inscrit avec succès');
+            return redirect()->route('eleves.show', $eleve)->with('success', 'Élève inscrit avec succès');
         } catch (\Throwable $e) {
             Log::error('Erreur lors de la création d\'un élève', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
             return redirect()->back()->withInput()->with('error', 'Une erreur est survenue lors de l\'inscription.');
         }
     }
 
-    public function show(int $id): Response
+    public function show(Eleve $eleve): Response
     {
-        $eleve = $this->eleveService->getFicheEleve($id, (int) auth()->user()->etablissement_id);
+        $eleve = $this->eleveService->getFicheEleve($eleve->id, (int) auth()->user()->etablissement_id);
         $inscriptionActive = $eleve->inscriptions->firstWhere('statut', Inscription::STATUTS['inscrit']);
 
         return Inertia::render('Eleves/Show', [
-            'eleve' => $eleve,
-            'inscription_active' => $inscriptionActive,
+            'eleve' => EleveResource::make($eleve),
+            'inscription_active' => $inscriptionActive ? InscriptionResource::make($inscriptionActive) : null,
             'notes_par_trimestre' => $inscriptionActive ? $this->eleveService->getNotesParTrimestre($inscriptionActive->id) : [1 => [], 2 => [], 3 => []],
             'paiements' => $inscriptionActive?->paiements ?? collect(),
             'absences' => $inscriptionActive?->absences ?? collect(),
@@ -80,32 +84,32 @@ class EleveController extends Controller
         ]);
     }
 
-    public function edit(int $id): Response
+    public function edit(Eleve $eleve): Response
     {
         $etablissementId = (int) auth()->user()->etablissement_id;
         return Inertia::render('Eleves/Edit', [
-            'eleve' => $this->eleveService->getFicheEleve($id, $etablissementId),
-            'classes' => Classe::query()->where('etablissement_id', $etablissementId)->with('niveau')->orderBy('nom')->get(),
+            'eleve' => EleveResource::make($this->eleveService->getFicheEleve($eleve->id, $etablissementId)),
+            'classes' => ClasseResource::collection(Classe::query()->select(['id','nom','niveau_id'])->where('etablissement_id', $etablissementId)->with('niveau:id,libelle')->orderBy('nom')->get()),
             'niveaux' => Niveau::query()->orderBy('ordre')->get(),
         ]);
     }
 
-    public function update(UpdateEleveRequest $request, int $id): RedirectResponse
+    public function update(UpdateEleveRequest $request, Eleve $eleve): RedirectResponse
     {
-        $eleve = $this->eleveService->mettreAJourEleve($id, $request->validated() + ['photo' => $request->file('photo')]);
-        return redirect()->route('eleves.show', $eleve->id)->with('success', 'Informations de l\'élève mises à jour avec succès');
+        $eleve = $this->eleveService->mettreAJourEleve($eleve->id, $request->validated() + ['photo' => $request->file('photo')]);
+        return redirect()->route('eleves.show', $eleve)->with('success', 'Informations de l\'élève mises à jour avec succès');
     }
 
-    public function destroy(int $id): RedirectResponse
+    public function destroy(Eleve $eleve): RedirectResponse
     {
-        $this->eleveService->supprimerEleve($id);
+        $this->eleveService->supprimerEleve($eleve->id);
         return redirect()->route('eleves.index')->with('success', 'Élève supprimé');
     }
 
-    public function transferer(Request $request, int $id): RedirectResponse
+    public function transferer(Request $request, Eleve $eleve): RedirectResponse
     {
         $validated = $request->validate(['ecole_destination' => ['required', 'string', 'max:255']]);
-        $this->eleveService->transfererEleve($id, $validated['ecole_destination']);
+        $this->eleveService->transfererEleve($eleve->id, $validated['ecole_destination']);
         return redirect()->route('eleves.index')->with('success', 'Élève transféré avec succès');
     }
 

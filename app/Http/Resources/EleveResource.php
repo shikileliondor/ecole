@@ -1,0 +1,6 @@
+<?php
+declare(strict_types=1);
+namespace App\Http\Resources;
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
+class EleveResource extends JsonResource{public function toArray(Request $request): array{$d=(bool)$request->user()?->can('eleves.voir_details');return ['id'=>$this->ulid ?? (string)$this->id,'matricule'=>$this->matricule,'nom'=>$this->nom,'prenoms'=>$this->prenoms,'sexe'=>$this->sexe,'statut'=>$this->statut,'photo'=>$this->photo,'inscription_active'=>$this->whenLoaded('inscriptions',fn()=>InscriptionResource::make($this->inscriptions->first())),'inscriptions'=>$this->whenLoaded('inscriptions',fn()=>InscriptionResource::collection($this->inscriptions)),'date_naissance'=>$this->when($d,$this->date_naissance),'lieu_naissance'=>$this->when($d,$this->lieu_naissance),'pays_naissance'=>$this->when($d,$this->pays_naissance),'nationalite'=>$this->when($d,$this->nationalite),'situation_familiale'=>$this->when($d,$this->situation_familiale),'est_boursier'=>$this->when($d,$this->est_boursier),'extrait_naissance_numero'=>$this->when($d,$this->extrait_naissance_numero),'parents_tuteurs'=>$this->whenLoaded('parentsTuteurs',fn()=>ParentTuteurResource::collection($this->parentsTuteurs))];}}

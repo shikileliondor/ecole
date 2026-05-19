@@ -44,18 +44,18 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/export/word', [EleveController::class, 'exportWord'])->name('export.word');
             Route::get('/export/excel', [EleveController::class, 'exportExcel'])->name('export.excel');
 
-            Route::get('/{id}', [EleveController::class, 'show'])->name('show');
+            Route::get('/{eleve}', [EleveController::class, 'show'])->name('show');
 
-            Route::get('/{id}/edit', [EleveController::class, 'edit'])
+            Route::get('/{eleve}/edit', [EleveController::class, 'edit'])
                 ->name('edit');
 
-            Route::put('/{id}', [EleveController::class, 'update'])
+            Route::put('/{eleve}', [EleveController::class, 'update'])
                 ->name('update');
 
-            Route::delete('/{id}', [EleveController::class, 'destroy'])
+            Route::delete('/{eleve}', [EleveController::class, 'destroy'])
                 ->name('destroy');
 
-            Route::post('/{id}/transferer', [EleveController::class, 'transferer'])->name('transferer');
+            Route::post('/{eleve}/transferer', [EleveController::class, 'transferer'])->name('transferer');
         });
 });
 
@@ -108,8 +108,8 @@ Route::middleware(['auth'])->prefix('notes-bulletins')->name('notes-bulletins.')
 Route::middleware(['auth'])->prefix('scolarite/emplois-du-temps')->name('emplois-du-temps.')->group(function (): void {
     Route::get('/', [EmploiDuTempsController::class, 'index'])->name('index');
     Route::post('/', [EmploiDuTempsController::class, 'store'])->name('store');
-    Route::patch('/{id}', [EmploiDuTempsController::class, 'update'])->name('update');
-    Route::delete('/{id}', [EmploiDuTempsController::class, 'destroy'])->name('destroy');
+    Route::patch('/{eleve}', [EmploiDuTempsController::class, 'update'])->name('update');
+    Route::delete('/{eleve}', [EmploiDuTempsController::class, 'destroy'])->name('destroy');
 });
 
 Route::middleware(['auth'])->prefix('classes')->name('classes.')->group(function (): void {
@@ -120,9 +120,9 @@ Route::middleware(['auth'])->prefix('inscriptions')->name('inscriptions.')->grou
     Route::get('/', [InscriptionController::class, 'index'])->name('index');
     Route::get('/create', [InscriptionController::class, 'create'])->name('create');
     Route::post('/', [InscriptionController::class, 'store'])->name('store');
-    Route::get('/{id}', [InscriptionController::class, 'show'])->name('show');
-    Route::get('/{id}/edit', [InscriptionController::class, 'edit'])->name('edit');
-    Route::put('/{id}', [InscriptionController::class, 'update'])->name('update');
+    Route::get('/{eleve}', [InscriptionController::class, 'show'])->name('show');
+    Route::get('/{eleve}/edit', [InscriptionController::class, 'edit'])->name('edit');
+    Route::put('/{eleve}', [InscriptionController::class, 'update'])->name('update');
 });
 
 

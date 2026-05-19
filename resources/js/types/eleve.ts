@@ -1,19 +1,19 @@
 export interface Eleve {
-    id: number;
+    id: string;
     matricule: string;
     nom: string;
     prenoms: string;
-    date_naissance: string;
-    lieu_naissance: string;
-    pays_naissance: string;
+    date_naissance?: string;
+    lieu_naissance?: string;
+    pays_naissance?: string;
     sexe: 'M' | 'F';
-    nationalite: string;
-    situation_familiale: string | null;
-    est_boursier: boolean;
+    nationalite?: string;
+    situation_familiale?: string | null;
+    est_boursier?: boolean;
     photo: string | null;
-    extrait_naissance_numero: string | null;
+    extrait_naissance_numero?: string | null;
     statut: 'actif' | 'transfere' | 'exclu' | 'sorti';
-    etablissement_id: number;
+    etablissement_id?: number;
     inscription_active?: Inscription;
     inscriptions?: Inscription[];
     parents?: ParentTuteur[];

@@ -33,9 +33,9 @@ class EleveService
             ->when(! empty($filters['niveau_id']), fn (Builder $builder): Builder => $builder->whereHas('inscriptions.classe', fn (Builder $q): Builder => $q->where('niveau_id', (int) $filters['niveau_id'])))
             ->when(! empty($filters['statut']), fn (Builder $builder): Builder => $builder->where('statut', (string) $filters['statut']))
             ->when(! empty($filters['sexe']), fn (Builder $builder): Builder => $builder->where('sexe', (string) $filters['sexe']))
+            ->select(['id','ulid','matricule','nom','prenoms','sexe','statut','photo','etablissement_id'])
             ->with([
-                'inscriptions' => fn ($builder) => $builder->actives()->with(['classe.niveau'])->latest('date_inscription'),
-                'parentsTuteurs' => fn ($builder) => $builder->orderByDesc('eleve_parents.est_principal'),
+                'inscriptions' => fn ($builder) => $builder->select(['id','eleve_id','classe_id','annee_scolaire_id','date_inscription','type','statut'])->actives()->with(['classe:id,nom,niveau_id','classe.niveau:id,libelle'])->latest('date_inscription'),
             ])
             ->latest('id')
             ->paginate(20)
