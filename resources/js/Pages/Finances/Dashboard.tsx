@@ -1,13 +1,8 @@
 import AppLayout from '@/Layouts/AppLayout';
-
-export default function FinancesDashboard() {
-    return (
-        <AppLayout title="Tableau de bord finance">
-            <div className="space-y-3">
-                <h1 className="text-2xl font-semibold text-gray-900">Tableau de bord finance</h1>
-                <p className="text-sm text-gray-600">Vue synthétique des flux financiers de l'établissement.</p>
-                <div className="rounded-xl border border-dashed border-gray-300 bg-white p-8" />
-            </div>
-        </AppLayout>
-    );
-}
+import { usePage } from '@inertiajs/react';
+import type { FinanceProps } from './types';
+const f=(n:number)=>new Intl.NumberFormat('fr-FR').format(n)+' FCFA';
+export default function FinancesDashboard(){const {props}=usePage<{props:FinanceProps}>() as any; const p=props as FinanceProps;
+return <AppLayout title='Tableau de bord finance'><div className='space-y-4 bg-[#F8FAFC] p-2'><h1 className='text-2xl font-semibold text-slate-900'>Tableau de bord finance</h1><p className='text-sm text-slate-500'>Vue d’ensemble des finances de l’établissement.</p>
+<div className='grid gap-3 md:grid-cols-3'>{[['Total attendu',f(p.metrics.totalAttendu)],['Total encaissé',f(p.metrics.totalEncaisse)],['Reste à payer',f(p.metrics.resteAPayer)],['Impayés en cours',String(p.metrics.impayesEnCours)],['Taux de recouvrement',p.metrics.tauxRecouvrement+'%'],['Paiements du mois',f(p.metrics.paiementsDuMois)]].map(([l,v])=><div key={String(l)} className='rounded-2xl border border-slate-200 bg-white p-4 shadow-sm'><div className='text-xs text-slate-500'>{l}</div><div className='mt-1 font-semibold'>{v}</div></div>)}</div>
+<div className='grid gap-4 lg:grid-cols-2'><div className='rounded-2xl border border-slate-200 bg-white p-4 shadow-sm'><h3 className='mb-3 font-medium'>Derniers paiements</h3>{p.payments.length? p.payments.slice(0,5).map(x=><div key={x.id} className='flex justify-between border-t py-2 text-sm'><span>{x.date} · {x.eleve} ({x.classe})</span><span>{f(x.montant)}</span></div>):<p className='text-sm text-slate-500'>Aucune donnée.</p>}</div><div className='rounded-2xl border border-slate-200 bg-white p-4 shadow-sm'><h3 className='mb-3 font-medium'>Élèves en retard de paiement</h3>{p.impayes.length? p.impayes.slice(0,5).map((x,i)=><div key={i} className='flex justify-between border-t py-2 text-sm'><span>{x.eleve} ({x.classe})</span><span>{f(x.reste)}</span></div>):<p className='text-sm text-slate-500'>Aucun impayé.</p>}</div></div></div></AppLayout>}

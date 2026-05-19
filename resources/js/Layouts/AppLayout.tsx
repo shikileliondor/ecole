@@ -96,9 +96,6 @@ const navGroups: NavGroup[] = [
             { label: 'Tableau de bord finance', href: '/finances/dashboard', icon: BarChart3 },
             { label: 'Paiements / Encaissements', href: '/finances/paiements', icon: CreditCard },
             { label: 'Impayés', href: '/finances/impayes', icon: AlertCircle },
-            { label: 'Dépenses / Caisse', href: '/finances/depenses', icon: Receipt },
-            { label: 'Salaires', href: '/finances/salaires', icon: Banknote },
-            { label: 'Rapports financiers', href: '/finances/rapports', icon: FileBarChart },
         ],
     },
     {

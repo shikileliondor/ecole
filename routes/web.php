@@ -3,6 +3,7 @@
 use App\Http\Controllers\EleveController;
 use App\Http\Controllers\InscriptionController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\FinanceController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Api\SmsController;
 use App\Http\Controllers\ParametreController;
@@ -122,9 +123,10 @@ Route::middleware(['auth'])->prefix('personnel')->name('personnel.')->group(func
 });
 
 Route::middleware(['auth'])->prefix('finances')->name('finances.')->group(function (): void {
-    Route::get('/dashboard', fn () => Inertia::render('Finances/Dashboard'))->name('dashboard');
-    Route::get('/paiements', fn () => Inertia::render('Finances/Paiements'))->name('paiements');
-    Route::get('/impayes', fn () => Inertia::render('Finances/Impayes'))->name('impayes');
+    Route::get('/dashboard', [FinanceController::class, 'dashboard'])->name('dashboard');
+    Route::get('/paiements', [FinanceController::class, 'paiements'])->name('paiements');
+    Route::get('/impayes', [FinanceController::class, 'impayes'])->name('impayes');
+    Route::post('/paiements', [FinanceController::class, 'storePaiement'])->name('paiements.store');
     Route::get('/depenses', fn () => Inertia::render('Finances/Depenses'))->name('depenses');
     Route::get('/salaires', fn () => Inertia::render('Finances/Salaires'))->name('salaires');
     Route::get('/rapports', fn () => Inertia::render('Finances/Rapports'))->name('rapports');

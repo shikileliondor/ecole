@@ -1,0 +1,6 @@
+export type FinanceMetrics = {
+  totalAttendu:number; totalEncaisse:number; resteAPayer:number; impayesEnCours:number; tauxRecouvrement:number; paiementsDuMois:number; paiementsAnnules:number; nombrePaiements:number;
+};
+export type PaymentRow = {id:number; date:string; eleve:string; classe:string; montant:number; mode:string; type_frais:string; reference?:string|null; statut:string; inscription_id:number; type_frais_id:number};
+export type ImpayeRow = {inscription_id:number; eleve:string; classe:string; type_frais:string; type_frais_id?:number|null; montant_du:number; montant_paye:number; reste:number; dernier_paiement:string; statut:string; annee_scolaire?:string|null};
+export type FinanceProps={metrics:FinanceMetrics; payments:PaymentRow[]; impayes:ImpayeRow[]; classes:Array<{id:number;nom:string}>; anneesScolaires:Array<{id:number;libelle:string}>; typesFrais:Array<{id:number;libelle:string;montant:number;classe_id?:number|null;annee_scolaire_id?:number|null}>; eleves:Array<{inscription_id:number;eleve_id:number;nom:string;classe:string;classe_id:number}>};

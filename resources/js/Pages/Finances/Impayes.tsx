@@ -1,13 +1,9 @@
 import AppLayout from '@/Layouts/AppLayout';
-
-export default function FinancesImpayes() {
-    return (
-        <AppLayout title="Impayés">
-            <div className="space-y-3">
-                <h1 className="text-2xl font-semibold text-gray-900">Impayés</h1>
-                <p className="text-sm text-gray-600">Liste des impayés et montants en retard.</p>
-                <div className="rounded-xl border border-dashed border-gray-300 bg-white p-8" />
-            </div>
-        </AppLayout>
-    );
-}
+import { usePage } from '@inertiajs/react';
+import type { FinanceProps } from './types';
+const f=(n:number)=>new Intl.NumberFormat('fr-FR').format(n)+' FCFA';
+export default function FinancesImpayes(){const {props}=usePage<{props:FinanceProps}>() as any; const p=props as FinanceProps; const total=p.impayes.reduce((a,b)=>a+b.reste,0);
+return <AppLayout title='Impayés'><div className='space-y-4 bg-[#F8FAFC] p-2'><h1 className='text-2xl font-semibold text-slate-900'>Impayés</h1><p className='text-sm text-slate-500'>Suivez les restes à payer des élèves par classe, frais et année scolaire.</p>
+<div className='grid gap-3 md:grid-cols-4'>{[['Total des impayés',f(total)],['Nombre d’élèves concernés',String(p.impayes.length)],['Classe la plus en retard',p.impayes[0]?.classe??'—'],['Reste moyen par élève',f(p.impayes.length?Math.round(total/p.impayes.length):0)]].map(([l,v])=><div key={String(l)} className='rounded-2xl border border-slate-200 bg-white p-4 shadow-sm'><div className='text-xs text-slate-500'>{l}</div><div className='mt-1 font-semibold'>{v}</div></div>)}</div>
+<div className='rounded-2xl border border-slate-200 bg-white p-4 shadow-sm overflow-auto'><table className='w-full text-sm'><thead><tr className='text-left text-slate-500'><th>Élève</th><th>Classe</th><th>Type de frais</th><th>Montant dû</th><th>Montant payé</th><th>Reste à payer</th><th>Dernier paiement</th><th>Statut</th></tr></thead><tbody>{p.impayes.length?p.impayes.map((r,i)=><tr key={i} className='border-t'><td>{r.eleve}</td><td>{r.classe}</td><td>{r.type_frais}</td><td>{f(r.montant_du)}</td><td>{f(r.montant_paye)}</td><td>{f(r.reste)}</td><td>{r.dernier_paiement}</td><td>{r.statut}</td></tr>):<tr><td colSpan={8} className='py-8 text-center text-slate-500'>Aucun impayé disponible.</td></tr>}</tbody></table></div>
+</div></AppLayout>}
