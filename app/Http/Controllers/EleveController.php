@@ -50,9 +50,29 @@ class EleveController extends Controller
         $anneeActive = AnneeScolaire::query()->where('etablissement_id', $etablissementId)->active()->first();
 
         return Inertia::render('Eleves/Create', [
-            'classes' => Classe::query()->where('etablissement_id', $etablissementId)->with('niveau')->withCount('inscriptions')->orderBy('nom')->get(),
+            'classes' => Classe::query()
+                ->where('etablissement_id', $etablissementId)
+                ->with('niveau:id,libelle')
+                ->withCount('inscriptions')
+                ->orderBy('nom')
+                ->get(['id', 'nom', 'capacite_max', 'niveau_id'])
+                ->map(function (Classe $classe): array {
+                    $placesDisponibles = max(0, (int) $classe->capacite_max - (int) $classe->inscriptions_count);
+
+                    return [
+                        'value' => (string) $classe->id,
+                        'label' => $classe->nom,
+                        'niveau' => $classe->niveau?->libelle,
+                        'places_disponibles' => $placesDisponibles,
+                    ];
+                }),
             'niveaux' => Niveau::query()->orderBy('ordre')->get(['id', 'libelle'])->map(fn (Niveau $niveau): array => ['value' => (string) $niveau->id, 'label' => $niveau->libelle]),
-            'annee_active' => $anneeActive,
+            'annee_active' => $anneeActive
+                ? [
+                    'value' => (string) $anneeActive->id,
+                    'label' => $anneeActive->libelle,
+                ]
+                : null,
         ]);
     }
 
