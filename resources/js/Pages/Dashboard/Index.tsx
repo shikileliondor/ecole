@@ -181,7 +181,7 @@ export default function DashboardIndex() {
                     {canViewScolarite ? (
                         <ChartCard title="Évolution des inscriptions" actionLabel="6 derniers mois">
                             <div className="h-72">
-                                <ResponsiveContainer width="100%" height="100%">
+                                <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={1}>
                                     <LineChart data={inscriptionData}>
                                         <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                                         <XAxis dataKey="mois" stroke="#6b7280" />
@@ -197,7 +197,7 @@ export default function DashboardIndex() {
                     {canViewScolarite ? (
                         <ChartCard title="Répartition par niveau" actionLabel="Année 2025-2026">
                             <div className="h-72">
-                                <ResponsiveContainer width="100%" height="100%">
+                                <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={1}>
                                     <BarChart data={niveauData}>
                                         <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                                         <XAxis dataKey="niveau" stroke="#6b7280" />
@@ -289,7 +289,7 @@ export default function DashboardIndex() {
                         <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
                             <h2 className="mb-4 text-base font-medium text-gray-800">Répartition des absences</h2>
                             <div className="h-48">
-                                <ResponsiveContainer width="100%" height="100%">
+                                <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={1}>
                                     <PieChart>
                                         <Pie data={absencePieData} dataKey="value" innerRadius={50} outerRadius={75} paddingAngle={3}>
                                             {absencePieData.map((entry) => (

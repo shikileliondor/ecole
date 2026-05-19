@@ -194,11 +194,11 @@ export default function FinancesDashboard() {
                 <section className="grid gap-4 xl:grid-cols-2">
                     <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                         <h3 className="mb-3 font-semibold text-[#0F172A]">Évolution des encaissements</h3>
-                        {encaissementsParMois.length ? <div className="h-72"><ResponsiveContainer><AreaChart data={encaissementsParMois}><CartesianGrid stroke="#E5E7EB" strokeDasharray="3 3" /><XAxis dataKey="mois" /><YAxis tickFormatter={(v) => `${Math.round(Number(v) / 1000)}k`} /><Tooltip formatter={(value: number) => formatCurrency(Number(value))} /><Area dataKey="montant" stroke="#0B63CE" fill="#0B63CE22" /></AreaChart></ResponsiveContainer></div> : <p className="py-16 text-center text-sm text-slate-500">Aucune donnée d’encaissement disponible.</p>}
+                        {encaissementsParMois.length ? <div className="h-72"><ResponsiveContainer minWidth={0} minHeight={1}><AreaChart data={encaissementsParMois}><CartesianGrid stroke="#E5E7EB" strokeDasharray="3 3" /><XAxis dataKey="mois" /><YAxis tickFormatter={(v) => `${Math.round(Number(v) / 1000)}k`} /><Tooltip formatter={(value: number) => formatCurrency(Number(value))} /><Area dataKey="montant" stroke="#0B63CE" fill="#0B63CE22" /></AreaChart></ResponsiveContainer></div> : <p className="py-16 text-center text-sm text-slate-500">Aucune donnée d’encaissement disponible.</p>}
                     </article>
                     <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                         <h3 className="mb-3 font-semibold text-[#0F172A]">Recouvrement par classe</h3>
-                        {recouvrementParClasse.length ? <div className="h-72"><ResponsiveContainer><BarChart data={recouvrementParClasse}><CartesianGrid stroke="#E5E7EB" strokeDasharray="3 3" /><XAxis dataKey="classe" /><YAxis tickFormatter={(v) => `${Math.round(Number(v) / 1000)}k`} /><Tooltip formatter={(value: number) => formatCurrency(Number(value))} /><Legend /><Bar dataKey="encaisse" fill="#16A34A" name="Encaissé" /><Bar dataKey="reste" fill="#F97316" name="Reste" /></BarChart></ResponsiveContainer></div> : <p className="py-16 text-center text-sm text-slate-500">Aucune donnée de recouvrement par classe.</p>}
+                        {recouvrementParClasse.length ? <div className="h-72"><ResponsiveContainer minWidth={0} minHeight={1}><BarChart data={recouvrementParClasse}><CartesianGrid stroke="#E5E7EB" strokeDasharray="3 3" /><XAxis dataKey="classe" /><YAxis tickFormatter={(v) => `${Math.round(Number(v) / 1000)}k`} /><Tooltip formatter={(value: number) => formatCurrency(Number(value))} /><Legend /><Bar dataKey="encaisse" fill="#16A34A" name="Encaissé" /><Bar dataKey="reste" fill="#F97316" name="Reste" /></BarChart></ResponsiveContainer></div> : <p className="py-16 text-center text-sm text-slate-500">Aucune donnée de recouvrement par classe.</p>}
                     </article>
                 </section>
 
@@ -209,7 +209,7 @@ export default function FinancesDashboard() {
                     </article>
                     <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                         <h3 className="mb-3 font-semibold text-[#0F172A]">Répartition par mode de paiement</h3>
-                        {repartitionModePaiement.length ? <div className="h-72"><ResponsiveContainer><PieChart><Pie data={repartitionModePaiement} dataKey="montant" nameKey="mode" innerRadius={55} outerRadius={85} paddingAngle={2}>{repartitionModePaiement.map((_, idx) => <Cell key={idx} fill={CHART_COLORS[idx % CHART_COLORS.length]} />)}</Pie><Tooltip formatter={(value: number) => formatCurrency(Number(value))} /></PieChart></ResponsiveContainer></div> : <p className="py-16 text-center text-sm text-slate-500">Aucune donnée de mode de paiement.</p>}
+                        {repartitionModePaiement.length ? <div className="h-72"><ResponsiveContainer minWidth={0} minHeight={1}><PieChart><Pie data={repartitionModePaiement} dataKey="montant" nameKey="mode" innerRadius={55} outerRadius={85} paddingAngle={2}>{repartitionModePaiement.map((_, idx) => <Cell key={idx} fill={CHART_COLORS[idx % CHART_COLORS.length]} />)}</Pie><Tooltip formatter={(value: number) => formatCurrency(Number(value))} /></PieChart></ResponsiveContainer></div> : <p className="py-16 text-center text-sm text-slate-500">Aucune donnée de mode de paiement.</p>}
                     </article>
                 </section>
 

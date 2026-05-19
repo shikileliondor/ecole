@@ -35,6 +35,7 @@ type Props = {
 };
 
 export default function ElevesIndex({ eleves, classes, niveaux, filters, stats }: Props) {
+    const classesList = Array.isArray(classes) ? classes : [];
     const [localFilters, setLocalFilters] = useState<Filters>(filters);
     const [searchTimeout, setSearchTimeout] = useState<number | null>(null);
     const [showTransfertDialog, setShowTransfertDialog] = useState(false);
@@ -43,9 +44,9 @@ export default function ElevesIndex({ eleves, classes, niveaux, filters, stats }
     const [eleveASupprimer, setEleveASupprimer] = useState<Eleve | null>(null);
 
     const classesFiltrees = useMemo(() => {
-        if (!localFilters.niveau_id) return classes;
-        return classes.filter((c) => String(c.niveau?.id ?? '') === localFilters.niveau_id);
-    }, [classes, localFilters.niveau_id]);
+        if (!localFilters.niveau_id) return classesList;
+        return classesList.filter((c) => String(c.niveau?.id ?? '') === localFilters.niveau_id);
+    }, [classesList, localFilters.niveau_id]);
 
     const hasActiveFilters = Object.values(localFilters).some((value) => !!value);
 
