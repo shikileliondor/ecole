@@ -349,7 +349,7 @@ export default function AppLayout({
                 </div>
             </aside>
         ),
-        [initials, pathname, roleName, schoolName, userName],
+        [initials, openedMenus, pathname, roleName, schoolName, userName],
     );
 
     return (
