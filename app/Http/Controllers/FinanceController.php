@@ -12,8 +12,10 @@ use App\Models\Paiement;
 use App\Models\Personnel;
 use App\Models\Salaire;
 use App\Models\TypeFrais;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -28,17 +30,36 @@ class FinanceController extends Controller
 
     public function storePaiement(Request $request): RedirectResponse
     {
+        $this->authorizeFinanceAccess($request);
+
         $payload = $request->validate([
             'inscription_id' => ['required', 'integer', 'exists:inscriptions,id'],
             'type_frais_id' => ['required', 'integer', 'exists:types_frais,id'],
-            'montant_attendu' => ['required', 'integer', 'min:0'],
             'montant_paye' => ['required', 'integer', 'min:1'],
-            'mode_paiement' => ['required', 'string'],
+            'mode_paiement' => ['required', Rule::in(array_values(Paiement::MODES_PAIEMENT))],
             'date_paiement' => ['required', 'date'],
             'reference_transaction' => ['nullable', 'string', 'max:255'],
             'note_caissier' => ['nullable', 'string'],
         ]);
-        Paiement::query()->create([...$payload, 'encaisse_par' => $request->user()?->id]);
+        $inscription = Inscription::query()
+            ->whereKey((int) $payload['inscription_id'])
+            ->whereHas('classe', fn ($q) => $q->where('etablissement_id', (int) $request->user()->etablissement_id))
+            ->firstOrFail();
+        $typeFrais = TypeFrais::query()
+            ->whereKey((int) $payload['type_frais_id'])
+            ->where('etablissement_id', (int) $request->user()->etablissement_id)
+            ->firstOrFail();
+        $montantAttendu = (int) $typeFrais->montant;
+        $montantPaye = min((int) $payload['montant_paye'], $montantAttendu);
+
+        Paiement::query()->create([
+            ...$payload,
+            'inscription_id' => $inscription->id,
+            'type_frais_id' => $typeFrais->id,
+            'montant_attendu' => $montantAttendu,
+            'montant_paye' => $montantPaye,
+            'encaisse_par' => $request->user()?->id,
+        ]);
 
         return back()->with('success', 'Paiement enregistré.');
     }
@@ -46,10 +67,12 @@ class FinanceController extends Controller
 
     public function updatePaiement(Request $request, Paiement $paiement): RedirectResponse
     {
+        $this->authorizeFinanceAccess($request);
+        $this->assertPaiementAccess($request, $paiement);
+
         $payload = $request->validate([
-            'montant_attendu' => ['required', 'integer', 'min:0'],
             'montant_paye' => ['required', 'integer', 'min:1'],
-            'mode_paiement' => ['required', 'string'],
+            'mode_paiement' => ['required', Rule::in(array_values(Paiement::MODES_PAIEMENT))],
             'date_paiement' => ['required', 'date'],
             'reference_transaction' => ['nullable', 'string', 'max:255'],
             'note_caissier' => ['nullable', 'string'],
@@ -59,13 +82,20 @@ class FinanceController extends Controller
             return back()->withErrors(['paiement' => 'Un paiement annulé ne peut pas être modifié.']);
         }
 
-        $paiement->update($payload);
+        $montantAttendu = (int) $paiement->typeFrais()->value('montant');
+        $paiement->update([
+            ...$payload,
+            'montant_attendu' => $montantAttendu,
+            'montant_paye' => min((int) $payload['montant_paye'], $montantAttendu),
+        ]);
 
         return back()->with('success', 'Paiement modifié.');
     }
 
     public function annulerPaiement(Request $request, Paiement $paiement): RedirectResponse
     {
+        $this->authorizeFinanceAccess($request);
+        $this->assertPaiementAccess($request, $paiement);
         $payload = $request->validate(['motif_annulation' => ['required', 'string', 'min:3']]);
         $paiement->update(['statut' => 'annule', 'note_caissier' => $payload['motif_annulation']]);
 
@@ -75,6 +105,7 @@ class FinanceController extends Controller
 
     public function storeDepense(Request $request): RedirectResponse
     {
+        $this->authorizeFinanceAccess($request);
         $payload = $request->validate([
             'libelle' => ['required', 'string', 'max:255'],
             'categorie' => ['nullable', 'string', 'max:255'],
@@ -97,6 +128,7 @@ class FinanceController extends Controller
 
     public function updateDepense(Request $request, Depense $depense): RedirectResponse
     {
+        $this->authorizeFinanceAccess($request);
         $payload = $request->validate([
             'libelle' => ['required', 'string', 'max:255'],
             'categorie' => ['nullable', 'string', 'max:255'],
@@ -122,6 +154,7 @@ class FinanceController extends Controller
 
     public function destroyDepense(Request $request, Depense $depense): RedirectResponse
     {
+        $this->authorizeFinanceAccess($request);
         if ($depense->etablissement_id !== (int) $request->user()->etablissement_id) {
             abort(403);
         }
@@ -165,5 +198,22 @@ class FinanceController extends Controller
         })->filter(fn (array $r) => $r['reste'] > 0)->values();
 
         return ['metrics' => ['totalAttendu' => $totalAttendu, 'totalEncaisse' => $totalEncaisse, 'resteAPayer' => $reste, 'impayesEnCours' => $impayes->count(), 'tauxRecouvrement' => $totalAttendu > 0 ? round(($totalEncaisse / $totalAttendu) * 100, 2) : 0, 'paiementsDuMois' => $paiementsMois, 'paiementsAnnules' => $paiements->where('statut', 'annule')->count(), 'nombrePaiements' => $paiements->count()], 'payments' => $payments, 'impayes' => $impayes, 'classes' => $classes, 'anneesScolaires' => $annees, 'typesFrais' => $typesFrais, 'modesPaiement' => array_values(Paiement::MODES_PAIEMENT), 'eleves' => $inscriptions->map(fn (Inscription $i) => ['inscription_id' => $i->id, 'eleve_id' => $i->eleve_id, 'nom' => $i->eleve?->nom_complet ?? 'Non renseigné', 'classe' => $i->classe?->nom ?? 'Non renseigné', 'classe_id' => $i->classe_id])->values(), 'depenses' => $depenses->map(fn (Depense $d) => ['id' => $d->id, 'date' => $d->date_depense?->format('Y-m-d'), 'libelle' => $d->libelle, 'categorie' => $d->categorie, 'montant' => (int) $d->montant, 'mode_paiement' => $d->mode_paiement, 'responsable' => $d->responsable?->nom_complet, 'justificatif_url' => $d->justificatif_path ? '/storage/'.$d->justificatif_path : null, 'statut' => $d->statut, 'observation' => $d->observation, 'responsable_id' => $d->responsable_id])->values(), 'salaires' => $salaires->map(fn (Salaire $s) => ['id' => $s->id, 'personnel_id' => $s->personnel_id, 'employe' => $s->personnel?->nom_complet, 'poste' => $s->personnel?->type, 'mois' => (int) $s->mois, 'salaire_base' => (int) $s->salaire_base, 'primes' => (int) $s->primes, 'deductions' => (int) $s->deductions, 'avances' => (int) $s->deductions, 'retenues' => 0, 'net_a_payer' => (int) $s->net_a_payer, 'statut' => $s->statut]), 'personnel' => $personnel->map(fn (Personnel $p) => ['id' => $p->id, 'nom' => $p->nom_complet, 'poste' => $p->type, 'salaire_base' => (int) $p->salaire_base])->values()];
+    }
+
+    private function assertPaiementAccess(Request $request, Paiement $paiement): void
+    {
+        $allowed = Paiement::query()
+            ->whereKey($paiement->getKey())
+            ->whereHas('inscription.classe', fn ($q) => $q->where('etablissement_id', (int) $request->user()->etablissement_id))
+            ->exists();
+        abort_unless($allowed, 403);
+    }
+
+    /**
+     * @throws AuthorizationException
+     */
+    private function authorizeFinanceAccess(Request $request): void
+    {
+        $request->user()?->can('finance.access') || throw new AuthorizationException('Accès finance non autorisé.');
     }
 }
