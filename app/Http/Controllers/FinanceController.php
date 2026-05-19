@@ -72,6 +72,65 @@ class FinanceController extends Controller
         return back()->with('success', 'Paiement annulé.');
     }
 
+
+    public function storeDepense(Request $request): RedirectResponse
+    {
+        $payload = $request->validate([
+            'libelle' => ['required', 'string', 'max:255'],
+            'categorie' => ['nullable', 'string', 'max:255'],
+            'montant' => ['required', 'integer', 'min:1'],
+            'date_depense' => ['required', 'date'],
+            'responsable_id' => ['nullable', 'integer', 'exists:personnel,id'],
+            'mode_paiement' => ['nullable', 'string', 'max:255'],
+            'observation' => ['nullable', 'string'],
+        ]);
+
+        Depense::query()->create([
+            ...$payload,
+            'etablissement_id' => (int) $request->user()->etablissement_id,
+            'created_by' => $request->user()?->id,
+            'statut' => 'active',
+        ]);
+
+        return back()->with('success', 'Dépense enregistrée.');
+    }
+
+    public function updateDepense(Request $request, Depense $depense): RedirectResponse
+    {
+        $payload = $request->validate([
+            'libelle' => ['required', 'string', 'max:255'],
+            'categorie' => ['nullable', 'string', 'max:255'],
+            'montant' => ['required', 'integer', 'min:1'],
+            'date_depense' => ['required', 'date'],
+            'responsable_id' => ['nullable', 'integer', 'exists:personnel,id'],
+            'mode_paiement' => ['nullable', 'string', 'max:255'],
+            'observation' => ['nullable', 'string'],
+        ]);
+
+        if ($depense->etablissement_id !== (int) $request->user()->etablissement_id) {
+            abort(403);
+        }
+
+        if ($depense->statut === 'annulee') {
+            return back()->withErrors(['depense' => 'Une dépense annulée ne peut pas être modifiée.']);
+        }
+
+        $depense->update($payload);
+
+        return back()->with('success', 'Dépense modifiée.');
+    }
+
+    public function destroyDepense(Request $request, Depense $depense): RedirectResponse
+    {
+        if ($depense->etablissement_id !== (int) $request->user()->etablissement_id) {
+            abort(403);
+        }
+
+        $depense->delete();
+
+        return back()->with('success', 'Dépense supprimée.');
+    }
+
     private function buildFinanceDataset(Request $request): array
     {
         $etablissementId = (int) $request->user()->etablissement_id;
@@ -105,6 +164,6 @@ class FinanceController extends Controller
             return ['inscription_id' => $i->id,'eleve' => $i->eleve?->nom_complet ?? 'Non renseigné','classe' => $i->classe?->nom ?? 'Non renseigné','type_frais' => $last?->typeFrais?->libelle ?? 'Non renseigné','type_frais_id' => $last?->type_frais_id,'montant_du' => $attendu,'montant_paye' => $paye,'reste' => max(0, $attendu - $paye),'dernier_paiement' => $last?->date_paiement?->format('d/m/Y') ?? 'Non renseigné','statut' => $last?->statut ?? 'impaye','annee_scolaire' => $i->anneeScolaire?->libelle];
         })->filter(fn (array $r) => $r['reste'] > 0)->values();
 
-        return ['metrics' => ['totalAttendu' => $totalAttendu, 'totalEncaisse' => $totalEncaisse, 'resteAPayer' => $reste, 'impayesEnCours' => $impayes->count(), 'tauxRecouvrement' => $totalAttendu > 0 ? round(($totalEncaisse / $totalAttendu) * 100, 2) : 0, 'paiementsDuMois' => $paiementsMois, 'paiementsAnnules' => $paiements->where('statut', 'annule')->count(), 'nombrePaiements' => $paiements->count()], 'payments' => $payments, 'impayes' => $impayes, 'classes' => $classes, 'anneesScolaires' => $annees, 'typesFrais' => $typesFrais, 'modesPaiement' => array_values(Paiement::MODES_PAIEMENT), 'eleves' => $inscriptions->map(fn (Inscription $i) => ['inscription_id' => $i->id, 'eleve_id' => $i->eleve_id, 'nom' => $i->eleve?->nom_complet ?? 'Non renseigné', 'classe' => $i->classe?->nom ?? 'Non renseigné', 'classe_id' => $i->classe_id])->values(), 'depenses' => $depenses->map(fn (Depense $d) => ['id' => $d->id, 'date' => $d->date_depense?->format('Y-m-d'), 'libelle' => $d->libelle, 'categorie' => $d->categorie, 'montant' => (int) $d->montant, 'mode_paiement' => $d->mode_paiement, 'responsable' => $d->responsable?->nom_complet, 'justificatif_url' => $d->justificatif_path ? '/storage/'.$d->justificatif_path : null, 'statut' => $d->statut])->values(), 'salaires' => $salaires->map(fn (Salaire $s) => ['id' => $s->id, 'personnel_id' => $s->personnel_id, 'employe' => $s->personnel?->nom_complet, 'poste' => $s->personnel?->type, 'mois' => (int) $s->mois, 'salaire_base' => (int) $s->salaire_base, 'primes' => (int) $s->primes, 'deductions' => (int) $s->deductions, 'avances' => (int) $s->deductions, 'retenues' => 0, 'net_a_payer' => (int) $s->net_a_payer, 'statut' => $s->statut]), 'personnel' => $personnel->map(fn (Personnel $p) => ['id' => $p->id, 'nom' => $p->nom_complet, 'poste' => $p->type, 'salaire_base' => (int) $p->salaire_base])->values()];
+        return ['metrics' => ['totalAttendu' => $totalAttendu, 'totalEncaisse' => $totalEncaisse, 'resteAPayer' => $reste, 'impayesEnCours' => $impayes->count(), 'tauxRecouvrement' => $totalAttendu > 0 ? round(($totalEncaisse / $totalAttendu) * 100, 2) : 0, 'paiementsDuMois' => $paiementsMois, 'paiementsAnnules' => $paiements->where('statut', 'annule')->count(), 'nombrePaiements' => $paiements->count()], 'payments' => $payments, 'impayes' => $impayes, 'classes' => $classes, 'anneesScolaires' => $annees, 'typesFrais' => $typesFrais, 'modesPaiement' => array_values(Paiement::MODES_PAIEMENT), 'eleves' => $inscriptions->map(fn (Inscription $i) => ['inscription_id' => $i->id, 'eleve_id' => $i->eleve_id, 'nom' => $i->eleve?->nom_complet ?? 'Non renseigné', 'classe' => $i->classe?->nom ?? 'Non renseigné', 'classe_id' => $i->classe_id])->values(), 'depenses' => $depenses->map(fn (Depense $d) => ['id' => $d->id, 'date' => $d->date_depense?->format('Y-m-d'), 'libelle' => $d->libelle, 'categorie' => $d->categorie, 'montant' => (int) $d->montant, 'mode_paiement' => $d->mode_paiement, 'responsable' => $d->responsable?->nom_complet, 'justificatif_url' => $d->justificatif_path ? '/storage/'.$d->justificatif_path : null, 'statut' => $d->statut, 'observation' => $d->observation, 'responsable_id' => $d->responsable_id])->values(), 'salaires' => $salaires->map(fn (Salaire $s) => ['id' => $s->id, 'personnel_id' => $s->personnel_id, 'employe' => $s->personnel?->nom_complet, 'poste' => $s->personnel?->type, 'mois' => (int) $s->mois, 'salaire_base' => (int) $s->salaire_base, 'primes' => (int) $s->primes, 'deductions' => (int) $s->deductions, 'avances' => (int) $s->deductions, 'retenues' => 0, 'net_a_payer' => (int) $s->net_a_payer, 'statut' => $s->statut]), 'personnel' => $personnel->map(fn (Personnel $p) => ['id' => $p->id, 'nom' => $p->nom_complet, 'poste' => $p->type, 'salaire_base' => (int) $p->salaire_base])->values()];
     }
 }
