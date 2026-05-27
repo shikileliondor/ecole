@@ -69,9 +69,14 @@ class EleveService
         return $eleve;
     }
 
-    public function getNotesParTrimestre(int $inscriptionId): array
+    public function getNotesParTrimestre(int $inscriptionId, int $etablissementId): array
     {
-        $notes = Inscription::query()->with('notes.matiere')->findOrFail($inscriptionId)->notes;
+        $notes = Inscription::query()
+            ->where('id', $inscriptionId)
+            ->whereHas('eleve', fn (Builder $query): Builder => $query->where('etablissement_id', $etablissementId))
+            ->with('notes.matiere')
+            ->firstOrFail()
+            ->notes;
 
         return [
             1 => $notes->where('trimestre', 1)->values(),
@@ -80,9 +85,13 @@ class EleveService
         ];
     }
 
-    public function getStatsFinancieres(int $inscriptionId): array
+    public function getStatsFinancieres(int $inscriptionId, int $etablissementId): array
     {
-        $inscription = Inscription::query()->with('paiements')->findOrFail($inscriptionId);
+        $inscription = Inscription::query()
+            ->where('id', $inscriptionId)
+            ->whereHas('eleve', fn (Builder $query): Builder => $query->where('etablissement_id', $etablissementId))
+            ->with('paiements')
+            ->firstOrFail();
         $totalDu = (int) $inscription->paiements->sum('montant_attendu');
         $totalPaye = (int) $inscription->paiements->sum('montant_paye');
         $solde = $totalDu - $totalPaye;
@@ -112,7 +121,7 @@ class EleveService
 
             $eleve->parentsTuteurs()->attach($parentPrincipal->id, ['est_principal' => true, 'peut_recuperer' => true]);
 
-            $classe = Classe::query()->with('niveau')->findOrFail((int) $data['classe_id']);
+            $classe = Classe::query()->where('etablissement_id', $etablissementId)->with('niveau')->findOrFail((int) $data['classe_id']);
             $isCp = str_starts_with((string) $classe->niveau?->libelle, 'CP');
 
             Inscription::query()->create([
@@ -128,10 +137,10 @@ class EleveService
         });
     }
 
-    public function mettreAJourEleve(int $id, array $data): Eleve
+    public function mettreAJourEleve(int $id, array $data, int $etablissementId): Eleve
     {
         /** @var Eleve $eleve */
-        $eleve = Eleve::query()->with('parentsTuteurs')->findOrFail($id);
+        $eleve = Eleve::query()->where('etablissement_id', $etablissementId)->with('parentsTuteurs')->findOrFail($id);
         $eleveData = collect($data)->except(['parent', 'classe_id'])->toArray();
 
         if (($data['photo'] ?? null) instanceof UploadedFile) {
@@ -150,10 +159,10 @@ class EleveService
         return $eleve->fresh(['inscriptions.classe.niveau', 'parentsTuteurs']) ?? $eleve;
     }
 
-    public function transfererEleve(int $id, string $ecoleDestination): Eleve
+    public function transfererEleve(int $id, string $ecoleDestination, int $etablissementId): Eleve
     {
         /** @var Eleve $eleve */
-        $eleve = Eleve::query()->with('inscriptions')->findOrFail($id);
+        $eleve = Eleve::query()->where('etablissement_id', $etablissementId)->with('inscriptions')->findOrFail($id);
         $eleve->update(['statut' => Eleve::STATUTS['transfere']]);
 
         $inscriptionActive = $eleve->inscriptions->firstWhere('statut', Inscription::STATUTS['inscrit']);
@@ -167,9 +176,9 @@ class EleveService
         return $eleve;
     }
 
-    public function supprimerEleve(int $id): bool
+    public function supprimerEleve(int $id, int $etablissementId): bool
     {
-        return (bool) Eleve::query()->findOrFail($id)->delete();
+        return (bool) Eleve::query()->where('etablissement_id', $etablissementId)->findOrFail($id)->delete();
     }
 
     public function getListePourExport(array $filters, int $etablissementId): Collection
