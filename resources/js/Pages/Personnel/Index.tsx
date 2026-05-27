@@ -27,7 +27,7 @@ type Props = {
     personnel: { data: PersonnelItem[]; links: any[]; total: number; from: number; to: number };
     stats: { total: number; enseignants: number; personnel_ecole: number; actifs: number; certifies_mena: number };
     filters: { search?: string | null; categorie?: string | null };
-    options: { categories: Record<string, string>; types: Record<string, string>; typesContrat: Record<string, string>; statuts: Record<string, string>; sexes: Record<string, string>; diplomes: Record<string, string> };
+    options: { categories: Record<string, string>; types: Record<string, string>; typesContrat: Record<string, string>; statuts: Record<string, string>; sexes: Record<string, string>; diplomes: Record<string, string>; matieres: string[] };
     classes: Classe[];
 };
 
@@ -449,7 +449,10 @@ function FormPanel({ mode, person, classes, options, onClose }: {
                                 <>
                                     <div className="sm:col-span-2">
                                         <FormField label="Spécialité / Matières enseignées">
-                                            <Input value={form.data.specialite} onChange={(e) => form.setData('specialite', e.target.value)} placeholder="Mathématiques et Sciences" />
+                                            <select className={SEL} value={form.data.specialite} onChange={(e) => form.setData('specialite', e.target.value)}>
+                                                <option value="">Sélectionner une matière</option>
+                                                {options.matieres.map((matiere) => <option key={matiere} value={matiere}>{matiere}</option>)}
+                                            </select>
                                         </FormField>
                                     </div>
                                     <FormField label="Diplôme">

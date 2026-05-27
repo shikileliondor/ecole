@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StorePersonnelRequest;
 use App\Models\Classe;
+use App\Models\Matiere;
 use App\Models\Personnel;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -96,6 +97,7 @@ class PersonnelController extends Controller
                 'statuts'       => Personnel::STATUTS,
                 'sexes'         => Personnel::SEXES,
                 'diplomes'      => Personnel::DIPLOMES,
+                'matieres'      => Matiere::query()->orderBy('libelle')->pluck('libelle')->values(),
             ],
             'classes' => Classe::query()
                 ->where('etablissement_id', $etablissementId)
