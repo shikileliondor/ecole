@@ -42,8 +42,8 @@ class AppNotification extends Notification
     {
         \App\Models\User::query()
             ->where('etablissement_id', $etablissementId)
-            ->where('user_type', 'staff')
-            ->where('statut', 'actif')
+            ->staff()
+            ->actifs()
             ->limit(30)
             ->get()
             ->each(fn ($user) => $user->notify($notification));
