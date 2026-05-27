@@ -17,6 +17,7 @@ type Props = {
     modele_relance_finance?: string;
     modele_confirmation_paiement?: string;
     modele_rappel_inscription?: string;
+    modeles?: Array<{ id?: string; label?: string; content?: string }>;
   };
 };
 
@@ -31,11 +32,20 @@ export default function SmsParents({ classes, parents, templates }: Props) {
 
   const recipientsCount = form.data.scope === 'single' ? (form.data.parent_id ? 1 : 0) : filteredParents.length;
   const submit = () => form.post(route('communication.sms.send'), { onSuccess: () => setConfirmOpen(false) });
-  const presetTemplates = [
+  const fallbackTemplates = [
     { key: 'modele_relance_finance', label: 'Relance finance', content: templates?.modele_relance_finance ?? '' },
     { key: 'modele_confirmation_paiement', label: 'Confirmation paiement', content: templates?.modele_confirmation_paiement ?? '' },
     { key: 'modele_rappel_inscription', label: 'Rappel inscription', content: templates?.modele_rappel_inscription ?? '' },
   ];
+  const presetTemplates = templates?.modeles?.length
+    ? templates.modeles
+        .filter((preset) => (preset?.content ?? '').trim().length > 0)
+        .map((preset, index) => ({
+          key: preset.id || `modele_${index + 1}`,
+          label: preset.label || `Modèle ${index + 1}`,
+          content: preset.content ?? '',
+        }))
+    : fallbackTemplates;
 
   return (
     <AppLayout title="Communication SMS">
