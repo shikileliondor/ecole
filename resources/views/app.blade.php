@@ -6,8 +6,14 @@
 
         <title inertia>{{ config('app.name', 'Laravel') }}</title>
 
-        @routes
+        @auth
+        @routes('app')
+        @else
+        @routes('public')
+        @endauth
+        @env('local')
         @viteReactRefresh
+        @endenv
         @vite(['resources/js/app.tsx'])
         @inertiaHead
     </head>
