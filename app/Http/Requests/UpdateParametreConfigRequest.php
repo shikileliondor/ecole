@@ -57,6 +57,11 @@ class UpdateParametreConfigRequest extends FormRequest
                 'donnees.cachet' => ['nullable', 'string', 'max:255'],
                 'donnees.variables' => ['nullable', 'string', 'max:4000'],
             ],
+            'communication_sms' => $common + [
+                'donnees.modele_relance_finance' => ['nullable', 'string', 'max:600'],
+                'donnees.modele_confirmation_paiement' => ['nullable', 'string', 'max:600'],
+                'donnees.modele_rappel_inscription' => ['nullable', 'string', 'max:600'],
+            ],
             default => $common,
         };
     }
