@@ -128,7 +128,9 @@ class EleveController extends Controller
     {
         $etablissementId = (int) auth()->user()->etablissement_id;
         $filters = $request->only(['search', 'classe_id', 'niveau_id', 'statut', 'sexe']);
-        $classe = $request->filled('classe_id') ? Classe::query()->find((int) $request->integer('classe_id')) : null;
+        $classe = $request->filled('classe_id')
+            ? Classe::query()->where('etablissement_id', $etablissementId)->find((int) $request->integer('classe_id'))
+            : null;
         $eleves = $this->eleveService->getListePourExport($filters, $etablissementId);
         $pdf = Pdf::loadView('eleves.export-pdf', ['eleves' => $eleves, 'classe' => $classe, 'date_edition' => now(), 'filters' => $filters]);
 
@@ -139,7 +141,9 @@ class EleveController extends Controller
     {
         $etablissementId = (int) auth()->user()->etablissement_id;
         $filters = $request->only(['search', 'classe_id', 'niveau_id', 'statut', 'sexe']);
-        $classe = $request->filled('classe_id') ? Classe::query()->find((int) $request->integer('classe_id')) : null;
+        $classe = $request->filled('classe_id')
+            ? Classe::query()->where('etablissement_id', $etablissementId)->find((int) $request->integer('classe_id'))
+            : null;
         $eleves = $this->eleveService->getListePourExport($filters, $etablissementId);
         $filename = 'eleves-' . ($classe?->nom ? str($classe->nom)->slug() : 'toutes-classes') . '-' . now()->format('Y-m-d') . '.doc';
 
@@ -153,7 +157,9 @@ class EleveController extends Controller
     {
         $etablissementId = (int) auth()->user()->etablissement_id;
         $filters = $request->only(['search', 'classe_id', 'niveau_id', 'statut', 'sexe']);
-        $classe = $request->filled('classe_id') ? Classe::query()->find((int) $request->integer('classe_id')) : null;
+        $classe = $request->filled('classe_id')
+            ? Classe::query()->where('etablissement_id', $etablissementId)->find((int) $request->integer('classe_id'))
+            : null;
         $eleves = $this->eleveService->getListePourExport($filters, $etablissementId);
         $filename = 'eleves-' . ($classe?->nom ? str($classe->nom)->slug() : 'toutes-classes') . '-' . now()->format('Y-m-d') . '.csv';
 
