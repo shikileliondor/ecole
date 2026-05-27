@@ -62,6 +62,18 @@ function StatusBadge({ statut }: { statut: string }) {
     return <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${cfg.cls}`}>{cfg.label}</span>;
 }
 
+function FormField({ label, error, required, children }: { label: string; error?: string; required?: boolean; children: React.ReactNode }) {
+    return (
+        <div>
+            <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-gray-400">
+                {label}{required ? <span className="ml-0.5 text-red-400">*</span> : null}
+            </label>
+            {children}
+            {error ? <p className="mt-1 text-xs text-red-500">{error}</p> : null}
+        </div>
+    );
+}
+
 function FlashBanner() {
     const { flash } = usePage<{ flash: { success?: string; error?: string } }>().props;
     if (!flash?.success && !flash?.error) return null;
@@ -318,16 +330,6 @@ function FormPanel({ mode, person, classes, options, onClose }: {
         }
     };
 
-    const F = ({ label, error, required, children }: { label: string; error?: string; required?: boolean; children: React.ReactNode }) => (
-        <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-gray-400">
-                {label}{required ? <span className="ml-0.5 text-red-400">*</span> : null}
-            </label>
-            {children}
-            {error ? <p className="mt-1 text-xs text-red-500">{error}</p> : null}
-        </div>
-    );
-
     return (
         <>
             {/* Overlay */}
@@ -374,27 +376,27 @@ function FormPanel({ mode, person, classes, options, onClose }: {
                             <UserCheck size={12} /> Identité
                         </p>
                         <div className="grid gap-3 sm:grid-cols-2">
-                            <F label="Nom" required error={form.errors.nom}>
+                            <FormField label="Nom" required error={form.errors.nom}>
                                 <Input value={form.data.nom} onChange={(e) => form.setData('nom', e.target.value)} placeholder="KOUAMÉ" />
-                            </F>
-                            <F label="Prénoms" required error={form.errors.prenoms}>
+                            </FormField>
+                            <FormField label="Prénoms" required error={form.errors.prenoms}>
                                 <Input value={form.data.prenoms} onChange={(e) => form.setData('prenoms', e.target.value)} placeholder="Jean-Baptiste" />
-                            </F>
-                            <F label="Sexe" required>
+                            </FormField>
+                            <FormField label="Sexe" required>
                                 <select className={SEL} value={form.data.sexe} onChange={(e) => form.setData('sexe', e.target.value)}>
                                     <option value="M">Masculin</option>
                                     <option value="F">Féminin</option>
                                 </select>
-                            </F>
-                            <F label="Date de naissance">
+                            </FormField>
+                            <FormField label="Date de naissance">
                                 <Input type="date" value={form.data.date_naissance} onChange={(e) => form.setData('date_naissance', e.target.value)} />
-                            </F>
-                            <F label="Lieu de naissance">
+                            </FormField>
+                            <FormField label="Lieu de naissance">
                                 <Input value={form.data.lieu_naissance} onChange={(e) => form.setData('lieu_naissance', e.target.value)} placeholder="Abidjan" />
-                            </F>
-                            <F label="Nationalité">
+                            </FormField>
+                            <FormField label="Nationalité">
                                 <Input value={form.data.nationalite} onChange={(e) => form.setData('nationalite', e.target.value)} placeholder="Ivoirienne" />
-                            </F>
+                            </FormField>
                         </div>
 
                         {/* Photo */}
@@ -423,16 +425,16 @@ function FormPanel({ mode, person, classes, options, onClose }: {
                             <Users size={12} /> Contact
                         </p>
                         <div className="grid gap-3 sm:grid-cols-2">
-                            <F label="Téléphone" required error={form.errors.telephone}>
+                            <FormField label="Téléphone" required error={form.errors.telephone}>
                                 <Input value={form.data.telephone} onChange={(e) => form.setData('telephone', e.target.value)} placeholder="+225 07 00 00 00 00" />
-                            </F>
-                            <F label="WhatsApp">
+                            </FormField>
+                            <FormField label="WhatsApp">
                                 <Input value={form.data.whatsapp} onChange={(e) => form.setData('whatsapp', e.target.value)} placeholder="+225 07 00 00 00 00" />
-                            </F>
+                            </FormField>
                             <div className="sm:col-span-2">
-                                <F label="Email" error={form.errors.email}>
+                                <FormField label="Email" error={form.errors.email}>
                                     <Input type="email" value={form.data.email} onChange={(e) => form.setData('email', e.target.value)} placeholder="jean.kouame@ecole.ci" />
-                                </F>
+                                </FormField>
                             </div>
                         </div>
                     </section>
@@ -446,16 +448,16 @@ function FormPanel({ mode, person, classes, options, onClose }: {
                             {isEnseignant ? (
                                 <>
                                     <div className="sm:col-span-2">
-                                        <F label="Spécialité / Matières enseignées">
+                                        <FormField label="Spécialité / Matières enseignées">
                                             <Input value={form.data.specialite} onChange={(e) => form.setData('specialite', e.target.value)} placeholder="Mathématiques et Sciences" />
-                                        </F>
+                                        </FormField>
                                     </div>
-                                    <F label="Diplôme">
+                                    <FormField label="Diplôme">
                                         <select className={SEL} value={form.data.diplome} onChange={(e) => form.setData('diplome', e.target.value)}>
                                             <option value="">Non renseigné</option>
                                             {Object.keys(options.diplomes).map((d) => <option key={d} value={d}>{d}</option>)}
                                         </select>
-                                    </F>
+                                    </FormField>
                                     <div>
                                         <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 px-3 py-2.5 text-sm dark:border-gray-600 dark:text-gray-300">
                                             <Checkbox
@@ -467,45 +469,45 @@ function FormPanel({ mode, person, classes, options, onClose }: {
                                     </div>
                                     {form.data.est_certifie_mena ? (
                                         <div className="sm:col-span-2">
-                                            <F label="Numéro de badge MENA">
+                                            <FormField label="Numéro de badge MENA">
                                                 <Input value={form.data.numero_badge_mena} onChange={(e) => form.setData('numero_badge_mena', e.target.value)} placeholder="MENA-2024-XXXXX" />
-                                            </F>
+                                            </FormField>
                                         </div>
                                     ) : null}
                                 </>
                             ) : (
                                 <>
-                                    <F label="Fonction / Titre du poste">
+                                    <FormField label="Fonction / Titre du poste">
                                         <select className={SEL} value={form.data.type} onChange={(e) => form.setData('type', e.target.value)}>
                                             {['directeur', 'caissier', 'secretaire', 'agent_entretien', 'surveillant'].map((t) => (
                                                 <option key={t} value={t}>{TYPE_LABELS[t]}</option>
                                             ))}
                                         </select>
-                                    </F>
-                                    <F label="Intitulé personnalisé du poste">
+                                    </FormField>
+                                    <FormField label="Intitulé personnalisé du poste">
                                         <Input value={form.data.poste} onChange={(e) => form.setData('poste', e.target.value)} placeholder="Ex : Secrétaire de direction" />
-                                    </F>
+                                    </FormField>
                                 </>
                             )}
 
-                            <F label="Date d'embauche" required error={form.errors.date_embauche}>
+                            <FormField label="Date d'embauche" required error={form.errors.date_embauche}>
                                 <Input type="date" value={form.data.date_embauche} onChange={(e) => form.setData('date_embauche', e.target.value)} />
-                            </F>
-                            <F label="Type de contrat" required>
+                            </FormField>
+                            <FormField label="Type de contrat" required>
                                 <select className={SEL} value={form.data.type_contrat} onChange={(e) => form.setData('type_contrat', e.target.value)}>
                                     {Object.keys(options.typesContrat).map((k) => <option key={k} value={k}>{k}</option>)}
                                 </select>
-                            </F>
-                            <F label="Salaire de base (FCFA)" required error={form.errors.salaire_base}>
+                            </FormField>
+                            <FormField label="Salaire de base (FCFA)" required error={form.errors.salaire_base}>
                                 <Input type="number" min={0} value={form.data.salaire_base} onChange={(e) => form.setData('salaire_base', Number(e.target.value))} />
-                            </F>
-                            <F label="Statut" required>
+                            </FormField>
+                            <FormField label="Statut" required>
                                 <select className={SEL} value={form.data.statut} onChange={(e) => form.setData('statut', e.target.value)}>
                                     <option value="actif">Actif</option>
                                     <option value="suspendu">Suspendu</option>
                                     <option value="parti">Parti</option>
                                 </select>
-                            </F>
+                            </FormField>
                         </div>
                     </section>
 
