@@ -61,6 +61,26 @@ class TenantAccessControlTest extends TestCase
         $this->actingAs($userA)->get('/inscriptions/' . $inscriptionB->id)->assertNotFound();
     }
 
+    public function test_sql_injection_payload_in_search_does_not_break_class_listing(): void
+    {
+        $school = $this->createEtablissement('Ecole Test');
+        $user = User::factory()->create(['etablissement_id' => $school->id]);
+
+        $this->actingAs($user)
+            ->get('/classes?search=' . urlencode("' OR 1=1 --"))
+            ->assertOk();
+    }
+
+    public function test_unallowed_ordering_is_rejected(): void
+    {
+        $school = $this->createEtablissement('Ecole Test');
+        $user = User::factory()->create(['etablissement_id' => $school->id]);
+
+        $this->actingAs($user)
+            ->get('/classes?ordering=' . urlencode('nom;DROP TABLE users'))
+            ->assertStatus(422);
+    }
+
     private function createEtablissement(string $nom): Etablissement
     {
         return Etablissement::query()->create([

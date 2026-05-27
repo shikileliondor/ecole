@@ -19,8 +19,14 @@ class ClasseController extends Controller
         $filters = [
             'search' => trim((string) $request->string('search')->value()),
             'statut' => trim((string) $request->string('statut')->value()),
+            'ordering' => trim((string) $request->string('ordering')->value()),
         ];
         $selectedId = $request->integer('classe');
+
+        $allowedOrdering = ['nom', '-nom', 'created_at', '-created_at'];
+        if ($filters['ordering'] !== '' && ! in_array($filters['ordering'], $allowedOrdering, true)) {
+            abort(422, 'Champ de tri non autorisé.');
+        }
 
         $classesQuery = Classe::query()
             ->where('etablissement_id', $etablissementId)
@@ -28,7 +34,19 @@ class ClasseController extends Controller
             ->withCount([
                 'inscriptions as effectif' => fn ($query) => $query->where('statut', Inscription::STATUTS['inscrit']),
             ])
-            ->orderBy('nom');
+            ->when(
+                $filters['ordering'] === 'created_at',
+                fn ($query) => $query->orderBy('created_at'),
+                fn ($query) => $query->when(
+                    $filters['ordering'] === '-created_at',
+                    fn ($subQuery) => $subQuery->orderByDesc('created_at'),
+                    fn ($subQuery) => $subQuery->when(
+                        $filters['ordering'] === '-nom',
+                        fn ($nested) => $nested->orderByDesc('nom'),
+                        fn ($nested) => $nested->orderBy('nom')
+                    )
+                )
+            );
 
         if ($filters['search'] !== '') {
             $search = $filters['search'];
@@ -61,6 +79,7 @@ class ClasseController extends Controller
             'filters' => [
                 'search' => $filters['search'] !== '' ? $filters['search'] : null,
                 'statut' => $filters['statut'] !== '' ? $filters['statut'] : null,
+                'ordering' => $filters['ordering'] !== '' ? $filters['ordering'] : null,
             ],
         ]);
     }

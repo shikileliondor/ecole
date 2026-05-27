@@ -12,7 +12,6 @@ use App\Models\Paiement;
 use App\Models\Personnel;
 use App\Models\PeriodeAcademique;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -78,13 +77,12 @@ class DashboardController extends Controller
         $startMonth = now()->copy()->startOfMonth()->subMonths(5);
 
         $inscriptionsRaw = Inscription::query()
-            ->selectRaw('YEAR(date_inscription) as year, MONTH(date_inscription) as month, COUNT(*) as total')
             ->whereHas('classe', fn ($query) => $query->where('etablissement_id', $etablissementId))
             ->when($anneeActive !== null, fn ($query) => $query->where('annee_scolaire_id', $anneeActive->id))
             ->whereDate('date_inscription', '>=', $startMonth)
-            ->groupByRaw('YEAR(date_inscription), MONTH(date_inscription)')
             ->get()
-            ->keyBy(fn ($row) => sprintf('%04d-%02d', (int) $row->year, (int) $row->month));
+            ->groupBy(fn (Inscription $inscription) => optional($inscription->date_inscription)?->format('Y-m'))
+            ->map(fn ($items) => $items->count());
 
         $inscriptionData = collect(range(0, 5))->map(function (int $offset) use ($startMonth, $inscriptionsRaw, $monthLabels): array {
             $date = $startMonth->copy()->addMonths($offset);
@@ -92,28 +90,33 @@ class DashboardController extends Controller
 
             return [
                 'mois' => $monthLabels[(int) $date->format('n')] ?? $date->format('M'),
-                'total' => (int) ($inscriptionsRaw[$key]->total ?? 0),
+                'total' => (int) ($inscriptionsRaw[$key] ?? 0),
             ];
         })->values();
 
-        $niveauData = DB::table('niveaux')
-            ->join('classes', 'classes.niveau_id', '=', 'niveaux.id')
-            ->leftJoin('inscriptions', function ($join) use ($anneeActive): void {
-                $join->on('inscriptions.classe_id', '=', 'classes.id')
-                    ->where('inscriptions.statut', '=', Inscription::STATUTS['inscrit']);
-
-                if ($anneeActive !== null) {
-                    $join->where('inscriptions.annee_scolaire_id', '=', $anneeActive->id);
-                }
-            })
-            ->where('classes.etablissement_id', $etablissementId)
-            ->selectRaw('niveaux.libelle as niveau, COUNT(inscriptions.id) as eleves')
-            ->groupBy('niveaux.id', 'niveaux.libelle', 'niveaux.ordre')
-            ->orderBy('niveaux.ordre')
+        $niveauData = Classe::query()
+            ->where('etablissement_id', $etablissementId)
+            ->with('niveau:id,libelle,ordre')
+            ->withCount([
+                'inscriptions as eleves_count' => function ($query) use ($anneeActive): void {
+                    $query->where('statut', Inscription::STATUTS['inscrit']);
+                    if ($anneeActive !== null) {
+                        $query->where('annee_scolaire_id', $anneeActive->id);
+                    }
+                },
+            ])
             ->get()
-            ->map(fn ($row) => [
-                'niveau' => $row->niveau,
-                'eleves' => (int) $row->eleves,
+            ->groupBy(fn (Classe $classe) => (string) $classe->niveau?->libelle)
+            ->map(fn ($classes, $niveau) => [
+                'niveau' => $niveau,
+                'ordre' => (int) ($classes->first()?->niveau?->ordre ?? 999),
+                'eleves' => (int) $classes->sum('eleves_count'),
+            ])
+            ->sortBy('ordre')
+            ->values()
+            ->map(fn (array $item) => [
+                'niveau' => $item['niveau'],
+                'eleves' => $item['eleves'],
             ])
             ->values();
 
@@ -134,19 +137,22 @@ class DashboardController extends Controller
             ->values();
 
         $criticalUnpaid = Paiement::query()
-            ->selectRaw('inscription_id, SUM(montant_restant) as montant_restant_total')
             ->whereHas('inscription.classe', fn ($query) => $query->where('etablissement_id', $etablissementId))
             ->when($anneeActive !== null, fn ($query) => $query->whereHas('inscription', fn ($sub) => $sub->where('annee_scolaire_id', $anneeActive->id)))
-            ->groupBy('inscription_id')
-            ->havingRaw('SUM(montant_restant) > 0')
-            ->orderByDesc('montant_restant_total')
-            ->limit(4)
             ->with(['inscription.eleve:id,nom,prenoms', 'inscription.classe:id,nom'])
             ->get()
-            ->map(fn (Paiement $payment) => [
-                'eleve' => trim(($payment->inscription?->eleve?->prenoms ?? '') . ' ' . ($payment->inscription?->eleve?->nom ?? '')),
-                'classe' => $payment->inscription?->classe?->nom ?? '—',
-                'montant' => number_format((int) $payment->montant_restant_total, 0, ',', ' ') . ' FCFA',
+            ->groupBy('inscription_id')
+            ->map(fn ($payments) => [
+                'payment' => $payments->first(),
+                'montant_restant_total' => (int) $payments->sum('montant_restant'),
+            ])
+            ->filter(fn (array $row) => $row['montant_restant_total'] > 0)
+            ->sortByDesc('montant_restant_total')
+            ->take(4)
+            ->map(fn (array $payment) => [
+                'eleve' => trim(($payment['payment']?->inscription?->eleve?->prenoms ?? '') . ' ' . ($payment['payment']?->inscription?->eleve?->nom ?? '')),
+                'classe' => $payment['payment']?->inscription?->classe?->nom ?? '—',
+                'montant' => number_format((int) $payment['montant_restant_total'], 0, ',', ' ') . ' FCFA',
             ])
             ->values();
 
