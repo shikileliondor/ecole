@@ -14,6 +14,7 @@ use App\Http\Controllers\SmsTestController;
 use App\Http\Controllers\AbsenceController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\CommunicationSmsController;
+use App\Http\Controllers\CommunicationEmailController;
 use App\Http\Controllers\PersonnelController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -179,6 +180,8 @@ Route::middleware(['auth'])->prefix('sms')->name('sms.')->group(function (): voi
 Route::middleware(['auth'])->prefix('communication')->name('communication.')->group(function (): void {
     Route::get('/sms', [CommunicationSmsController::class, 'index'])->name('sms.index');
     Route::post('/sms/send', [CommunicationSmsController::class, 'send'])->name('sms.send');
+    Route::get('/email', [CommunicationEmailController::class, 'index'])->name('email.index');
+    Route::post('/email/send', [CommunicationEmailController::class, 'send'])->name('email.send');
 });
 
 Route::middleware('auth')->prefix('notifications')->name('notifications.')->group(function (): void {
