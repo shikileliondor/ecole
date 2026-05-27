@@ -61,6 +61,10 @@ class UpdateParametreConfigRequest extends FormRequest
                 'donnees.modele_relance_finance' => ['nullable', 'string', 'max:600'],
                 'donnees.modele_confirmation_paiement' => ['nullable', 'string', 'max:600'],
                 'donnees.modele_rappel_inscription' => ['nullable', 'string', 'max:600'],
+                'donnees.modeles' => ['nullable', 'array', 'max:20'],
+                'donnees.modeles.*.id' => ['required_with:donnees.modeles', 'string', 'max:80'],
+                'donnees.modeles.*.label' => ['required_with:donnees.modeles', 'string', 'max:120'],
+                'donnees.modeles.*.content' => ['required_with:donnees.modeles', 'string', 'max:600'],
             ],
             default => $common,
         };

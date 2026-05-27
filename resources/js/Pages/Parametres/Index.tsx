@@ -86,6 +86,28 @@ function Label({ children, required }: { children: React.ReactNode; required?: b
     );
 }
 
+type SmsTemplate = { id: string; label: string; content: string };
+
+const buildSmsTemplates = (smsConfig: Record<string, unknown>): SmsTemplate[] => {
+    const dynamicTemplates = Array.isArray(smsConfig.modeles)
+        ? smsConfig.modeles
+            .map((item, index) => ({
+                id: String((item as { id?: unknown })?.id ?? `modele_${index + 1}`),
+                label: String((item as { label?: unknown })?.label ?? `Modèle ${index + 1}`),
+                content: String((item as { content?: unknown })?.content ?? ''),
+            }))
+            .filter((item) => item.label.trim() || item.content.trim())
+        : [];
+
+    if (dynamicTemplates.length > 0) return dynamicTemplates;
+
+    return [
+        { id: 'modele_relance_finance', label: 'Relance finance', content: String(smsConfig.modele_relance_finance ?? "Bonjour, ceci est un rappel de paiement. Merci de régulariser la situation de votre enfant.") },
+        { id: 'modele_confirmation_paiement', label: 'Confirmation paiement', content: String(smsConfig.modele_confirmation_paiement ?? 'Bonjour, nous confirmons la réception de votre paiement. Merci pour votre confiance.') },
+        { id: 'modele_rappel_inscription', label: 'Rappel inscription', content: String(smsConfig.modele_rappel_inscription ?? "Bonjour, la période d'inscription/réinscription est ouverte. Merci de finaliser les démarches.") },
+    ];
+};
+
 function FlashBanner() {
     const { flash } = usePage<{ flash: { success?: string; error?: string } }>().props;
     if (!flash?.success && !flash?.error) return null;
@@ -201,9 +223,7 @@ export default function ParametresIndex(props: Props) {
     });
     const communicationSmsConfigForm = useForm({
         donnees: {
-            modele_relance_finance: String(config('communication_sms').modele_relance_finance ?? "Bonjour, ceci est un rappel de paiement. Merci de régulariser la situation de votre enfant."),
-            modele_confirmation_paiement: String(config('communication_sms').modele_confirmation_paiement ?? 'Bonjour, nous confirmons la réception de votre paiement. Merci pour votre confiance.'),
-            modele_rappel_inscription: String(config('communication_sms').modele_rappel_inscription ?? "Bonjour, la période d'inscription/réinscription est ouverte. Merci de finaliser les démarches."),
+            modeles: buildSmsTemplates(config('communication_sms')),
         },
     });
 
@@ -1335,17 +1355,35 @@ export default function ParametresIndex(props: Props) {
                     <div className="space-y-4">
                         <Section title="Modèles SMS préconfigurés" subtitle="Ces messages sont disponibles dans le module Communication SMS pour un remplissage rapide.">
                             <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); communicationSmsConfigForm.patch(route('parametres.config.update', 'communication_sms'), { preserveScroll: true }); }}>
-                                <div>
-                                    <Label>Relance finance</Label>
-                                    <Textarea rows={3} maxLength={600} value={String(communicationSmsConfigForm.data.donnees.modele_relance_finance)} onChange={(e) => communicationSmsConfigForm.setData('donnees', { ...communicationSmsConfigForm.data.donnees, modele_relance_finance: e.target.value })} />
-                                </div>
-                                <div>
-                                    <Label>Confirmation paiement</Label>
-                                    <Textarea rows={3} maxLength={600} value={String(communicationSmsConfigForm.data.donnees.modele_confirmation_paiement)} onChange={(e) => communicationSmsConfigForm.setData('donnees', { ...communicationSmsConfigForm.data.donnees, modele_confirmation_paiement: e.target.value })} />
-                                </div>
-                                <div>
-                                    <Label>Rappel inscription</Label>
-                                    <Textarea rows={3} maxLength={600} value={String(communicationSmsConfigForm.data.donnees.modele_rappel_inscription)} onChange={(e) => communicationSmsConfigForm.setData('donnees', { ...communicationSmsConfigForm.data.donnees, modele_rappel_inscription: e.target.value })} />
+                                {communicationSmsConfigForm.data.donnees.modeles.map((modele, index) => (
+                                    <div key={modele.id} className="space-y-2 rounded-lg border border-slate-200 p-3 dark:border-gray-700">
+                                        <div className="flex items-center justify-between gap-3">
+                                            <div className="flex-1">
+                                                <Label>Nom du modèle</Label>
+                                                <Input maxLength={120} value={modele.label} onChange={(e) => communicationSmsConfigForm.setData('donnees', {
+                                                    ...communicationSmsConfigForm.data.donnees,
+                                                    modeles: communicationSmsConfigForm.data.donnees.modeles.map((item, idx) => idx === index ? { ...item, label: e.target.value } : item),
+                                                })} />
+                                            </div>
+                                            <Button type="button" variant="outline" size="sm" onClick={() => communicationSmsConfigForm.setData('donnees', {
+                                                ...communicationSmsConfigForm.data.donnees,
+                                                modeles: communicationSmsConfigForm.data.donnees.modeles.filter((_, idx) => idx !== index),
+                                            })}>Supprimer</Button>
+                                        </div>
+                                        <div>
+                                            <Label>Contenu du message</Label>
+                                            <Textarea rows={3} maxLength={600} value={modele.content} onChange={(e) => communicationSmsConfigForm.setData('donnees', {
+                                                ...communicationSmsConfigForm.data.donnees,
+                                                modeles: communicationSmsConfigForm.data.donnees.modeles.map((item, idx) => idx === index ? { ...item, content: e.target.value } : item),
+                                            })} />
+                                        </div>
+                                    </div>
+                                ))}
+                                <div className="flex justify-start">
+                                    <Button type="button" variant="outline" onClick={() => communicationSmsConfigForm.setData('donnees', {
+                                        ...communicationSmsConfigForm.data.donnees,
+                                        modeles: [...communicationSmsConfigForm.data.donnees.modeles, { id: `modele_${Date.now()}`, label: '', content: '' }],
+                                    })}>Ajouter un modèle</Button>
                                 </div>
                                 <div className="flex justify-end">
                                     <Button type="submit" disabled={communicationSmsConfigForm.processing}>Enregistrer</Button>
