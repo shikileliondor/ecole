@@ -22,12 +22,13 @@ class ParentTuteurSeeder extends Seeder
     public function run(): void
     {
         DB::transaction(function (): void {
+            DB::table('eleve_parents')->delete();
+
             Eleve::query()->each(function (Eleve $eleve): void {
                 $lienPrincipal = fake()->randomElement(['pere', 'mere']);
                 $tel1 = $this->telephoneIvoirien();
 
-                // Création du parent principal
-                $principal = ParentTuteur::query()->create([
+                $principalPayload = [
                     'nom' => fake()->randomElement(EleveFactoryNames::NOMS),
                     'prenoms' => fake()->randomElement(EleveFactoryNames::PRENOMS_MIXTES),
                     'lien' => $lienPrincipal,
@@ -41,7 +42,10 @@ class ParentTuteurSeeder extends Seeder
                     'can_portal_access' => fake()->boolean(60),
                     'portal_login' => null,
                     'portal_password' => null,
-                ]);
+                ];
+
+                // Création du parent principal
+                $principal = ParentTuteur::query()->create($principalPayload);
 
                 if ($principal->can_portal_access) {
                     $principal->update([
@@ -62,9 +66,22 @@ class ParentTuteurSeeder extends Seeder
                     )->syncRoles(['parent']);
                 }
 
+                DB::table('eleve_parents')->updateOrInsert(
+                    [
+                        'eleve_id' => $eleve->id,
+                        'parent_id' => $principal->id,
+                    ],
+                    [
+                        'est_principal' => true,
+                        'peut_recuperer' => true,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]
+                );
+
                 // Création du parent secondaire dans 70% des cas
                 if (fake()->boolean(70)) {
-                    ParentTuteur::query()->create([
+                    $secondaire = ParentTuteur::query()->create([
                         'nom' => fake()->randomElement(EleveFactoryNames::NOMS),
                         'prenoms' => fake()->randomElement(EleveFactoryNames::PRENOMS_MIXTES),
                         'lien' => $lienPrincipal === 'pere' ? 'mere' : 'pere',
@@ -77,10 +94,23 @@ class ParentTuteurSeeder extends Seeder
                         'est_payeur' => false,
                         'can_portal_access' => false,
                     ]);
+
+                    DB::table('eleve_parents')->updateOrInsert(
+                        [
+                            'eleve_id' => $eleve->id,
+                            'parent_id' => $secondaire->id,
+                        ],
+                        [
+                            'est_principal' => false,
+                            'peut_recuperer' => fake()->boolean(85),
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]
+                    );
                 }
             });
 
-            $this->command?->info('✓ Parents/tuteurs créés.');
+            $this->command?->info('✓ Parents/tuteurs créés et liés aux élèves.');
         });
     }
 

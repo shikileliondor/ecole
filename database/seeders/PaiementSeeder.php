@@ -65,9 +65,10 @@ class PaiementSeeder extends Seeder
                                 ? (int) round($attendu * (fake()->numberBetween(50, 80) / 100))
                                 : $attendu;
 
-                            Paiement::query()->create([
+                            Paiement::query()->updateOrCreate([
                                 'inscription_id' => $inscription->id,
                                 'type_frais_id' => $typeFrais->id,
+                            ], [
                                 'montant_attendu' => $attendu,
                                 'montant_paye' => $paye,
                                 'mode_paiement' => $mode,
