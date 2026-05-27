@@ -115,6 +115,7 @@ function getNavGroups(unreadCount: number): NavGroup[] {
         label: 'COMMUNICATION',
         items: [
             { label: 'SMS parents', href: route('communication.sms.index'), icon: Mail },
+            { label: 'Email parents', href: route('communication.email.index'), icon: MailCheck },
         ],
     },
     {
