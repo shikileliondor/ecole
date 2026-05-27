@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Classe;
 use App\Models\ParentTuteur;
+use App\Models\ParametreConfig;
 use App\Models\SmsMessage;
 use App\Services\Sms\OrangeSmsService;
 use Illuminate\Http\RedirectResponse;
@@ -53,6 +54,10 @@ class CommunicationSmsController extends Controller
         return Inertia::render('Communication/SmsParents', [
             'classes' => $classes,
             'parents' => $parents,
+            'templates' => ParametreConfig::query()
+                ->where('etablissement_id', $etablissementId)
+                ->where('onglet', 'communication_sms')
+                ->value('donnees') ?? [],
         ]);
     }
 

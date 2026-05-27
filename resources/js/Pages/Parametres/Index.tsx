@@ -21,7 +21,8 @@ type TabId =
     | 'evaluations'
     | 'absences'
     | 'utilisateurs'
-    | 'documents';
+    | 'documents'
+    | 'communication_sms';
 
 type Props = {
     etablissement: {
@@ -198,6 +199,13 @@ export default function ParametresIndex(props: Props) {
             variables: String(config('documents').variables ?? '{{eleve_nom}}, {{classe}}, {{annee_scolaire}}, {{moyenne_generale}}'),
         },
     });
+    const communicationSmsConfigForm = useForm({
+        donnees: {
+            modele_relance_finance: String(config('communication_sms').modele_relance_finance ?? "Bonjour, ceci est un rappel de paiement. Merci de régulariser la situation de votre enfant."),
+            modele_confirmation_paiement: String(config('communication_sms').modele_confirmation_paiement ?? 'Bonjour, nous confirmons la réception de votre paiement. Merci pour votre confiance.'),
+            modele_rappel_inscription: String(config('communication_sms').modele_rappel_inscription ?? "Bonjour, la période d'inscription/réinscription est ouverte. Merci de finaliser les démarches."),
+        },
+    });
 
     const anneeForm = useForm({ libelle: '', date_debut: '', date_fin: '' });
     const periodeForm = useForm({ annee_scolaire_id: '', libelle: '', date_debut: '', date_fin: '', ordre: 1 });
@@ -236,6 +244,7 @@ export default function ParametresIndex(props: Props) {
             { id: 'absences', label: 'Absences & discipline' },
             { id: 'utilisateurs', label: 'Utilisateurs & accès' },
             { id: 'documents', label: 'Documents' },
+            { id: 'communication_sms', label: 'Communication SMS' },
         ] satisfies Array<{ id: TabId; label: string }>,
         [],
     );
@@ -1318,6 +1327,30 @@ export default function ParametresIndex(props: Props) {
                                     ))}
                                 </Table>
                             </div>
+                        </Section>
+                    </div>
+                ) : null}
+
+                {activeTab === 'communication_sms' ? (
+                    <div className="space-y-4">
+                        <Section title="Modèles SMS préconfigurés" subtitle="Ces messages sont disponibles dans le module Communication SMS pour un remplissage rapide.">
+                            <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); communicationSmsConfigForm.patch(route('parametres.config.update', 'communication_sms'), { preserveScroll: true }); }}>
+                                <div>
+                                    <Label>Relance finance</Label>
+                                    <Textarea rows={3} maxLength={600} value={String(communicationSmsConfigForm.data.donnees.modele_relance_finance)} onChange={(e) => communicationSmsConfigForm.setData('donnees', { ...communicationSmsConfigForm.data.donnees, modele_relance_finance: e.target.value })} />
+                                </div>
+                                <div>
+                                    <Label>Confirmation paiement</Label>
+                                    <Textarea rows={3} maxLength={600} value={String(communicationSmsConfigForm.data.donnees.modele_confirmation_paiement)} onChange={(e) => communicationSmsConfigForm.setData('donnees', { ...communicationSmsConfigForm.data.donnees, modele_confirmation_paiement: e.target.value })} />
+                                </div>
+                                <div>
+                                    <Label>Rappel inscription</Label>
+                                    <Textarea rows={3} maxLength={600} value={String(communicationSmsConfigForm.data.donnees.modele_rappel_inscription)} onChange={(e) => communicationSmsConfigForm.setData('donnees', { ...communicationSmsConfigForm.data.donnees, modele_rappel_inscription: e.target.value })} />
+                                </div>
+                                <div className="flex justify-end">
+                                    <Button type="submit" disabled={communicationSmsConfigForm.processing}>Enregistrer</Button>
+                                </div>
+                            </form>
                         </Section>
                     </div>
                 ) : null}
