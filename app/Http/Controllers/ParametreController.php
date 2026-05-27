@@ -20,6 +20,8 @@ use App\Models\TypeFrais;
 use App\Services\Parametres\ParametreAuditService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response as HttpResponse;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 use Spatie\Permission\Models\Permission;
@@ -40,7 +42,7 @@ class ParametreController extends Controller
             ->all();
 
         $etablissementData = $etablissement->toArray();
-        $etablissementData['logo_url'] = $etablissement->logo ? asset('storage/' . $etablissement->logo) : null;
+        $etablissementData['logo_url'] = $etablissement->logo ? route('parametres.logo') : null;
 
         return Inertia::render('Parametres/Index', [
             'etablissement' => $etablissementData,
@@ -61,6 +63,25 @@ class ParametreController extends Controller
             'permissions' => Permission::query()->orderBy('name')->get(),
             'modelesImpression' => ModeleImpression::query()->where('etablissement_id', $etablissementId)->orderBy('type_document')->orderBy('nom')->get(),
             'typesDocument' => ['bulletin', 'recu', 'carte_scolaire', 'attestation'],
+        ]);
+    }
+
+
+    public function logo(Request $request): HttpResponse
+    {
+        $etablissementId = (int) $request->user()->etablissement_id;
+        $etablissement = Etablissement::query()->findOrFail($etablissementId);
+
+        abort_if(empty($etablissement->logo), 404);
+
+        $disk = Storage::disk('public');
+        $path = (string) $etablissement->logo;
+
+        abort_unless($disk->exists($path), 404);
+
+        return response($disk->get($path), 200, [
+            'Content-Type' => $disk->mimeType($path) ?? 'application/octet-stream',
+            'Cache-Control' => 'private, max-age=300',
         ]);
     }
 
