@@ -1,7 +1,7 @@
 import AppLayout from '@/Layouts/AppLayout';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { useState } from 'react';
-import { CalendarX, Check, ChevronLeft, ChevronRight, Download, FileSpreadsheet, FileText, FileType, Plus, Trash2, X } from 'lucide-react';
+import { CalendarX, Check, ChevronLeft, ChevronRight, Download, FileSpreadsheet, FileText, Plus, Trash2, X } from 'lucide-react';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/Components/ui/select';
@@ -145,40 +145,26 @@ function buildExportUrl(routeName: string, filters: Record<string, string>): str
 }
 
 function ExportButtons({ filters }: { filters: Record<string, string> }) {
-    const [open, setOpen] = useState(false);
     return (
-        <div className="relative">
-            <Button variant="outline" onClick={() => setOpen((o) => !o)} className="gap-2">
-                <Download size={15} /> Exporter
+        <div className="flex flex-wrap gap-2">
+            <Button asChild variant="outline">
+                <a href={buildExportUrl('absences.export.pdf', filters)} target="_blank" rel="noopener noreferrer">
+                    <Download className="mr-2 h-4 w-4" />
+                    Exporter PDF
+                </a>
             </Button>
-            {open ? (
-                <>
-                    <button className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-                    <div className="absolute right-0 top-10 z-20 w-44 rounded-xl border bg-white py-1 shadow-lg">
-                        <a
-                            href={buildExportUrl('absences.export.pdf', filters)}
-                            className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                            onClick={() => setOpen(false)}
-                        >
-                            <FileText size={14} className="text-red-500" /> Export PDF
-                        </a>
-                        <a
-                            href={buildExportUrl('absences.export.excel', filters)}
-                            className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                            onClick={() => setOpen(false)}
-                        >
-                            <FileSpreadsheet size={14} className="text-green-600" /> Export Excel
-                        </a>
-                        <a
-                            href={buildExportUrl('absences.export.word', filters)}
-                            className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                            onClick={() => setOpen(false)}
-                        >
-                            <FileType size={14} className="text-blue-600" /> Export Word
-                        </a>
-                    </div>
-                </>
-            ) : null}
+            <Button asChild variant="outline">
+                <a href={buildExportUrl('absences.export.word', filters)} target="_blank" rel="noopener noreferrer">
+                    <FileText className="mr-2 h-4 w-4" />
+                    Exporter Word
+                </a>
+            </Button>
+            <Button asChild variant="outline">
+                <a href={buildExportUrl('absences.export.excel', filters)} target="_blank" rel="noopener noreferrer">
+                    <FileSpreadsheet className="mr-2 h-4 w-4" />
+                    Exporter Excel
+                </a>
+            </Button>
         </div>
     );
 }
