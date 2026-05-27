@@ -12,6 +12,7 @@ use App\Models\Paiement;
 use App\Models\Personnel;
 use App\Models\Salaire;
 use App\Models\TypeFrais;
+use App\Notifications\AppNotification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -38,7 +39,21 @@ class FinanceController extends Controller
             'reference_transaction' => ['nullable', 'string', 'max:255'],
             'note_caissier' => ['nullable', 'string'],
         ]);
-        Paiement::query()->create([...$payload, 'encaisse_par' => $request->user()?->id]);
+        $paiement = Paiement::query()->create([...$payload, 'encaisse_par' => $request->user()?->id]);
+
+        $paiement->load('inscription.eleve');
+        $eleve = $paiement->inscription?->eleve;
+        $montantFormate = number_format((int) $payload['montant_paye'], 0, ',', ' ') . ' FCFA';
+
+        AppNotification::notifyStaff(
+            (int) $request->user()?->etablissement_id,
+            new AppNotification(
+                notifType: 'paiement',
+                title:     'Paiement reçu',
+                message:   ($eleve ? trim($eleve->nom . ' ' . $eleve->prenoms) . ' — ' : '') . $montantFormate,
+                link:      '/finances/paiements',
+            )
+        );
 
         return back()->with('success', 'Paiement enregistré.');
     }

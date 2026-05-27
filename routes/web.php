@@ -11,6 +11,8 @@ use App\Http\Controllers\ParametreController;
 use App\Http\Controllers\ClasseController;
 use App\Http\Controllers\NoteBulletinController;
 use App\Http\Controllers\SmsTestController;
+use App\Http\Controllers\AbsenceController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PersonnelController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -126,9 +128,22 @@ Route::middleware(['auth'])->prefix('inscriptions')->name('inscriptions.')->grou
 });
 
 
+Route::middleware(['auth'])->prefix('absences')->name('absences.')->group(function (): void {
+    Route::get('/', [AbsenceController::class, 'index'])->name('index');
+    Route::get('/create', [AbsenceController::class, 'create'])->name('create');
+    Route::post('/', [AbsenceController::class, 'store'])->name('store');
+    Route::get('/export/pdf', [AbsenceController::class, 'exportPdf'])->name('export.pdf');
+    Route::get('/export/excel', [AbsenceController::class, 'exportExcel'])->name('export.excel');
+    Route::get('/export/word', [AbsenceController::class, 'exportWord'])->name('export.word');
+    Route::patch('/{absence}', [AbsenceController::class, 'update'])->name('update');
+    Route::delete('/{absence}', [AbsenceController::class, 'destroy'])->name('destroy');
+});
+
 Route::middleware(['auth'])->prefix('personnel')->name('personnel.')->group(function (): void {
     Route::get('/', [PersonnelController::class, 'index'])->name('index');
     Route::post('/', [PersonnelController::class, 'store'])->name('store');
+    Route::post('/{personnel}', [PersonnelController::class, 'update'])->name('update');
+    Route::delete('/{personnel}', [PersonnelController::class, 'destroy'])->name('destroy');
 });
 
 Route::middleware(['auth'])->prefix('finances')->name('finances.')->group(function (): void {
@@ -156,6 +171,13 @@ Route::middleware(['auth'])->prefix('api')->name('api.')->group(function (): voi
 Route::middleware(['auth'])->prefix('sms')->name('sms.')->group(function (): void {
     Route::get('/test', [SmsTestController::class, 'create'])->name('test');
     Route::post('/test', [SmsTestController::class, 'store'])->name('test.store');
+});
+
+Route::middleware('auth')->prefix('notifications')->name('notifications.')->group(function (): void {
+    Route::post('/{id}/read', [NotificationController::class, 'markAsRead'])->name('read');
+    Route::post('/read-all', [NotificationController::class, 'markAllAsRead'])->name('read-all');
+    Route::delete('/clear-read', [NotificationController::class, 'clearRead'])->name('clear-read');
+    Route::delete('/{id}', [NotificationController::class, 'destroy'])->name('destroy');
 });
 
 Route::middleware('auth')->group(function () {

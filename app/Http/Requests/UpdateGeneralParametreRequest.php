@@ -36,6 +36,7 @@ class UpdateGeneralParametreRequest extends FormRequest
             'directeur_nom' => ['nullable', 'string', 'max:120'],
             'agrement_mena' => ['nullable', 'string', 'max:120'],
             'annee_creation' => ['nullable', 'integer', 'min:1900', 'max:2100'],
+            'logo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
         ];
     }
 

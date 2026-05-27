@@ -10,6 +10,7 @@ use App\Models\AnneeScolaire;
 use App\Models\Classe;
 use App\Models\Inscription;
 use App\Models\Niveau;
+use App\Notifications\AppNotification;
 use App\Services\EleveService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
@@ -58,6 +59,19 @@ class EleveController extends Controller
         try {
             $eleve = $this->eleveService->creerEleve($request->validated() + ['photo' => $request->file('photo')], (int) auth()->user()->etablissement_id);
             Log::info('Eleve created', ['eleve_id' => $eleve->id]);
+
+            $classe = $eleve->inscriptions->first()?->classe;
+            AppNotification::notifyStaff(
+                (int) auth()->user()->etablissement_id,
+                new AppNotification(
+                    notifType: 'inscription',
+                    title:     'Nouvel élève inscrit',
+                    message:   trim($eleve->nom . ' ' . $eleve->prenoms)
+                               . ($classe ? ' — ' . $classe->nom : ''),
+                    link:      '/eleves/' . $eleve->id,
+                )
+            );
+
             return redirect()->route('eleves.show', $eleve->id)->with('success', 'Élève inscrit avec succès');
         } catch (\Throwable $e) {
             Log::error('Erreur lors de la création d\'un élève', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);

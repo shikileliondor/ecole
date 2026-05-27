@@ -76,6 +76,8 @@ class Personnel extends Model
         'photo',
         'categorie',
         'type',
+        'poste',
+        'specialite',
         'diplome',
         'est_certifie_mena',
         'numero_badge_mena',

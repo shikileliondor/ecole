@@ -39,8 +39,11 @@ class ParametreController extends Controller
             ->pluck('donnees', 'onglet')
             ->all();
 
+        $etablissementData = $etablissement->toArray();
+        $etablissementData['logo_url'] = $etablissement->logo ? asset('storage/' . $etablissement->logo) : null;
+
         return Inertia::render('Parametres/Index', [
-            'etablissement' => $etablissement,
+            'etablissement' => $etablissementData,
             'configs' => $configs,
             'annees' => AnneeScolaire::query()->where('etablissement_id', $etablissementId)->orderByDesc('date_debut')->get(),
             'periodes' => PeriodeAcademique::query()->whereHas('anneeScolaire', fn ($query) => $query->where('etablissement_id', $etablissementId))->with('anneeScolaire:id,libelle')->orderBy('ordre')->get(),
@@ -66,8 +69,15 @@ class ParametreController extends Controller
         $etablissementId = (int) auth()->user()->etablissement_id;
         $etablissement = Etablissement::query()->findOrFail($etablissementId);
 
-        $avant = $etablissement->only(array_keys($request->validated()));
-        $etablissement->update($request->validated());
+        $data = collect($request->validated())->except('logo')->all();
+
+        if ($request->hasFile('logo')) {
+            $path = $request->file('logo')->store('logos', 'public');
+            $data['logo'] = $path;
+        }
+
+        $avant = $etablissement->only(array_keys($data));
+        $etablissement->update($data);
 
         $this->auditService->log(
             request: $request,
@@ -76,7 +86,7 @@ class ParametreController extends Controller
             action: 'update_general',
             cible: $etablissement,
             avant: $avant,
-            apres: $etablissement->only(array_keys($request->validated())),
+            apres: $etablissement->only(array_keys($data)),
         );
 
         return back()->with('success', 'Paramètres généraux mis à jour.');

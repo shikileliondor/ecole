@@ -5,7 +5,7 @@ export default function Section({ title, subtitle, children }: { title: string; 
     const [isOpen, setIsOpen] = useState(true);
 
     return (
-        <section className="rounded-xl border border-slate-200 bg-white p-5">
+        <section className="rounded-xl border border-slate-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
             <button
                 type="button"
                 onClick={() => setIsOpen((current) => !current)}
@@ -13,10 +13,10 @@ export default function Section({ title, subtitle, children }: { title: string; 
                 aria-expanded={isOpen}
             >
                 <div>
-                    <h3 className="text-lg font-semibold text-slate-900">{title}</h3>
-                    {subtitle ? <p className="mt-1 text-sm text-slate-500">{subtitle}</p> : null}
+                    <h3 className="text-lg font-semibold text-slate-900 dark:text-gray-100">{title}</h3>
+                    {subtitle ? <p className="mt-1 text-sm text-slate-500 dark:text-gray-400">{subtitle}</p> : null}
                 </div>
-                <ChevronDown className={`mt-1 h-5 w-5 shrink-0 text-slate-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown className={`mt-1 h-5 w-5 shrink-0 text-slate-500 transition-transform dark:text-gray-400 ${isOpen ? 'rotate-180' : ''}`} />
             </button>
 
             {isOpen ? <div className="mt-4">{children}</div> : null}

@@ -6,7 +6,7 @@ export default function TabButton({ active, label, onClick }: { active: boolean;
             className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
                 active
                     ? 'bg-blue-600 text-white shadow-sm'
-                    : 'bg-white text-slate-700 hover:bg-slate-100'
+                    : 'bg-white text-slate-700 hover:bg-slate-100 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
             }`}
         >
             {label}

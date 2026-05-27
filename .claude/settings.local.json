@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -r \"TODO\\\\|FIXME\\\\|@todo\\\\|todo\\\\|fixme\" C:/xampp/htdocs/morel-app --include=*.php --include=*.tsx --include=*.ts --include=*.jsx --include=*.js)"
+    ]
+  }
+}

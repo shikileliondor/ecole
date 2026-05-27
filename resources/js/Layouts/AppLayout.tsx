@@ -1,5 +1,6 @@
 import { Link, usePage } from '@inertiajs/react';
 import { type PropsWithChildren, useMemo, useState } from 'react';
+import NotificationPanel, { type NotificationItem } from '@/Components/NotificationPanel';
 import {
     AlertCircle,
     BarChart3,
@@ -29,6 +30,7 @@ import {
     Users,
     X,
 } from 'lucide-react';
+import { useDarkMode } from '@/hooks/useDarkMode';
 import { Avatar, AvatarFallback } from '@/Components/ui/avatar';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
@@ -70,14 +72,20 @@ type AuthProps = {
         roles?: string[];
         permissions?: string[];
     };
+    notifications: {
+        unread_count: number;
+        items: NotificationItem[];
+    };
+    flash?: { success?: string; error?: string };
 };
 
-const navGroups: NavGroup[] = [
+function getNavGroups(unreadCount: number): NavGroup[] {
+    return [
     {
         label: 'PRINCIPAL',
         items: [
             { label: 'Tableau de bord', href: route('dashboard'), icon: LayoutDashboard },
-            { label: 'Notifications', href: '#', icon: Bell, notifications: 4 },
+            { label: 'Notifications', href: '#', icon: Bell, notifications: unreadCount > 0 ? unreadCount : undefined },
         ],
     },
     {
@@ -89,7 +97,7 @@ const navGroups: NavGroup[] = [
             { label: 'Classes', href: route('classes.index'), icon: School },
             { label: 'Emplois du temps', href: route('emplois-du-temps.index'), icon: CalendarDays },
             { label: 'Notes & Bulletins', href: route('notes-bulletins.index'), icon: BookOpen },
-            { label: 'Absences', href: '#', icon: CalendarX },
+            { label: 'Absences', href: route('absences.index'), icon: CalendarX },
         ],
     },
     {
@@ -125,15 +133,18 @@ const navGroups: NavGroup[] = [
             },
         ],
     },
-];
+    ]; // end getNavGroups
+}
 
 export default function AppLayout({
     children,
     title = 'Tableau de bord',
 }: PropsWithChildren<{ title?: string }>) {
-    const { auth } = usePage<AuthProps>().props;
+    const { auth, notifications: notifProps } = usePage<AuthProps>().props;
     const [sidebarOpen, setSidebarOpen] = useState(false);
-    const [isDarkMode, setIsDarkMode] = useState(false);
+    const [notifOpen, setNotifOpen] = useState(false);
+    const [unreadCount, setUnreadCount] = useState(notifProps?.unread_count ?? 0);
+    const [isDarkMode, toggleDarkMode] = useDarkMode();
     const [openedMenus, setOpenedMenus] = useState<Record<string, boolean>>({
         Paramètres: window.location.pathname.startsWith('/parametres'),
         FINANCES: window.location.pathname.startsWith('/finances'),
@@ -150,6 +161,7 @@ export default function AppLayout({
         .toUpperCase();
 
     const pathname = window.location.pathname;
+    const navGroups = useMemo(() => getNavGroups(unreadCount), [unreadCount]);
 
     const renderedSidebar = useMemo(
         () => (
@@ -351,13 +363,13 @@ export default function AppLayout({
                 </div>
             </aside>
         ),
-        [initials, openedMenus, pathname, roleName, schoolName, userName],
+        [initials, navGroups, openedMenus, pathname, roleName, schoolName, userName],
     );
 
     return (
-        <div className={isDarkMode ? 'dark' : ''}>
-            <div className="flex min-h-screen bg-gray-50">
-                <div className="hidden lg:block">{renderedSidebar}</div>
+        <>
+        <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-950">
+                <div className="hidden h-screen shrink-0 lg:block">{renderedSidebar}</div>
 
                 {/* Sidebar mobile + overlay */}
                 {sidebarOpen ? (
@@ -371,7 +383,7 @@ export default function AppLayout({
                     </>
                 ) : null}
 
-                <div className="flex min-w-0 flex-1 flex-col">
+                <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
                     {/* Barre de navigation supérieure */}
                     <header className="sticky top-0 z-30 h-16 border-b border-gray-200 bg-white">
                         <div className="flex h-full items-center justify-between gap-3 px-4 lg:px-6">
@@ -406,14 +418,24 @@ export default function AppLayout({
                                     type="button"
                                     variant="ghost"
                                     size="icon"
-                                    onClick={() => setIsDarkMode((prev) => !prev)}
+                                    onClick={toggleDarkMode}
                                 >
                                     {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
                                 </Button>
 
-                                <Button type="button" variant="ghost" size="icon" className="relative">
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="relative"
+                                    onClick={() => setNotifOpen((o) => !o)}
+                                >
                                     <Bell size={18} />
-                                    <span className="absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-full bg-red-500" />
+                                    {unreadCount > 0 ? (
+                                        <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-0.5 text-[9px] font-bold text-white">
+                                            {unreadCount > 99 ? '99+' : unreadCount}
+                                        </span>
+                                    ) : null}
                                 </Button>
 
                                 <div className="hidden lg:block">
@@ -466,7 +488,15 @@ export default function AppLayout({
 
                     <main className="flex-1 overflow-y-auto p-4 lg:p-6">{children}</main>
                 </div>
-            </div>
         </div>
+
+        <NotificationPanel
+            open={notifOpen}
+            onClose={() => setNotifOpen(false)}
+            items={notifProps?.items ?? []}
+            unreadCount={unreadCount}
+            onCountChange={setUnreadCount}
+        />
+        </>
     );
 }

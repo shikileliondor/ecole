@@ -106,3 +106,97 @@
     font-family: 'Fraunces', serif;
   }
 }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Dark mode — overrides for hardcoded Tailwind utility classes
+   The .dark class is applied to <html> by useDarkMode hook.
+   Using "html.dark" prefix for specificity without !important.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* Backgrounds */
+html.dark .bg-white          { background-color: rgb(30 41 59);  }   /* slate-800 */
+html.dark .bg-gray-50        { background-color: rgb(15 23 42);  }   /* slate-900 */
+html.dark .bg-gray-100       { background-color: rgb(30 41 59);  }   /* slate-800 */
+html.dark .bg-gray-200       { background-color: rgb(51 65 85);  }   /* slate-700 */
+
+/* Text */
+html.dark .text-gray-800     { color: rgb(241 245 249); }   /* slate-100 */
+html.dark .text-gray-700     { color: rgb(226 232 240); }   /* slate-200 */
+html.dark .text-gray-600     { color: rgb(203 213 225); }   /* slate-300 */
+html.dark .text-gray-500     { color: rgb(148 163 184); }   /* slate-400 */
+html.dark .text-gray-400     { color: rgb(100 116 139); }   /* slate-500 */
+
+/* Borders */
+html.dark .border-gray-200   { border-color: rgb(51 65 85);  }   /* slate-700 */
+html.dark .border-gray-100   { border-color: rgb(30 41 59);  }   /* slate-800 */
+html.dark .border-b          { border-bottom-color: rgb(51 65 85); }
+html.dark .divide-y > * + *  { border-top-color: rgb(51 65 85); }
+
+/* Header / topbar */
+html.dark header.sticky      { background-color: rgb(15 23 42); border-bottom-color: rgb(51 65 85); }
+
+/* Hover states */
+html.dark .hover\:bg-gray-50:hover  { background-color: rgb(30 41 59); }
+html.dark .hover\:bg-gray-100:hover { background-color: rgb(51 65 85); }
+
+/* Table rows */
+html.dark tbody tr:hover             { background-color: rgb(30 41 59) !important; }
+html.dark .even\:bg-gray-50:nth-child(even),
+html.dark tbody tr:nth-child(even)   { background-color: rgb(20 30 48); }
+
+/* Inputs, selects */
+html.dark input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+html.dark textarea,
+html.dark select {
+  background-color: rgb(30 41 59);
+  color: rgb(241 245 249);
+  border-color: rgb(51 65 85);
+}
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: rgb(100 116 139);
+}
+
+/* Cards / panels with rounded border */
+html.dark .rounded-xl.border,
+html.dark .rounded-lg.border {
+  border-color: rgb(51 65 85);
+}
+
+/* Dropdowns / popovers */
+html.dark [role="listbox"],
+html.dark [data-radix-popper-content-wrapper] > div {
+  background-color: rgb(30 41 59);
+  border-color: rgb(51 65 85);
+  color: rgb(226 232 240);
+}
+
+/* Badge outline */
+html.dark .border.bg-transparent {
+  border-color: rgb(51 65 85);
+  color: rgb(203 213 225);
+}
+
+/* Pagination */
+html.dark a.border   { border-color: rgb(51 65 85); color: rgb(203 213 225); background-color: rgb(30 41 59); }
+html.dark a.border:hover { background-color: rgb(51 65 85); }
+
+/* Modal / dialog overlay */
+html.dark .bg-white.shadow-xl,
+html.dark .bg-white.rounded-xl {
+  background-color: rgb(30 41 59);
+  color: rgb(226 232 240);
+}
+
+/* Buttons ghost / outline */
+html.dark .bg-white.border   { background-color: rgb(30 41 59); border-color: rgb(51 65 85); color: rgb(203 213 225); }
+html.dark button.border:not([class*="bg-"]) { border-color: rgb(51 65 85); color: rgb(203 213 225); }
+
+/* Context band / info boxes */
+html.dark .bg-gray-50.border-l-4 { background-color: rgb(20 30 48); }
+html.dark .bg-blue-50 { background-color: rgb(23 37 84); }
+html.dark .bg-green-50 { background-color: rgb(20 44 32); }
+html.dark .bg-red-50   { background-color: rgb(55 20 20); }
+
+/* Step indicators (inactive) */
+html.dark .bg-gray-200.text-gray-600 { background-color: rgb(51 65 85); color: rgb(148 163 184); }
