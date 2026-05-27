@@ -43,7 +43,11 @@ class InscriptionController extends Controller
             'niveaux' => Niveau::query()->orderBy('ordre')->get(),
             'annees' => AnneeScolaire::query()->where('etablissement_id', $etablissementId)->orderByDesc('date_debut')->get(),
             'eleves' => Eleve::query()->where('etablissement_id', $etablissementId)->orderBy('nom')->orderBy('prenoms')->get(['id', 'nom', 'prenoms', 'matricule']),
-            'parents' => ParentTuteur::query()->orderBy('nom')->orderBy('prenoms')->get(['id', 'nom', 'prenoms', 'telephone_1']),
+            'parents' => ParentTuteur::query()
+                ->whereHas('eleves', fn ($query) => $query->where('etablissement_id', $etablissementId))
+                ->orderBy('nom')
+                ->orderBy('prenoms')
+                ->get(['id', 'nom', 'prenoms', 'telephone_1']),
         ]);
     }
 
@@ -56,7 +60,9 @@ class InscriptionController extends Controller
 
     public function show(int $id): Response
     {
+        $etablissementId = (int) auth()->user()->etablissement_id;
         $inscription = Inscription::query()
+            ->whereHas('eleve', fn ($query) => $query->where('etablissement_id', $etablissementId))
             ->with(['eleve.parentsTuteurs', 'classe.niveau', 'anneeScolaire', 'documents'])
             ->findOrFail($id);
 
@@ -66,7 +72,7 @@ class InscriptionController extends Controller
     public function edit(int $id): Response
     {
         $etablissementId = (int) auth()->user()->etablissement_id;
-        $inscription = Inscription::query()->with(['eleve', 'classe', 'anneeScolaire'])->findOrFail($id);
+        $inscription = Inscription::query()->whereHas('eleve', fn ($query) => $query->where('etablissement_id', $etablissementId))->with(['eleve', 'classe', 'anneeScolaire'])->findOrFail($id);
 
         return Inertia::render('Inscriptions/Edit', [
             'inscription' => $inscription,
@@ -76,7 +82,7 @@ class InscriptionController extends Controller
 
     public function update(UpdateInscriptionRequest $request, int $id): RedirectResponse
     {
-        $inscription = Inscription::query()->with('eleve')->findOrFail($id);
+        $inscription = Inscription::query()->whereHas('eleve', fn ($query) => $query->where('etablissement_id', (int) auth()->user()->etablissement_id))->with('eleve')->findOrFail($id);
         $inscription = $this->inscriptionService->update($inscription, $request->validated());
 
         return redirect()->route('inscriptions.show', $inscription->id)->with('success', 'Inscription mise à jour');

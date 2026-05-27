@@ -81,16 +81,17 @@ class EleveController extends Controller
 
     public function show(int $id): Response
     {
-        $eleve = $this->eleveService->getFicheEleve($id, (int) auth()->user()->etablissement_id);
+        $etablissementId = (int) auth()->user()->etablissement_id;
+        $eleve = $this->eleveService->getFicheEleve($id, $etablissementId);
         $inscriptionActive = $eleve->inscriptions->firstWhere('statut', Inscription::STATUTS['inscrit']);
 
         return Inertia::render('Eleves/Show', [
             'eleve' => $eleve,
             'inscription_active' => $inscriptionActive,
-            'notes_par_trimestre' => $inscriptionActive ? $this->eleveService->getNotesParTrimestre($inscriptionActive->id) : [1 => [], 2 => [], 3 => []],
+            'notes_par_trimestre' => $inscriptionActive ? $this->eleveService->getNotesParTrimestre($inscriptionActive->id, $etablissementId) : [1 => [], 2 => [], 3 => []],
             'paiements' => $inscriptionActive?->paiements ?? collect(),
             'absences' => $inscriptionActive?->absences ?? collect(),
-            'stats_financieres' => $inscriptionActive ? $this->eleveService->getStatsFinancieres($inscriptionActive->id) : ['total_du' => 0, 'total_paye' => 0, 'solde' => 0, 'est_a_jour' => true],
+            'stats_financieres' => $inscriptionActive ? $this->eleveService->getStatsFinancieres($inscriptionActive->id, $etablissementId) : ['total_du' => 0, 'total_paye' => 0, 'solde' => 0, 'est_a_jour' => true],
         ]);
     }
 
@@ -106,20 +107,20 @@ class EleveController extends Controller
 
     public function update(UpdateEleveRequest $request, int $id): RedirectResponse
     {
-        $eleve = $this->eleveService->mettreAJourEleve($id, $request->validated() + ['photo' => $request->file('photo')]);
+        $eleve = $this->eleveService->mettreAJourEleve($id, $request->validated() + ['photo' => $request->file('photo')], (int) auth()->user()->etablissement_id);
         return redirect()->route('eleves.show', $eleve->id)->with('success', 'Informations de l\'élève mises à jour avec succès');
     }
 
     public function destroy(int $id): RedirectResponse
     {
-        $this->eleveService->supprimerEleve($id);
+        $this->eleveService->supprimerEleve($id, (int) auth()->user()->etablissement_id);
         return redirect()->route('eleves.index')->with('success', 'Élève supprimé');
     }
 
     public function transferer(Request $request, int $id): RedirectResponse
     {
         $validated = $request->validate(['ecole_destination' => ['required', 'string', 'max:255']]);
-        $this->eleveService->transfererEleve($id, $validated['ecole_destination']);
+        $this->eleveService->transfererEleve($id, $validated['ecole_destination'], (int) auth()->user()->etablissement_id);
         return redirect()->route('eleves.index')->with('success', 'Élève transféré avec succès');
     }
 
