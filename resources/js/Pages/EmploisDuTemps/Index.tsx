@@ -1,6 +1,7 @@
 import { Head, router, useForm } from '@inertiajs/react';
 import AppLayout from '@/Layouts/AppLayout';
 import { Button } from '@/Components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/Components/ui/select';
 
 type Option = { id: number; nom?: string; libelle?: string; prenoms?: string };
 type Emploi = {
@@ -65,14 +66,24 @@ export default function EmploisIndex({ filters, classes, anneesScolaires, matier
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="grid gap-3 md:grid-cols-2">
           <label className="text-sm text-slate-700">Classe
-            <select value={form.data.classe_id} onChange={(e) => { form.setData('classe_id', e.target.value); onFilterChange({ classe_id: e.target.value }); }} className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2">
-              {classes.map((c) => <option key={c.id} value={c.id}>{c.nom}</option>)}
-            </select>
+            <Select value={form.data.classe_id} onValueChange={(value) => { form.setData('classe_id', value); onFilterChange({ classe_id: value }); }}>
+              <SelectTrigger className="mt-1 w-full">
+                <SelectValue placeholder="Classe" />
+              </SelectTrigger>
+              <SelectContent>
+                {classes.map((c) => <SelectItem key={c.id} value={String(c.id)}>{c.nom}</SelectItem>)}
+              </SelectContent>
+            </Select>
           </label>
           <label className="text-sm text-slate-700">Année scolaire
-            <select value={form.data.annee_scolaire_id} onChange={(e) => { form.setData('annee_scolaire_id', e.target.value); onFilterChange({ annee_scolaire_id: e.target.value }); }} className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2">
-              {anneesScolaires.map((a) => <option key={a.id} value={a.id}>{a.libelle}</option>)}
-            </select>
+            <Select value={form.data.annee_scolaire_id} onValueChange={(value) => { form.setData('annee_scolaire_id', value); onFilterChange({ annee_scolaire_id: value }); }}>
+              <SelectTrigger className="mt-1 w-full">
+                <SelectValue placeholder="Année scolaire" />
+              </SelectTrigger>
+              <SelectContent>
+                {anneesScolaires.map((a) => <SelectItem key={a.id} value={String(a.id)}>{a.libelle}</SelectItem>)}
+              </SelectContent>
+            </Select>
           </label>
         </div>
       </div>
