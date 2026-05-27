@@ -267,17 +267,29 @@ export default function AbsencesIndex({ absences, classes, filters, stats }: Pag
                 {/* Filtres */}
                 <div className="rounded-xl border bg-white p-4">
                     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-                        <Select value={filterClasse || 'all'} onValueChange={(v) => setFilterClasse(v === 'all' ? '' : v)}>
-                            <SelectTrigger className="w-full">
-                                <SelectValue placeholder="Toutes les classes" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">Toutes les classes</SelectItem>
+                        <div className="relative">
+                            <Input
+                                list="classes-filter-options"
+                                value={filterClasse ? (classes.find((c) => String(c.id) === filterClasse)?.nom ?? '') : 'Toutes les classes'}
+                                onChange={(e) => {
+                                    const nextValue = e.target.value;
+                                    if (nextValue === 'Toutes les classes' || nextValue.trim() === '') {
+                                        setFilterClasse('');
+                                        return;
+                                    }
+                                    const matchedClasse = classes.find((c) => c.nom.toLowerCase() === nextValue.toLowerCase());
+                                    setFilterClasse(matchedClasse ? String(matchedClasse.id) : '');
+                                }}
+                                placeholder="Toutes les classes"
+                                className="w-full"
+                            />
+                            <datalist id="classes-filter-options">
+                                <option value="Toutes les classes" />
                                 {classes.map((c) => (
-                                    <SelectItem key={c.id} value={String(c.id)}>{c.nom}</SelectItem>
+                                    <option key={c.id} value={c.nom} />
                                 ))}
-                            </SelectContent>
-                        </Select>
+                            </datalist>
+                        </div>
 
                         <Input
                             type="date"
