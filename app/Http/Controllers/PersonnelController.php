@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StorePersonnelRequest;
+use App\Models\AnneeScolaire;
 use App\Models\Classe;
 use App\Models\Matiere;
 use App\Models\Personnel;
@@ -20,6 +21,10 @@ class PersonnelController extends Controller
     public function index(Request $request): Response
     {
         $etablissementId = (int) auth()->user()->etablissement_id;
+        $anneeActiveId = (int) AnneeScolaire::query()
+            ->where('etablissement_id', $etablissementId)
+            ->active()
+            ->value('id');
 
         $filters = [
             'search'    => trim((string) $request->string('search')->value()),
@@ -101,6 +106,7 @@ class PersonnelController extends Controller
             ],
             'classes' => Classe::query()
                 ->where('etablissement_id', $etablissementId)
+                ->when($anneeActiveId > 0, fn ($query) => $query->where('annee_scolaire_id', $anneeActiveId))
                 ->orderBy('nom')
                 ->get(['id', 'nom']),
         ]);
