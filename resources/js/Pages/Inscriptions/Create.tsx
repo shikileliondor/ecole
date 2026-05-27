@@ -7,7 +7,6 @@ import { Card, CardContent } from '@/Components/ui/card';
 import FeedbackAlert from '@/Components/ui/feedback-alert';
 import { Input } from '@/Components/ui/input';
 import { Label } from '@/Components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/Components/ui/select';
 import { Textarea } from '@/Components/ui/textarea';
 import { Bell, ChevronRight, FileText, Info, Moon, School, Search, ShieldCheck, UserRound } from 'lucide-react';
 
@@ -21,6 +20,32 @@ type Props = {
 };
 
 const inputClass = 'mt-2 h-11 rounded-lg border-slate-200 text-sm focus-visible:ring-blue-100';
+const selectClass = `${inputClass} w-full rounded-lg border border-slate-200 bg-white px-3`;
+
+type SimpleSelectOption = { value: string; label: string };
+
+function SimpleSelect({
+    value,
+    onChange,
+    options,
+    placeholder = 'Sélectionner',
+}: {
+    value: string;
+    onChange: (value: string) => void;
+    options: SimpleSelectOption[];
+    placeholder?: string;
+}) {
+    return (
+        <select className={selectClass} value={value} onChange={(e) => onChange(e.target.value)}>
+            <option value="">{placeholder}</option>
+            {options.map((option) => (
+                <option key={option.value} value={option.value}>
+                    {option.label}
+                </option>
+            ))}
+        </select>
+    );
+}
 
 export default function InscriptionsCreate({ classes, annees, eleves, parents }: Props) {
     const steps = useMemo(
@@ -94,11 +119,11 @@ export default function InscriptionsCreate({ classes, annees, eleves, parents }:
                         <div className="border-b border-slate-200 bg-white px-6 py-5"><h2 className="text-xl font-bold text-slate-900">{steps[currentStep].title}</h2></div>
                         <CardContent className="space-y-6 p-6">
                             {currentStep === 0 && <div className="grid grid-cols-1 gap-4 md:grid-cols-2">{/* identity */}
-                                <div><Label className="text-sm font-medium text-slate-800">Type d'inscription <span className="text-red-500">*</span></Label><Select value={data.type_inscription} onValueChange={(v) => setData('type_inscription', v)}><SelectTrigger className={inputClass}><SelectValue /></SelectTrigger><SelectContent><SelectItem value="nouvelle">Nouvelle inscription</SelectItem><SelectItem value="reinscription">Réinscription</SelectItem></SelectContent></Select></div>
-                                {data.type_inscription === 'reinscription' ? <div><Label className="text-sm font-medium text-slate-800">Élève existant <span className="text-red-500">*</span></Label><Select value={data.eleve_id || 'none'} onValueChange={(v) => setData('eleve_id', v === 'none' ? '' : v)}><SelectTrigger className={inputClass}><SelectValue placeholder="Sélectionner" /></SelectTrigger><SelectContent><SelectItem value="none">Sélectionner</SelectItem>{eleves.map((e) => <SelectItem key={e.id} value={String(e.id)}>{e.matricule} - {e.nom} {e.prenoms}</SelectItem>)}</SelectContent></Select></div> : <>
+                                <div><Label className="text-sm font-medium text-slate-800">Type d'inscription <span className="text-red-500">*</span></Label><SimpleSelect value={data.type_inscription} onChange={(v) => setData('type_inscription', v)} options={[{ value: 'nouvelle', label: 'Nouvelle inscription' }, { value: 'reinscription', label: 'Réinscription' }]} placeholder="Choisir le type" /></div>
+                                {data.type_inscription === 'reinscription' ? <div><Label className="text-sm font-medium text-slate-800">Élève existant <span className="text-red-500">*</span></Label><SimpleSelect value={data.eleve_id || ''} onChange={(v) => setData('eleve_id', v)} options={eleves.map((e) => ({ value: String(e.id), label: `${e.matricule} - ${e.nom} ${e.prenoms}` }))} /></div> : <>
                                     <div><Label className="text-sm font-medium text-slate-800">Nom <span className="text-red-500">*</span></Label><Input className={inputClass} placeholder="Nom de l'élève" value={data.nom} onChange={(e) => setData('nom', e.target.value)} /></div>
                                     <div><Label className="text-sm font-medium text-slate-800">Prénoms <span className="text-red-500">*</span></Label><Input className={inputClass} placeholder="Prénoms de l'élève" value={data.prenoms} onChange={(e) => setData('prenoms', e.target.value)} /></div>
-                                    <div><Label className="text-sm font-medium text-slate-800">Sexe <span className="text-red-500">*</span></Label><Select value={data.sexe || 'none'} onValueChange={(v) => setData('sexe', v === 'none' ? '' : v)}><SelectTrigger className={inputClass}><SelectValue placeholder="Sélectionner" /></SelectTrigger><SelectContent><SelectItem value="none">Sélectionner</SelectItem><SelectItem value="M">Masculin</SelectItem><SelectItem value="F">Féminin</SelectItem></SelectContent></Select></div>
+                                    <div><Label className="text-sm font-medium text-slate-800">Sexe <span className="text-red-500">*</span></Label><SimpleSelect value={data.sexe || ''} onChange={(v) => setData('sexe', v)} options={[{ value: 'M', label: 'Masculin' }, { value: 'F', label: 'Féminin' }]} /></div>
                                     <div><Label className="text-sm font-medium text-slate-800">Date de naissance <span className="text-red-500">*</span></Label><Input className={inputClass} type="date" value={data.date_naissance} onChange={(e) => setData('date_naissance', e.target.value)} /></div>
                                     <div><Label className="text-sm font-medium text-slate-800">Lieu de naissance <span className="text-red-500">*</span></Label><Input className={inputClass} placeholder="Lieu de naissance" value={data.lieu_naissance} onChange={(e) => setData('lieu_naissance', e.target.value)} /></div>
                                     <div><Label className="text-sm font-medium text-slate-800">Nationalité <span className="text-red-500">*</span></Label><Input className={inputClass} value={data.nationalite} onChange={(e) => setData('nationalite', e.target.value)} /></div>
@@ -108,8 +133,8 @@ export default function InscriptionsCreate({ classes, annees, eleves, parents }:
                             </div>}
 
                             {currentStep === 1 && <div className="grid grid-cols-1 gap-4 md:grid-cols-2">{/* contacts */}
-                                <div><Label>Mode responsable</Label><Select value={data.mode_tuteur} onValueChange={(v) => setData('mode_tuteur', v)}><SelectTrigger className={inputClass}><SelectValue /></SelectTrigger><SelectContent><SelectItem value="create">Créer</SelectItem><SelectItem value="attach">Rattacher</SelectItem><SelectItem value="replace">Remplacer</SelectItem></SelectContent></Select></div>
-                                {data.mode_tuteur === 'attach' ? <div><Label>Responsable existant</Label><Select value={data.parent_tuteur_id || 'none'} onValueChange={(v) => setData('parent_tuteur_id', v === 'none' ? '' : v)}><SelectTrigger className={inputClass}><SelectValue placeholder="Sélectionner" /></SelectTrigger><SelectContent><SelectItem value="none">Sélectionner</SelectItem>{parents.map((p) => <SelectItem key={p.id} value={String(p.id)}>{p.nom} {p.prenoms} ({p.telephone_1})</SelectItem>)}</SelectContent></Select></div> : <>
+                                <div><Label>Mode responsable</Label><SimpleSelect value={data.mode_tuteur} onChange={(v) => setData('mode_tuteur', v)} options={[{ value: 'create', label: 'Créer' }, { value: 'attach', label: 'Rattacher' }, { value: 'replace', label: 'Remplacer' }]} placeholder="Choisir le mode" /></div>
+                                {data.mode_tuteur === 'attach' ? <div><Label>Responsable existant</Label><SimpleSelect value={data.parent_tuteur_id || ''} onChange={(v) => setData('parent_tuteur_id', v)} options={parents.map((p) => ({ value: String(p.id), label: `${p.nom} ${p.prenoms} (${p.telephone_1})` }))} /></div> : <>
                                     <div><Label>Responsable légal *</Label><Input className={inputClass} value={data.nom_tuteur} onChange={(e) => setData('nom_tuteur', e.target.value)} /></div><div><Label>Prénoms *</Label><Input className={inputClass} value={data.prenoms_tuteur} onChange={(e) => setData('prenoms_tuteur', e.target.value)} /></div>
                                     <div><Label>Téléphone responsable *</Label><Input className={inputClass} value={data.telephone_tuteur} onChange={(e) => setData('telephone_tuteur', e.target.value)} /></div><div><Label>Adresse responsable</Label><Input className={inputClass} value={data.adresse_tuteur} onChange={(e) => setData('adresse_tuteur', e.target.value)} /></div>
                                 </>}
@@ -118,9 +143,9 @@ export default function InscriptionsCreate({ classes, annees, eleves, parents }:
                             </div>}
 
                             {currentStep === 2 && <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                                <div><Label>Année scolaire *</Label><Select value={data.annee_scolaire_id || 'none'} onValueChange={(v) => setData('annee_scolaire_id', v === 'none' ? '' : v)}><SelectTrigger className={inputClass}><SelectValue placeholder="Sélectionner" /></SelectTrigger><SelectContent><SelectItem value="none">Sélectionner</SelectItem>{annees.map((a) => <SelectItem key={a.id} value={String(a.id)}>{a.libelle}</SelectItem>)}</SelectContent></Select></div>
-                                <div><Label>Classe *</Label><Select value={data.classe_id || 'none'} onValueChange={(v) => setData('classe_id', v === 'none' ? '' : v)}><SelectTrigger className={inputClass}><SelectValue placeholder="Sélectionner" /></SelectTrigger><SelectContent><SelectItem value="none">Sélectionner</SelectItem>{classes.map((c) => <SelectItem key={c.id} value={String(c.id)}>{c.nom}</SelectItem>)}</SelectContent></Select></div>
-                                <div><Label>Statut inscription *</Label><Select value={data.statut} onValueChange={(v) => setData('statut', v)}><SelectTrigger className={inputClass}><SelectValue /></SelectTrigger><SelectContent><SelectItem value="inscrit">Inscrit</SelectItem><SelectItem value="transfere">Transféré</SelectItem><SelectItem value="abandonne">Abandonné</SelectItem></SelectContent></Select></div>
+                                <div><Label>Année scolaire *</Label><SimpleSelect value={data.annee_scolaire_id || ''} onChange={(v) => setData('annee_scolaire_id', v)} options={annees.map((a) => ({ value: String(a.id), label: a.libelle }))} /></div>
+                                <div><Label>Classe *</Label><SimpleSelect value={data.classe_id || ''} onChange={(v) => setData('classe_id', v)} options={classes.map((c) => ({ value: String(c.id), label: c.nom }))} /></div>
+                                <div><Label>Statut inscription *</Label><SimpleSelect value={data.statut} onChange={(v) => setData('statut', v)} options={[{ value: 'inscrit', label: 'Inscrit' }, { value: 'transfere', label: 'Transféré' }, { value: 'abandonne', label: 'Abandonné' }]} placeholder="Choisir un statut" /></div>
                                 <div><Label>Date inscription *</Label><Input className={inputClass} type="date" value={data.date_inscription} onChange={(e) => setData('date_inscription', e.target.value)} /></div>
                             </div>}
 
