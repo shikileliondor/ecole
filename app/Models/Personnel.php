@@ -179,7 +179,7 @@ class Personnel extends Model
     protected function anciennete(): Attribute
     {
         return Attribute::make(
-            get: fn (): int => $this->date_embauche ? Carbon::parse($this->date_embauche)->diffInYears(now()) : 0
+            get: fn (): int => $this->date_embauche ? (int) Carbon::parse($this->date_embauche)->diffInYears(now()) : 0
         );
     }
 
