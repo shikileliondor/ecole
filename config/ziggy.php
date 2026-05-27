@@ -23,6 +23,7 @@ return [
             'finances.*',
             'api.sms.*',
             'sms.*',
+            'communication.*',
             'notifications.*',
             'profile.*',
             'storage.local',
