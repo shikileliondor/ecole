@@ -112,6 +112,12 @@ function getNavGroups(unreadCount: number): NavGroup[] {
         ],
     },
     {
+        label: 'COMMUNICATION',
+        items: [
+            { label: 'SMS parents', href: route('communication.sms.index'), icon: Mail },
+        ],
+    },
+    {
         label: 'RESSOURCES HUMAINES',
         items: [{ label: 'Personnel', href: route('personnel.index'), icon: UserCog }],
     },
