@@ -1,7 +1,7 @@
 import AppLayout from '@/Layouts/AppLayout';
 import { router, useForm, usePage } from '@inertiajs/react';
 import { Paperclip, Search, X } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { FinanceProps, PaymentRow } from './types';
 
 const formatCurrency = (amount: number) => `${new Intl.NumberFormat('fr-FR').format(Math.round(amount || 0))} FCFA`;
