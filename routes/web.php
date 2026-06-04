@@ -152,7 +152,7 @@ Route::middleware(['auth'])->prefix('absences')->name('absences.')->group(functi
 Route::middleware(['auth'])->prefix('personnel')->name('personnel.')->group(function (): void {
     Route::get('/', [PersonnelController::class, 'index'])->middleware('permission:personnel.voir')->name('index');
     Route::post('/', [PersonnelController::class, 'store'])->middleware('permission:personnel.creer')->name('store');
-    Route::post('/{personnel}', [PersonnelController::class, 'update'])->middleware('permission:personnel.modifier')->name('update');
+    Route::match(['post', 'patch'], '/{personnel}', [PersonnelController::class, 'update'])->middleware('permission:personnel.modifier')->name('update');
     Route::delete('/{personnel}', [PersonnelController::class, 'destroy'])->middleware('permission:personnel.supprimer')->name('destroy');
 });
 
