@@ -45,6 +45,7 @@ class Paiement extends Model
         'trimestre',
         'statut',
         'note_caissier',
+        'justificatif_path',
     ];
 
     protected function casts(): array

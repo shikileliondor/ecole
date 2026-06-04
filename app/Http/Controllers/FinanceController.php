@@ -15,6 +15,7 @@ use App\Models\TypeFrais;
 use App\Notifications\AppNotification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -38,7 +39,15 @@ class FinanceController extends Controller
             'date_paiement' => ['required', 'date'],
             'reference_transaction' => ['nullable', 'string', 'max:255'],
             'note_caissier' => ['nullable', 'string'],
+            'justificatif' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:4096'],
         ]);
+
+        unset($payload['justificatif']);
+
+        if ($request->hasFile('justificatif')) {
+            $payload['justificatif_path'] = $request->file('justificatif')->store('paiements/justificatifs', 'public');
+        }
+
         $paiement = Paiement::query()->create([...$payload, 'encaisse_par' => $request->user()?->id]);
 
         $paiement->load('inscription.eleve');
@@ -68,10 +77,21 @@ class FinanceController extends Controller
             'date_paiement' => ['required', 'date'],
             'reference_transaction' => ['nullable', 'string', 'max:255'],
             'note_caissier' => ['nullable', 'string'],
+            'justificatif' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:4096'],
         ]);
+
+        unset($payload['justificatif']);
 
         if ($paiement->statut === 'annule') {
             return back()->withErrors(['paiement' => 'Un paiement annulé ne peut pas être modifié.']);
+        }
+
+        if ($request->hasFile('justificatif')) {
+            if ($paiement->justificatif_path) {
+                Storage::disk('public')->delete($paiement->justificatif_path);
+            }
+
+            $payload['justificatif_path'] = $request->file('justificatif')->store('paiements/justificatifs', 'public');
         }
 
         $paiement->update($payload);
@@ -170,6 +190,7 @@ class FinanceController extends Controller
             'inscription_id' => $p->inscription_id, 'type_frais_id' => $p->type_frais_id, 'recu_numero' => $p->recu_numero,
             'note_caissier' => $p->note_caissier, 'motif_annulation' => $p->statut === 'annule' ? $p->note_caissier : null,
             'encaisse_par_nom' => $p->encaissePar?->name,
+            'justificatif_url' => $p->justificatif_path ? '/storage/'.$p->justificatif_path : null,
         ])->values();
 
         $impayes = $inscriptions->map(function (Inscription $i) {
