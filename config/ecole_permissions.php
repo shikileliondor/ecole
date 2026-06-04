@@ -51,7 +51,10 @@ return [
         'parametres.academique.gerer' => ['module' => 'Paramètres', 'label' => 'Gérer les référentiels académiques'],
         'parametres.documents.gerer' => ['module' => 'Paramètres', 'label' => 'Gérer les modèles de documents'],
         'permissions.roles.gerer' => ['module' => 'Permissions', 'label' => 'Gérer les rôles et leurs permissions'],
-        'permissions.utilisateurs.gerer' => ['module' => 'Permissions', 'label' => 'Gérer les exceptions utilisateurs'],
+        'permissions.utilisateurs.voir' => ['module' => 'Permissions', 'label' => 'Voir les utilisateurs et leurs accès'],
+        'permissions.utilisateurs.creer' => ['module' => 'Permissions', 'label' => 'Créer les utilisateurs et attribuer un rôle'],
+        'permissions.utilisateurs.permissions.gerer' => ['module' => 'Permissions', 'label' => 'Gérer les rôles et exceptions utilisateurs'],
+        'permissions.utilisateurs.gerer' => ['module' => 'Permissions', 'label' => 'Gérer complètement les utilisateurs (compatibilité)'],
         'permissions.creer' => ['module' => 'Permissions', 'label' => 'Créer des permissions techniques'],
         'permissions.supprimer' => ['module' => 'Permissions', 'label' => 'Supprimer des permissions techniques'],
 
@@ -69,7 +72,9 @@ return [
             'personnel.voir', 'personnel.creer', 'personnel.modifier', 'finances.voir',
             'finances.rapports.voir', 'communication.sms.gerer', 'communication.email.gerer',
             'parametres.voir', 'parametres.modifier', 'parametres.academique.gerer',
-            'parametres.documents.gerer', 'notifications.gerer', 'profile.modifier',
+            'parametres.documents.gerer', 'permissions.utilisateurs.voir', 'permissions.utilisateurs.creer',
+            'permissions.utilisateurs.permissions.gerer', 'permissions.roles.gerer',
+            'notifications.gerer', 'profile.modifier',
         ],
         'enseignant' => [
             'dashboard.voir', 'eleves.voir', 'classes.voir', 'emplois.voir', 'notes.voir',

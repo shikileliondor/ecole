@@ -100,8 +100,8 @@ Route::middleware(['auth'])->prefix('parametres')->name('parametres.')->group(fu
     Route::delete('/roles/{role}', [ParametreController::class, 'destroyRole'])->middleware('permission:permissions.roles.gerer')->name('roles.destroy');
     Route::post('/permissions', [ParametreController::class, 'storePermission'])->middleware('permission:permissions.creer')->name('permissions.store');
     Route::delete('/permissions/{permission}', [ParametreController::class, 'destroyPermission'])->middleware('permission:permissions.supprimer')->name('permissions.destroy');
-    Route::post('/users', [ParametreController::class, 'storeUser'])->middleware('permission:permissions.utilisateurs.gerer')->name('users.store');
-    Route::put('/users/{user}/permissions', [ParametreController::class, 'syncUserPermissions'])->middleware('permission:permissions.utilisateurs.gerer')->name('users.permissions.sync');
+    Route::post('/users', [ParametreController::class, 'storeUser'])->middleware('permission:permissions.utilisateurs.creer|permissions.utilisateurs.gerer')->name('users.store');
+    Route::put('/users/{user}/permissions', [ParametreController::class, 'syncUserPermissions'])->middleware('permission:permissions.utilisateurs.permissions.gerer|permissions.utilisateurs.gerer')->name('users.permissions.sync');
     Route::post('/modeles-impression', [ParametreController::class, 'storeModeleImpression'])->middleware('permission:parametres.documents.gerer')->name('modeles-impression.store');
     Route::delete('/modeles-impression/{modeleImpression}', [ParametreController::class, 'destroyModeleImpression'])->middleware('permission:parametres.documents.gerer')->name('modeles-impression.destroy');
 });

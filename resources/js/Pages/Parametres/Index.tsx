@@ -1,6 +1,6 @@
 import AppLayout from '@/Layouts/AppLayout';
 import { Head, router, useForm, usePage } from '@inertiajs/react';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
 import { Checkbox } from '@/Components/ui/checkbox';
@@ -128,8 +128,41 @@ function FlashBanner() {
     );
 }
 
+const TAB_IDS: TabId[] = ['general', 'academique', 'referentiels', 'inscriptions', 'finance', 'evaluations', 'absences', 'utilisateurs', 'documents', 'communication_sms'];
+
+const getInitialTab = (): TabId => {
+    if (typeof window === 'undefined') return 'general';
+
+    const tab = new URLSearchParams(window.location.search).get('tab') as TabId | null;
+
+    return tab && TAB_IDS.includes(tab) ? tab : 'general';
+};
+
 export default function ParametresIndex(props: Props) {
-    const [activeTab, setActiveTab] = useState<TabId>('general');
+    const { auth } = usePage<{ auth: { roles?: string[]; permissions?: string[] } }>().props;
+    const authPermissions = auth.permissions ?? [];
+    const hasAnyPermission = (permissions: string[]) => permissions.some((permission) => authPermissions.includes(permission));
+    const canManageRoles = hasAnyPermission(['permissions.roles.gerer']);
+    const canCreatePermissions = hasAnyPermission(['permissions.creer']);
+    const canCreateUsers = hasAnyPermission(['permissions.utilisateurs.creer', 'permissions.utilisateurs.gerer']);
+    const canManageUserPermissions = hasAnyPermission(['permissions.utilisateurs.permissions.gerer', 'permissions.utilisateurs.gerer']);
+    const canSeeUsersAccess = hasAnyPermission([
+        'permissions.utilisateurs.voir',
+        'permissions.utilisateurs.creer',
+        'permissions.utilisateurs.permissions.gerer',
+        'permissions.utilisateurs.gerer',
+        'permissions.roles.gerer',
+        'permissions.creer',
+    ]);
+    const [activeTab, setActiveTab] = useState<TabId>(getInitialTab);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+
+        const url = new URL(window.location.href);
+        url.searchParams.set('tab', activeTab);
+        window.history.replaceState({}, '', `${url.pathname}?${url.searchParams.toString()}${url.hash}`);
+    }, [activeTab]);
 
     const config = (key: string) => props.configs[key] ?? {};
 
@@ -1259,6 +1292,14 @@ export default function ParametresIndex(props: Props) {
                 {/* ── UTILISATEURS ─────────────────────────────────────────── */}
                 {activeTab === 'utilisateurs' ? (
                     <div className="space-y-4">
+                        <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-100">
+                            <p className="font-semibold">Vue Utilisateurs & accès</p>
+                            <p className="mt-1">Créez les comptes, attribuez un rôle principal, puis ajustez les permissions finales utilisateur par utilisateur.</p>
+                            {!canSeeUsersAccess ? (
+                                <p className="mt-2 rounded-lg bg-white/70 p-2 text-blue-800 dark:bg-gray-900/40 dark:text-blue-100">Vous pouvez ouvrir cet onglet, mais les actions de gestion restent limitées tant que les permissions utilisateurs ne sont pas attribuées à votre rôle.</p>
+                            ) : null}
+                        </div>
+
                         <Section title="Configuration des permissions" subtitle="Gérez les permissions système, les rôles métiers et les exceptions par utilisateur.">
                             <div className="mb-4 grid gap-3 md:grid-cols-3">
                                 <form
@@ -1268,9 +1309,10 @@ export default function ParametresIndex(props: Props) {
                                     <Label>Ajouter une permission technique</Label>
                                     <div className="flex gap-2">
                                         <Input placeholder="module.action" value={permissionForm.data.name} onChange={(e) => permissionForm.setData('name', e.target.value)} />
-                                        <Button type="submit" disabled={permissionForm.processing} variant="outline">Ajouter</Button>
+                                        <Button type="submit" disabled={permissionForm.processing || !canCreatePermissions} variant="outline">Ajouter</Button>
                                     </div>
                                     <FieldError message={permissionForm.errors.name} />
+                                    {!canCreatePermissions ? <p className="mt-1 text-xs text-slate-500">Permission requise : permissions.creer</p> : null}
                                 </form>
                                 <div>
                                     <Label>Recherche</Label>
@@ -1344,8 +1386,8 @@ export default function ParametresIndex(props: Props) {
                                     <div className="flex items-center justify-between border-t border-slate-100 p-4 dark:border-gray-700">
                                         <p className="text-sm text-slate-500">{roleForm.data.permissions.length} permission(s) sélectionnée(s)</p>
                                         <div className="flex gap-2">
-                                            {selectedRole?.name !== 'super_admin' ? <Button type="button" variant="outline" onClick={() => selectedRole && router.delete(route('parametres.roles.destroy', selectedRole.id), { preserveScroll: true })}>Supprimer le rôle</Button> : null}
-                                            <Button type="submit" disabled={roleForm.processing}>Enregistrer les permissions du rôle</Button>
+                                            {selectedRole?.name !== 'super_admin' ? <Button type="button" variant="outline" disabled={!canManageRoles} onClick={() => selectedRole && router.delete(route('parametres.roles.destroy', selectedRole.id), { preserveScroll: true })}>Supprimer le rôle</Button> : null}
+                                            <Button type="submit" disabled={roleForm.processing || !canManageRoles}>Enregistrer les permissions du rôle</Button>
                                         </div>
                                     </div>
                                 </form>
@@ -1407,8 +1449,9 @@ export default function ParametresIndex(props: Props) {
                                     <FieldError message={userForm.errors.password_confirmation} />
                                 </div>
                                 <div className="flex items-end md:col-span-2 xl:col-span-3">
-                                    <Button type="submit" disabled={userForm.processing}>Créer l'utilisateur et attribuer le rôle</Button>
+                                    <Button type="submit" disabled={userForm.processing || !canCreateUsers}>Créer l'utilisateur et attribuer le rôle</Button>
                                 </div>
+                                {!canCreateUsers ? <p className="md:col-span-2 xl:col-span-3 text-xs text-slate-500">Permission requise : permissions.utilisateurs.creer</p> : null}
                             </form>
                         </Section>
 
@@ -1488,7 +1531,7 @@ export default function ParametresIndex(props: Props) {
                                         </div>
 
                                         <div className="flex justify-end border-t border-slate-100 p-4 dark:border-gray-700">
-                                            <Button type="submit" disabled={userPermissionForm.processing}>Enregistrer les permissions utilisateur</Button>
+                                            <Button type="submit" disabled={userPermissionForm.processing || !canManageUserPermissions}>Enregistrer les permissions utilisateur</Button>
                                         </div>
                                     </form>
                                 ) : <p className="text-sm text-slate-500">Aucun utilisateur disponible.</p>}
