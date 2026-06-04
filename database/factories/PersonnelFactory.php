@@ -40,6 +40,7 @@ class PersonnelFactory extends Factory
             'telephone' => '07' . fake()->numerify('########'),
             'whatsapp' => null,
             'email' => fake()->unique()->safeEmail(),
+            'categorie' => 'enseignant',
             'type' => 'enseignant',
             'diplome' => 'BAC',
             'est_certifie_mena' => fake()->boolean(),
@@ -53,6 +54,7 @@ class PersonnelFactory extends Factory
     public function enseignant(): static
     {
         return $this->state(fn () => [
+            'categorie' => 'enseignant',
             'type' => 'enseignant',
             'diplome' => fake()->randomElement(['BAC', 'BTS']),
             'salaire_base' => fake()->numberBetween(80000, 180000),
@@ -62,6 +64,7 @@ class PersonnelFactory extends Factory
     public function directeur(): static
     {
         return $this->state(fn () => [
+            'categorie' => 'personnel_ecole',
             'type' => 'directeur',
             'diplome' => fake()->randomElement(['Licence', 'Master']),
             'est_certifie_mena' => true,
@@ -73,6 +76,7 @@ class PersonnelFactory extends Factory
     public function caissier(): static
     {
         return $this->state(fn () => [
+            'categorie' => 'personnel_ecole',
             'type' => 'caissier',
             'diplome' => 'BTS',
             'type_contrat' => 'CDI',
