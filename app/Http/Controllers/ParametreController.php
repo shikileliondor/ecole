@@ -659,7 +659,7 @@ class ParametreController extends Controller
 
     public function storeUser(Request $request): RedirectResponse
     {
-        $this->authorizePermission('permissions.utilisateurs.gerer');
+        $this->authorizeAnyPermission(['permissions.utilisateurs.creer', 'permissions.utilisateurs.gerer']);
 
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -694,7 +694,7 @@ class ParametreController extends Controller
 
     public function syncUserPermissions(Request $request, User $user): RedirectResponse
     {
-        $this->authorizePermission('permissions.utilisateurs.gerer');
+        $this->authorizeAnyPermission(['permissions.utilisateurs.permissions.gerer', 'permissions.utilisateurs.gerer']);
 
         $this->authorizeUserManagement($request, $user);
 
@@ -761,6 +761,19 @@ class ParametreController extends Controller
     private function authorizePermission(string $permissionName): void
     {
         abort_unless(auth()->user()?->can($permissionName), 403);
+    }
+
+    /**
+     * Autorise l'accès lorsqu'une des permissions passées est disponible.
+     * Garde la compatibilité avec l'ancienne permission globale utilisateurs.
+     *
+     * @param  array<int, string>  $permissionNames
+     */
+    private function authorizeAnyPermission(array $permissionNames): void
+    {
+        $user = auth()->user();
+
+        abort_unless($user !== null && collect($permissionNames)->contains(fn (string $permissionName): bool => $user->can($permissionName)), 403);
     }
 
     public function storeModeleImpression(Request $request): RedirectResponse

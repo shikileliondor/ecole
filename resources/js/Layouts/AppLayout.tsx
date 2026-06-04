@@ -82,7 +82,7 @@ type AuthProps = {
 };
 
 function getNavGroups(unreadCount: number, permissions: string[] = []): NavGroup[] {
-    const can = (permission?: string) => !permission || permissions.includes(permission);
+    const can = (permission?: string) => !permission || permission.split('|').some((item) => permissions.includes(item));
     const filterItems = (groups: NavGroup[]): NavGroup[] => groups
         .map((group) => ({
             ...group,
@@ -149,6 +149,8 @@ function getNavGroups(unreadCount: number, permissions: string[] = []): NavGroup
                 permission: 'parametres.voir',
                 children: [
                     { label: 'Paramètres généraux', href: route('parametres.index'), icon: Settings, permission: 'parametres.voir' },
+                    { label: 'Utilisateurs & accès', href: `${route('parametres.index')}?tab=utilisateurs`, icon: UserCog, permission: 'permissions.utilisateurs.voir|permissions.utilisateurs.gerer|permissions.utilisateurs.creer' },
+                    { label: 'Rôles & permissions', href: `${route('parametres.index')}?tab=utilisateurs`, icon: Settings, permission: 'permissions.roles.gerer|permissions.utilisateurs.gerer' },
                     // { label: 'Nouvelle inscription', href: route('inscriptions.create'), icon: ClipboardList, permission: 'inscriptions.creer' },
                     // { label: 'Slides Hero', href: route('parametres.index'), icon: MonitorPlay },
                     // { label: 'Templates notifications', href: route('parametres.index'), icon: Mail },
