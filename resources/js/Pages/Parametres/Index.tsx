@@ -62,6 +62,8 @@ type Props = {
     users: Array<Item & {
         name: string;
         email: string;
+        type: 'staff' | 'parent';
+        statut: 'actif' | 'bloque';
         roles: Array<{ id: number; name: string }>;
         permissions: string[];
         overrides: Array<{ permission_name: string; effect: 'allow' | 'deny' }>;
@@ -257,6 +259,15 @@ export default function ParametresIndex(props: Props) {
     const typeFraisForm = useForm({ libelle: '', montant: 0, niveau_id: '', classe_id: '', frequence: 'unique', est_obligatoire: true });
     const statutForm = useForm({ libelle: '' });
     const permissionForm = useForm({ name: '' });
+    const userForm = useForm({
+        name: '',
+        email: '',
+        password: '',
+        password_confirmation: '',
+        type: 'staff',
+        statut: 'actif',
+        role: props.roles.find((role) => role.name !== 'super_admin')?.name ?? props.roles[0]?.name ?? '',
+    });
     const roleForm = useForm({ name: props.roles[0]?.name ?? '', permissions: props.roles[0]?.permissions.map((permission) => permission.name) ?? [] as string[] });
     const [selectedRoleId, setSelectedRoleId] = useState<number | null>(props.roles[0]?.id ?? null);
     const [selectedUserId, setSelectedUserId] = useState<number | null>(props.users[0]?.id ?? null);
@@ -1341,6 +1352,66 @@ export default function ParametresIndex(props: Props) {
                             </div>
                         </Section>
 
+                        <Section title="Créer un utilisateur" subtitle="Ajoutez un compte applicatif et attribuez-lui immédiatement son rôle principal.">
+                            <form
+                                className="grid gap-4 rounded-xl border border-slate-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800 md:grid-cols-2 xl:grid-cols-3"
+                                onSubmit={(e) => {
+                                    e.preventDefault();
+                                    userForm.post(route('parametres.users.store'), {
+                                        preserveScroll: true,
+                                        onSuccess: () => userForm.reset('name', 'email', 'password', 'password_confirmation'),
+                                    });
+                                }}
+                            >
+                                <div>
+                                    <Label required>Nom complet</Label>
+                                    <Input value={userForm.data.name} onChange={(e) => userForm.setData('name', e.target.value)} placeholder="Ex: Kouadio Jean" />
+                                    <FieldError message={userForm.errors.name} />
+                                </div>
+                                <div>
+                                    <Label required>Email</Label>
+                                    <Input type="email" value={userForm.data.email} onChange={(e) => userForm.setData('email', e.target.value)} placeholder="utilisateur@ecole.ci" />
+                                    <FieldError message={userForm.errors.email} />
+                                </div>
+                                <div>
+                                    <Label required>Rôle</Label>
+                                    <select className={SEL} value={userForm.data.role} onChange={(e) => userForm.setData('role', e.target.value)}>
+                                        {props.roles.map((role) => <option key={role.id} value={role.name}>{role.name.replace('_', ' ')}</option>)}
+                                    </select>
+                                    <FieldError message={userForm.errors.role} />
+                                </div>
+                                <div>
+                                    <Label required>Type de compte</Label>
+                                    <select className={SEL} value={userForm.data.type} onChange={(e) => userForm.setData('type', e.target.value)}>
+                                        <option value="staff">Personnel</option>
+                                        <option value="parent">Parent</option>
+                                    </select>
+                                    <FieldError message={userForm.errors.type} />
+                                </div>
+                                <div>
+                                    <Label required>Statut</Label>
+                                    <select className={SEL} value={userForm.data.statut} onChange={(e) => userForm.setData('statut', e.target.value)}>
+                                        <option value="actif">Actif</option>
+                                        <option value="bloque">Bloqué</option>
+                                    </select>
+                                    <FieldError message={userForm.errors.statut} />
+                                </div>
+                                <div>
+                                    <Label required>Mot de passe</Label>
+                                    <Input type="password" value={userForm.data.password} onChange={(e) => userForm.setData('password', e.target.value)} placeholder="8 caractères minimum" />
+                                    <FieldError message={userForm.errors.password} />
+                                </div>
+                                <div>
+                                    <Label required>Confirmation du mot de passe</Label>
+                                    <Input type="password" value={userForm.data.password_confirmation} onChange={(e) => userForm.setData('password_confirmation', e.target.value)} />
+                                    <FieldError message={userForm.errors.password_confirmation} />
+                                </div>
+                                <div className="flex items-end md:col-span-2 xl:col-span-3">
+                                    <Button type="submit" disabled={userForm.processing}>Créer l'utilisateur et attribuer le rôle</Button>
+                                </div>
+                            </form>
+                        </Section>
+
                         <Section title="Permissions des utilisateurs" subtitle="Appliquez un rôle puis ajoutez ou retirez des permissions spécifiques à un utilisateur.">
                             <div className="grid gap-4 lg:grid-cols-[300px_minmax(0,1fr)]">
                                 <div className="rounded-xl border border-slate-200 bg-white p-2 dark:border-gray-700 dark:bg-gray-800">
@@ -1356,6 +1427,7 @@ export default function ParametresIndex(props: Props) {
                                                 <span className="block font-medium">{user.name}</span>
                                                 <span className="block truncate text-xs opacity-75">{user.email}</span>
                                                 <span className="mt-1 inline-block rounded-full bg-white/15 px-2 py-0.5 text-xs capitalize">{user.roles[0]?.name.replace('_', ' ') ?? 'sans rôle'}</span>
+                                                <span className="ml-1 mt-1 inline-block rounded-full bg-white/15 px-2 py-0.5 text-xs capitalize">{user.type === 'parent' ? 'Parent' : 'Personnel'} · {user.statut}</span>
                                             </button>
                                         ))}
                                     </div>

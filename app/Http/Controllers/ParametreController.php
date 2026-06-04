@@ -72,13 +72,16 @@ class ParametreController extends Controller
                 'module' => config("ecole_permissions.permissions.{$permission->name}.module", 'Autres'),
             ]),
             'users' => User::query()
+                ->where('etablissement_id', $etablissementId)
                 ->with(['roles:id,name', 'permissionOverrides'])
                 ->orderBy('name')
-                ->get(['id', 'name', 'email'])
+                ->get(['id', 'name', 'email', 'type', 'statut'])
                 ->map(fn (User $user) => [
                     'id' => $user->id,
                     'name' => $user->name,
                     'email' => $user->email,
+                    'type' => $user->type,
+                    'statut' => $user->statut,
                     'roles' => $user->roles->map(fn (Role $role) => ['id' => $role->id, 'name' => $role->name])->values(),
                     'permissions' => $user->getAllPermissions()->pluck('name')->values(),
                     'overrides' => $user->permissionOverrides->map(fn (UserPermissionOverride $override) => [
@@ -654,9 +657,46 @@ class ParametreController extends Controller
         return back()->with('success', 'Permission supprimée.');
     }
 
+    public function storeUser(Request $request): RedirectResponse
+    {
+        $this->authorizePermission('permissions.utilisateurs.gerer');
+
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:users,email'],
+            'password' => ['required', 'string', 'confirmed', 'min:8'],
+            'type' => ['required', Rule::in(array_keys(User::TYPES))],
+            'statut' => ['required', Rule::in(array_keys(User::STATUTS))],
+            'role' => ['required', 'string', Rule::exists('roles', 'name')->where('guard_name', 'web')],
+        ]);
+
+        if ($data['role'] === 'super_admin' && ! $request->user()?->hasRole('super_admin')) {
+            abort(403);
+        }
+
+        $etablissementId = (int) $request->user()->etablissement_id;
+
+        DB::transaction(function () use ($data, $etablissementId): void {
+            $user = User::query()->create([
+                'name' => $data['name'],
+                'email' => $data['email'],
+                'password' => $data['password'],
+                'etablissement_id' => $etablissementId > 0 ? $etablissementId : null,
+                'type' => $data['type'],
+                'statut' => $data['statut'],
+            ]);
+
+            $user->syncRoles([$data['role']]);
+        });
+
+        return back()->with('success', 'Utilisateur créé et rôle attribué.');
+    }
+
     public function syncUserPermissions(Request $request, User $user): RedirectResponse
     {
         $this->authorizePermission('permissions.utilisateurs.gerer');
+
+        $this->authorizeUserManagement($request, $user);
 
         if ($user->hasRole('super_admin') && ! $request->user()?->hasRole('super_admin')) {
             abort(403);
@@ -700,6 +740,15 @@ class ParametreController extends Controller
         });
 
         return back()->with('success', 'Permissions utilisateur enregistrées.');
+    }
+
+    private function authorizeUserManagement(Request $request, User $user): void
+    {
+        if ($request->user()?->hasRole('super_admin')) {
+            return;
+        }
+
+        abort_unless((int) $user->etablissement_id === (int) $request->user()?->etablissement_id, 403);
     }
 
     private function syncConfiguredPermissions(): void
