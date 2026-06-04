@@ -132,9 +132,29 @@ class EleveController extends Controller
             ? Classe::query()->where('etablissement_id', $etablissementId)->find((int) $request->integer('classe_id'))
             : null;
         $eleves = $this->eleveService->getListePourExport($filters, $etablissementId);
-        $pdf = Pdf::loadView('eleves.export-pdf', ['eleves' => $eleves, 'classe' => $classe, 'date_edition' => now(), 'filters' => $filters]);
+        $etablissement = auth()->user()?->etablissement;
+        $logoPath = $this->getPdfLogoPath($etablissement?->logo_pdf ?? $etablissement?->logo);
+        $pdf = Pdf::loadView('eleves.export-pdf', [
+            'eleves' => $eleves,
+            'classe' => $classe,
+            'date_edition' => now(),
+            'filters' => $filters,
+            'etablissement' => $etablissement,
+            'logoPath' => $logoPath,
+        ])->setPaper('a4', 'landscape');
 
         return $pdf->download('eleves-' . ($classe?->nom ? str($classe->nom)->slug() : 'toutes-classes') . '-' . now()->format('Y-m-d') . '.pdf');
+    }
+
+    private function getPdfLogoPath(?string $logo): ?string
+    {
+        if (blank($logo)) {
+            return null;
+        }
+
+        $logoPath = public_path('storage/' . ltrim($logo, '/'));
+
+        return is_file($logoPath) ? $logoPath : null;
     }
 
     public function exportWord(Request $request)

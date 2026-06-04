@@ -26,12 +26,12 @@
         <table class="header-table">
             <tr>
                 <td style="width: 33%;">
-                    @if(auth()->user()?->etablissement?->logo)
-                        <img src="{{ public_path('storage/' . auth()->user()?->etablissement?->logo) }}" alt="Logo" style="width: 65px;">
+                    @if($logoPath)
+                        <img src="{{ $logoPath }}" alt="Logo" style="width: 65px;">
                     @endif
-                    <div class="school">{{ auth()->user()?->etablissement?->nom ?? 'Établissement scolaire' }}</div>
-                    <div class="muted">{{ auth()->user()?->etablissement?->adresse ?? 'Adresse non renseignée' }}</div>
-                    <div class="muted">{{ auth()->user()?->etablissement?->telephone ?? '' }}</div>
+                    <div class="school">{{ $etablissement?->nom ?? 'Établissement scolaire' }}</div>
+                    <div class="muted">{{ $etablissement?->adresse_complete ?: 'Adresse non renseignée' }}</div>
+                    <div class="muted">{{ $etablissement?->contact_telephone ?? '' }}</div>
                 </td>
                 <td style="width: 34%;">
                     <div class="title">LISTE DES ÉLÈVES</div>
