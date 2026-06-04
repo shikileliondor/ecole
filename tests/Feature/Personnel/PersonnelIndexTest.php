@@ -57,4 +57,63 @@ class PersonnelIndexTest extends TestCase
                 ->where('personnel.data.0.id', $legacyTeacher->id)
             );
     }
+
+    public function test_personnel_can_be_updated_with_patch_method_spoofing(): void
+    {
+        $this->withoutMiddleware(PermissionMiddleware::class);
+
+        $school = Etablissement::query()->create([
+            'nom' => 'Groupe Scolaire Test',
+            'type' => Etablissement::TYPES['prive_laic'],
+            'cycle' => Etablissement::CYCLES['primaire'],
+            'localisation_ville' => 'Abidjan',
+            'contact_telephone' => '0102030405',
+        ]);
+
+        $user = User::factory()->create(['etablissement_id' => $school->id]);
+        $personnel = Personnel::factory()->create([
+            'etablissement_id' => $school->id,
+            'nom' => 'AKA',
+            'prenoms' => 'Franck',
+            'telephone' => '0700000000',
+        ]);
+
+        $payload = [
+            'nom' => 'KOUASSI',
+            'prenoms' => 'Jean',
+            'sexe' => 'M',
+            'date_naissance' => '1985-02-15',
+            'lieu_naissance' => 'Abidjan',
+            'nationalite' => 'Ivoirienne',
+            'telephone' => '0712345678',
+            'whatsapp' => null,
+            'email' => 'jean.kouassi@example.test',
+            'categorie' => Personnel::CATEGORIES['enseignant'],
+            'type' => Personnel::TYPES['enseignant'],
+            'poste' => null,
+            'specialite' => 'Mathématiques',
+            'diplome' => 'BAC',
+            'est_certifie_mena' => true,
+            'numero_badge_mena' => 'MENA-123',
+            'date_embauche' => '2024-09-01',
+            'type_contrat' => 'CDI',
+            'salaire_base' => 150000,
+            'statut' => 'actif',
+            'classes_ids' => [],
+            '_method' => 'PATCH',
+        ];
+
+        $this
+            ->actingAs($user)
+            ->post(route('personnel.update', $personnel), $payload)
+            ->assertRedirect(route('personnel.index'));
+
+        $this->assertDatabaseHas('personnel', [
+            'id' => $personnel->id,
+            'nom' => 'KOUASSI',
+            'prenoms' => 'Jean',
+            'telephone' => '0712345678',
+            'specialite' => 'Mathématiques',
+        ]);
+    }
 }
