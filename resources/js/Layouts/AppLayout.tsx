@@ -50,10 +50,12 @@ type NavGroup = {
         href: string;
         icon: typeof LayoutDashboard;
         notifications?: number;
+        permission?: string;
         children?: Array<{
             label: string;
             href: string;
             icon: typeof LayoutDashboard;
+            permission?: string;
         }>;
     }>;
 };
@@ -79,60 +81,75 @@ type AuthProps = {
     flash?: { success?: string; error?: string };
 };
 
-function getNavGroups(unreadCount: number): NavGroup[] {
-    return [
+function getNavGroups(unreadCount: number, permissions: string[] = []): NavGroup[] {
+    const can = (permission?: string) => !permission || permissions.includes(permission);
+    const filterItems = (groups: NavGroup[]): NavGroup[] => groups
+        .map((group) => ({
+            ...group,
+            items: group.items
+                .filter((item) => item.href === '#' || can(item.permission))
+                .map((item) => ({
+                    ...item,
+                    children: item.children?.filter((child) => can(child.permission)),
+                }))
+                .filter((item) => !item.children || item.children.length > 0),
+        }))
+        .filter((group) => group.items.length > 0);
+
+    return filterItems([
     {
         label: 'PRINCIPAL',
         items: [
-            { label: 'Tableau de bord', href: route('dashboard'), icon: LayoutDashboard },
+            { label: 'Tableau de bord', href: route('dashboard'), icon: LayoutDashboard, permission: 'dashboard.voir' },
             { label: 'Notifications', href: '#', icon: Bell, notifications: unreadCount > 0 ? unreadCount : undefined },
         ],
     },
     {
         label: 'SCOLARITÉ',
         items: [
-            { label: 'Élèves', href: route('eleves.index'), icon: Users },
+            { label: 'Élèves', href: route('eleves.index'), icon: Users, permission: 'eleves.voir' },
             // { label: 'Inscriptions', href: route('inscriptions.index'), icon: ClipboardList },
-            { label: 'Nouvelle inscription', href: route('inscriptions.create'), icon: ClipboardList },
-            { label: 'Classes', href: route('classes.index'), icon: School },
-            { label: 'Emplois du temps', href: route('emplois-du-temps.index'), icon: CalendarDays },
-            { label: 'Notes & Bulletins', href: route('notes-bulletins.index'), icon: BookOpen },
-            { label: 'Absences', href: route('absences.index'), icon: CalendarX },
+            { label: 'Nouvelle inscription', href: route('inscriptions.create'), icon: ClipboardList, permission: 'inscriptions.creer' },
+            { label: 'Classes', href: route('classes.index'), icon: School, permission: 'classes.voir' },
+            { label: 'Emplois du temps', href: route('emplois-du-temps.index'), icon: CalendarDays, permission: 'emplois.voir' },
+            { label: 'Notes & Bulletins', href: route('notes-bulletins.index'), icon: BookOpen, permission: 'notes.voir' },
+            { label: 'Absences', href: route('absences.index'), icon: CalendarX, permission: 'absences.voir' },
         ],
     },
     {
         label: 'Finances',
         items: [
-            { label: 'Tableau de bord finance', href: '/finances/dashboard', icon: BarChart3 },
-            { label: 'Paiements / Encaissements', href: '/finances/paiements', icon: CreditCard },
-            { label: 'Impayés', href: '/finances/impayes', icon: AlertCircle },
-            { label: 'Dépenses / Caisse', href: '/finances/depenses', icon: Banknote },
-            { label: 'Salaires', href: '/finances/salaires', icon: Users },
-            { label: 'Rapports financiers', href: '/finances/rapports', icon: FileBarChart },
+            { label: 'Tableau de bord finance', href: '/finances/dashboard', icon: BarChart3, permission: 'finances.voir' },
+            { label: 'Paiements / Encaissements', href: '/finances/paiements', icon: CreditCard, permission: 'finances.paiements.gerer' },
+            { label: 'Impayés', href: '/finances/impayes', icon: AlertCircle, permission: 'finances.paiements.gerer' },
+            { label: 'Dépenses / Caisse', href: '/finances/depenses', icon: Banknote, permission: 'finances.depenses.gerer' },
+            { label: 'Salaires', href: '/finances/salaires', icon: Users, permission: 'finances.salaires.voir' },
+            { label: 'Rapports financiers', href: '/finances/rapports', icon: FileBarChart, permission: 'finances.rapports.voir' },
         ],
     },
     {
         label: 'COMMUNICATION',
         items: [
-            { label: 'SMS parents', href: route('communication.sms.index'), icon: Mail },
-            { label: 'Email parents', href: route('communication.email.index'), icon: MailCheck },
+            { label: 'SMS parents', href: route('communication.sms.index'), icon: Mail, permission: 'communication.sms.gerer' },
+            { label: 'Email parents', href: route('communication.email.index'), icon: MailCheck, permission: 'communication.email.gerer' },
         ],
     },
     {
         label: 'RESSOURCES HUMAINES',
-        items: [{ label: 'Personnel', href: route('personnel.index'), icon: UserCog }],
+        items: [{ label: 'Personnel', href: route('personnel.index'), icon: UserCog, permission: 'personnel.voir' }],
     },
     {
         label: 'RAPPORTS',
         items: [
-            { label: 'Rapports', href: route('finances.rapports.index'), icon: BarChart3 },
+            { label: 'Rapports', href: route('finances.rapports.index'), icon: BarChart3, permission: 'finances.rapports.voir' },
             {
                 label: 'Paramètres',
                 href: route('parametres.index'),
                 icon: Settings,
+                permission: 'parametres.voir',
                 children: [
-                    { label: 'Paramètres généraux', href: route('parametres.index'), icon: Settings },
-                    // { label: 'Nouvelle inscription', href: route('inscriptions.create'), icon: ClipboardList },
+                    { label: 'Paramètres généraux', href: route('parametres.index'), icon: Settings, permission: 'parametres.voir' },
+                    // { label: 'Nouvelle inscription', href: route('inscriptions.create'), icon: ClipboardList, permission: 'inscriptions.creer' },
                     // { label: 'Slides Hero', href: route('parametres.index'), icon: MonitorPlay },
                     // { label: 'Templates notifications', href: route('parametres.index'), icon: Mail },
                     // { label: 'Historique notifications', href: route('parametres.index'), icon: MailCheck },
@@ -140,7 +157,7 @@ function getNavGroups(unreadCount: number): NavGroup[] {
             },
         ],
     },
-    ]; // end getNavGroups
+    ]); // end getNavGroups
 }
 
 export default function AppLayout({
@@ -168,7 +185,8 @@ export default function AppLayout({
         .toUpperCase();
 
     const pathname = window.location.pathname;
-    const navGroups = useMemo(() => getNavGroups(unreadCount), [unreadCount]);
+    const authPermissions = auth.permissions ?? [];
+    const navGroups = useMemo(() => getNavGroups(unreadCount, authPermissions), [authPermissions, unreadCount]);
 
     const renderedSidebar = useMemo(
         () => (
@@ -202,7 +220,7 @@ export default function AppLayout({
                             <p className="mb-1 mt-4 px-3 text-[10px] uppercase tracking-widest text-white/40">
                                 {group.label}
                             </p>
-                            {group.label === 'FINANCES' ? (
+                            {group.label.toUpperCase() === 'FINANCES' ? (
                                 <div className="space-y-1">
                                     <button
                                         type="button"

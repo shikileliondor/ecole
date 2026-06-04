@@ -17,11 +17,15 @@ use App\Models\ParametreConfig;
 use App\Models\PeriodeAcademique;
 use App\Models\StatutInscription;
 use App\Models\TypeFrais;
+use App\Models\User;
+use App\Models\UserPermissionOverride;
 use App\Services\Parametres\ParametreAuditService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 use Spatie\Permission\Models\Permission;
@@ -33,6 +37,7 @@ class ParametreController extends Controller
 
     public function index(): Response
     {
+        $this->syncConfiguredPermissions();
         $etablissementId = (int) auth()->user()->etablissement_id;
         $etablissement = Etablissement::query()->findOrFail($etablissementId);
 
@@ -60,7 +65,27 @@ class ParametreController extends Controller
             'modesPaiement' => ModePaiement::query()->where('etablissement_id', $etablissementId)->orderBy('ordre')->get(),
             'statutsInscription' => StatutInscription::query()->where('etablissement_id', $etablissementId)->orderBy('ordre')->get(),
             'roles' => Role::query()->with('permissions')->orderBy('name')->get(),
-            'permissions' => Permission::query()->orderBy('name')->get(),
+            'permissions' => Permission::query()->orderBy('name')->get()->map(fn (Permission $permission) => [
+                'id' => $permission->id,
+                'name' => $permission->name,
+                'label' => config("ecole_permissions.permissions.{$permission->name}.label", $permission->name),
+                'module' => config("ecole_permissions.permissions.{$permission->name}.module", 'Autres'),
+            ]),
+            'users' => User::query()
+                ->with(['roles:id,name', 'permissionOverrides'])
+                ->orderBy('name')
+                ->get(['id', 'name', 'email'])
+                ->map(fn (User $user) => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'roles' => $user->roles->map(fn (Role $role) => ['id' => $role->id, 'name' => $role->name])->values(),
+                    'permissions' => $user->getAllPermissions()->pluck('name')->values(),
+                    'overrides' => $user->permissionOverrides->map(fn (UserPermissionOverride $override) => [
+                        'permission_name' => $override->permission_name,
+                        'effect' => $override->effect,
+                    ])->values(),
+                ]),
             'modelesImpression' => ModeleImpression::query()->where('etablissement_id', $etablissementId)->orderBy('type_document')->orderBy('nom')->get(),
             'typesDocument' => ['bulletin', 'recu', 'carte_scolaire', 'attestation'],
         ]);
@@ -576,10 +601,12 @@ class ParametreController extends Controller
 
     public function storeRole(Request $request): RedirectResponse
     {
+        $this->authorizePermission('permissions.roles.gerer');
+
         $data = $request->validate([
             'name' => ['required', 'string', 'max:80'],
             'permissions' => ['array'],
-            'permissions.*' => ['string'],
+            'permissions.*' => ['string', Rule::exists('permissions', 'name')->where('guard_name', 'web')],
         ]);
 
         $role = Role::query()->firstOrCreate(['name' => $data['name'], 'guard_name' => 'web']);
@@ -590,6 +617,12 @@ class ParametreController extends Controller
 
     public function destroyRole(Role $role): RedirectResponse
     {
+        $this->authorizePermission('permissions.roles.gerer');
+
+        if ($role->name === 'super_admin') {
+            return back()->withErrors(['role' => 'Le rôle super_admin ne peut pas être supprimé.']);
+        }
+
         $role->delete();
 
         return back()->with('success', 'Rôle supprimé.');
@@ -597,6 +630,8 @@ class ParametreController extends Controller
 
     public function storePermission(Request $request): RedirectResponse
     {
+        $this->authorizePermission('permissions.creer');
+
         $data = $request->validate([
             'name' => ['required', 'string', 'max:80'],
         ]);
@@ -608,9 +643,75 @@ class ParametreController extends Controller
 
     public function destroyPermission(Permission $permission): RedirectResponse
     {
+        $this->authorizePermission('permissions.supprimer');
+
+        if (array_key_exists($permission->name, config('ecole_permissions.permissions', []))) {
+            return back()->withErrors(['permission' => 'Une permission système ne peut pas être supprimée.']);
+        }
+
         $permission->delete();
 
         return back()->with('success', 'Permission supprimée.');
+    }
+
+    public function syncUserPermissions(Request $request, User $user): RedirectResponse
+    {
+        $this->authorizePermission('permissions.utilisateurs.gerer');
+
+        if ($user->hasRole('super_admin') && ! $request->user()?->hasRole('super_admin')) {
+            abort(403);
+        }
+
+        $data = $request->validate([
+            'role' => ['nullable', 'string', Rule::exists('roles', 'name')->where('guard_name', 'web')],
+            'allows' => ['array'],
+            'allows.*' => ['string', Rule::exists('permissions', 'name')->where('guard_name', 'web')],
+            'denies' => ['array'],
+            'denies.*' => ['string', Rule::exists('permissions', 'name')->where('guard_name', 'web')],
+        ]);
+
+        $allows = collect($data['allows'] ?? []);
+        $denies = collect($data['denies'] ?? [])->diff($allows)->values();
+
+        DB::transaction(function () use ($user, $data, $allows, $denies): void {
+            if (! empty($data['role'])) {
+                if ($user->hasRole('super_admin') && $data['role'] !== 'super_admin') {
+                    return;
+                }
+
+                $user->syncRoles([$data['role']]);
+            }
+
+            $user->permissionOverrides()->delete();
+
+            foreach ($allows as $permissionName) {
+                $user->permissionOverrides()->create([
+                    'permission_name' => $permissionName,
+                    'effect' => UserPermissionOverride::EFFECT_ALLOW,
+                ]);
+            }
+
+            foreach ($denies as $permissionName) {
+                $user->permissionOverrides()->create([
+                    'permission_name' => $permissionName,
+                    'effect' => UserPermissionOverride::EFFECT_DENY,
+                ]);
+            }
+        });
+
+        return back()->with('success', 'Permissions utilisateur enregistrées.');
+    }
+
+    private function syncConfiguredPermissions(): void
+    {
+        foreach (array_keys(config('ecole_permissions.permissions', [])) as $permissionName) {
+            Permission::query()->firstOrCreate(['name' => $permissionName, 'guard_name' => 'web']);
+        }
+    }
+
+    private function authorizePermission(string $permissionName): void
+    {
+        abort_unless(auth()->user()?->can($permissionName), 403);
     }
 
     public function storeModeleImpression(Request $request): RedirectResponse
