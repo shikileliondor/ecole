@@ -61,7 +61,8 @@ class EleveService
         $eleve = Eleve::query()
             ->where('etablissement_id', $etablissementId)
             ->with([
-                'inscriptions' => fn ($builder) => $builder->with(['classe.niveau', 'anneeScolaire', 'notes.matiere', 'paiements.typeFrais', 'absences'])->latest('date_inscription'),
+                'etablissement',
+                'inscriptions' => fn ($builder) => $builder->with(['classe.niveau', 'classe.etablissement', 'anneeScolaire', 'notes.matiere', 'paiements.typeFrais', 'absences'])->latest('date_inscription'),
                 'parentsTuteurs',
             ])
             ->findOrFail($id);
