@@ -1,7 +1,7 @@
 import AppLayout from '@/Layouts/AppLayout';
 import { router, useForm, usePage } from '@inertiajs/react';
 import { Search, X } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { FinanceProps, PaymentRow } from './types';
 
 const formatCurrency = (amount: number) => `${new Intl.NumberFormat('fr-FR').format(Math.round(amount || 0))} FCFA`;
@@ -26,6 +26,7 @@ const emptyPayment = {
 
 const modeBadge = (mode: string) => ({ especes: 'bg-slate-100 text-slate-700', orange_money: 'bg-orange-100 text-orange-700', wave: 'bg-cyan-100 text-cyan-700', mtn_momo: 'bg-yellow-100 text-yellow-800', virement: 'bg-violet-100 text-violet-700' }[mode] || 'bg-slate-100 text-slate-700');
 const statusBadge = (s: string) => ({ paye: 'bg-emerald-100 text-emerald-700', partiel: 'bg-orange-100 text-orange-700', annule: 'bg-red-100 text-red-700' }[s] || 'bg-slate-100 text-slate-700');
+const normalizeSearch = (value: string) => value.trim().toLowerCase();
 
 export default function FinancesPaiements() {
     const { props } = usePage<{ props: FinanceProps }>() as any;
@@ -47,10 +48,29 @@ export default function FinancesPaiements() {
 
     const selectedEleve = data.eleves.find((e) => String(e.inscription_id) === form.data.inscription_id);
     const filteredEleves = useMemo(() => {
-        if (!studentQuery.trim()) return data.eleves;
-        const q = studentQuery.toLowerCase();
+        const q = normalizeSearch(studentQuery);
+        if (!q) return data.eleves;
         return data.eleves.filter((e: any) => `${e.nom} ${e.classe || ''} ${e.matricule || ''}`.toLowerCase().includes(q));
     }, [data.eleves, studentQuery]);
+
+    useEffect(() => {
+        if (isEdit) return;
+
+        const q = normalizeSearch(studentQuery);
+        const exactEleve = filteredEleves.find((e: any) => normalizeSearch(e.nom || '') === q || normalizeSearch(e.matricule || '') === q);
+        const autoSelectedEleve = exactEleve ?? (q && filteredEleves.length === 1 ? filteredEleves[0] : null);
+        const nextInscriptionId = autoSelectedEleve ? String(autoSelectedEleve.inscription_id) : '';
+
+        if (form.data.inscription_id === nextInscriptionId) return;
+
+        form.setData({
+            ...form.data,
+            inscription_id: nextInscriptionId,
+            type_frais_id: '',
+            montant_attendu: '0',
+            montant_paye: '',
+        });
+    }, [filteredEleves, form.data.inscription_id, isEdit, studentQuery]);
 
     const eleveFeeRows = useMemo(() => {
         if (!form.data.inscription_id) return [];
@@ -136,9 +156,9 @@ export default function FinancesPaiements() {
             <div className='mt-5 flex-1 space-y-5 overflow-y-auto pr-1'>
                 <section className='space-y-2'><h4 className='text-sm font-semibold text-slate-800'>Élève concerné</h4>
                     <label className='text-xs text-slate-500'>Élève</label>
-                    <div className='relative'><Search className='absolute left-3 top-3.5 h-4 w-4 text-slate-400' /><input disabled={isEdit} value={studentQuery} onChange={(e) => setStudentQuery(e.target.value)} placeholder='Rechercher un élève...' className='h-10 w-full rounded-lg border border-slate-200 pl-9 pr-3 text-sm disabled:bg-slate-100' /></div>
-                    {!isEdit && <select className='h-10 w-full rounded-lg border border-slate-200 px-3 text-sm' value={form.data.inscription_id} onChange={e => form.setData('inscription_id', e.target.value)}><option value=''>Sélectionnez un élève</option>{filteredEleves.map((e: any) => <option key={e.inscription_id} value={e.inscription_id}>{e.nom}</option>)}</select>}
-                    {selectedEleve ? <div className='rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600'><p className='font-semibold text-slate-800'>{selectedEleve.nom}</p><p>Classe : {selectedEleve.classe || 'Non renseignée'}</p><p>Matricule : {selectedEleve.matricule || 'Non renseigné'}</p><p>Année scolaire : {selectedEleve.annee_scolaire || 'Non renseignée'}</p><p>Statut financier : {(selectedEleve as any).statut_financier || 'Non renseigné'}</p></div> : <p className='text-xs text-slate-500'>Sélectionnez un élève pour afficher ses frais.</p>}
+                    <div className='relative'><Search className='absolute left-3 top-3.5 h-4 w-4 text-slate-400' /><input disabled={isEdit} value={studentQuery} onChange={(e) => setStudentQuery(e.target.value)} placeholder='Tapez le nom ou le matricule de l’élève' className='h-10 w-full rounded-lg border border-slate-200 pl-9 pr-3 text-sm disabled:bg-slate-100' /></div>
+                    {!isEdit && studentQuery.trim() && !selectedEleve && <p className='text-xs text-slate-500'>{filteredEleves.length > 1 ? `${filteredEleves.length} élèves correspondent : continuez à saisir pour sélectionner automatiquement.` : 'Aucun élève trouvé pour cette recherche.'}</p>}
+                    {selectedEleve ? <div className='rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs text-slate-600'><p className='font-semibold text-emerald-800'>Élève sélectionné automatiquement</p><p className='mt-1 font-semibold text-slate-800'>{selectedEleve.nom}</p><p>Classe : {selectedEleve.classe || 'Non renseignée'}</p><p>Matricule : {selectedEleve.matricule || 'Non renseigné'}</p><p>Année scolaire : {selectedEleve.annee_scolaire || 'Non renseignée'}</p><p>Statut financier : {(selectedEleve as any).statut_financier || 'Non renseigné'}</p></div> : <p className='text-xs text-slate-500'>Tapez le nom ou le matricule complet de l’élève pour afficher ses frais.</p>}
                 </section>
 
                 <section className='space-y-2'><h4 className='text-sm font-semibold text-slate-800'>Frais à régler</h4>
