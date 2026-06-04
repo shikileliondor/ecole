@@ -43,7 +43,9 @@ class PersonnelController extends Controller
                     ->orWhere('matricule_interne', 'like', "%{$s}%")
                 );
             })
-            ->when($filters['categorie'] !== '', fn ($q) => $q->where('categorie', $filters['categorie']))
+            ->when($filters['categorie'] === Personnel::CATEGORIES['enseignant'], fn ($q) => $q->enseignants())
+            ->when($filters['categorie'] === Personnel::CATEGORIES['personnel_ecole'], fn ($q) => $q->personnelEcole())
+            ->when($filters['categorie'] === Personnel::CATEGORIES['autre'], fn ($q) => $q->where('categorie', Personnel::CATEGORIES['autre']))
             ->orderBy('nom')
             ->orderBy('prenoms')
             ->paginate(15)
@@ -82,8 +84,8 @@ class PersonnelController extends Controller
         $base = Personnel::query()->where('etablissement_id', $etablissementId);
         $stats = [
             'total'          => (clone $base)->count(),
-            'enseignants'    => (clone $base)->where('categorie', 'enseignant')->count(),
-            'personnel_ecole'=> (clone $base)->where('categorie', 'personnel_ecole')->count(),
+            'enseignants'    => (clone $base)->enseignants()->count(),
+            'personnel_ecole'=> (clone $base)->personnelEcole()->count(),
             'actifs'         => (clone $base)->where('statut', 'actif')->count(),
             'certifies_mena' => (clone $base)->where('est_certifie_mena', true)->count(),
         ];

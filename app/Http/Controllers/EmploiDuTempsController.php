@@ -33,7 +33,7 @@ class EmploiDuTempsController extends Controller
             'classes' => Classe::query()->where('etablissement_id', $etablissementId)->orderBy('nom')->get(['id', 'nom']),
             'anneesScolaires' => AnneeScolaire::query()->where('etablissement_id', $etablissementId)->orderByDesc('date_debut')->get(['id', 'libelle']),
             'matieres' => Matiere::query()->orderBy('libelle')->get(['id', 'libelle']),
-            'enseignants' => Personnel::query()->where('etablissement_id', $etablissementId)->where('categorie', Personnel::CATEGORIES['enseignant'])->where('statut', 'actif')->orderBy('nom')->get(['id', 'nom', 'prenoms']),
+            'enseignants' => Personnel::query()->where('etablissement_id', $etablissementId)->enseignants()->where('statut', 'actif')->orderBy('nom')->get(['id', 'nom', 'prenoms']),
             'emplois' => $entries,
         ]);
     }

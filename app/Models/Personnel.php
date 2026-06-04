@@ -155,10 +155,21 @@ class Personnel extends Model
         return $query->where('statut', self::STATUTS['actif']);
     }
 
-    /** Filtre les enseignants. */
+    /** Filtre les enseignants, y compris les anciennes fiches classées par type uniquement. */
     public function scopeEnseignants(Builder $query): Builder
     {
-        return $query->where('categorie', self::CATEGORIES['enseignant']);
+        return $query->where(fn (Builder $inner): Builder => $inner
+            ->where('categorie', self::CATEGORIES['enseignant'])
+            ->orWhere('type', self::TYPES['enseignant'])
+        );
+    }
+
+    /** Filtre le personnel non enseignant de l'école. */
+    public function scopePersonnelEcole(Builder $query): Builder
+    {
+        return $query
+            ->where('categorie', self::CATEGORIES['personnel_ecole'])
+            ->where('type', '!=', self::TYPES['enseignant']);
     }
 
     /** Filtre le personnel certifié MENA. */
