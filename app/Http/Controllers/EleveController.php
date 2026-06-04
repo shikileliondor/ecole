@@ -83,7 +83,8 @@ class EleveController extends Controller
     {
         $etablissementId = (int) auth()->user()->etablissement_id;
         $eleve = $this->eleveService->getFicheEleve($id, $etablissementId);
-        $inscriptionActive = $eleve->inscriptions->firstWhere('statut', Inscription::STATUTS['inscrit']);
+        $inscriptionActive = $eleve->inscriptions->firstWhere('statut', Inscription::STATUTS['inscrit'])
+            ?? $eleve->inscriptions->first();
 
         return Inertia::render('Eleves/Show', [
             'eleve' => $eleve,

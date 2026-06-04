@@ -72,17 +72,49 @@ export default function ElevesShow({ eleve, inscription_active, notes_par_trimes
 
     const { auth } = usePage<AuthProps>().props;
 
+    const activeInscription = useMemo(
+        () =>
+            inscription_active
+            ?? eleve.inscription_active
+            ?? eleve.inscriptions?.find((inscription) => inscription.statut === 'inscrit')
+            ?? eleve.inscriptions?.[0]
+            ?? null,
+        [eleve.inscription_active, eleve.inscriptions, inscription_active],
+    );
+
     const age = useMemo(() => new Date().getFullYear() - new Date(eleve.date_naissance).getFullYear(), [eleve.date_naissance]);
 
-    const allPaiements = useMemo(
-        () => eleve.inscriptions?.flatMap((inscription) => inscription.paiements ?? []) ?? paiements,
-        [eleve.inscriptions, paiements],
-    );
+    const notesByTrimestre = useMemo(() => {
+        const groupedNotes: Props['notes_par_trimestre'] = {
+            1: [...(notes_par_trimestre[1] ?? [])],
+            2: [...(notes_par_trimestre[2] ?? [])],
+            3: [...(notes_par_trimestre[3] ?? [])],
+        };
 
-    const allAbsences = useMemo(
-        () => eleve.inscriptions?.flatMap((inscription) => inscription.absences ?? []) ?? absences,
-        [absences, eleve.inscriptions],
-    );
+        if (Object.values(groupedNotes).some((notes) => notes.length > 0)) {
+            return groupedNotes;
+        }
+
+        activeInscription?.notes?.forEach((note) => {
+            if (note.trimestre === 1 || note.trimestre === 2 || note.trimestre === 3) {
+                groupedNotes[note.trimestre].push(note);
+            }
+        });
+
+        return groupedNotes;
+    }, [activeInscription, notes_par_trimestre]);
+
+    const allPaiements = useMemo(() => {
+        const inscriptionPaiements = eleve.inscriptions?.flatMap((inscription) => inscription.paiements ?? []) ?? [];
+
+        return inscriptionPaiements.length > 0 ? inscriptionPaiements : paiements;
+    }, [eleve.inscriptions, paiements]);
+
+    const allAbsences = useMemo(() => {
+        const inscriptionAbsences = eleve.inscriptions?.flatMap((inscription) => inscription.absences ?? []) ?? [];
+
+        return inscriptionAbsences.length > 0 ? inscriptionAbsences : absences;
+    }, [absences, eleve.inscriptions]);
 
     const paymentTotals = useMemo(() => ({
         totalDu: allPaiements.reduce((total, paiement) => total + (paiement.montant_attendu ?? 0), 0),
@@ -91,20 +123,20 @@ export default function ElevesShow({ eleve, inscription_active, notes_par_trimes
     }), [allPaiements]);
 
     const moyenneT1 = useMemo(() => {
-        const notes = notes_par_trimestre[1] ?? [];
+        const notes = notesByTrimestre[1] ?? [];
         if (!notes.length) {
             return '—';
         }
 
         const total = notes.reduce((acc, note) => acc + (note.note ?? 0), 0);
         return `${(total / notes.length).toFixed(2)}/20`;
-    }, [notes_par_trimestre]);
+    }, [notesByTrimestre]);
 
     const dateNaissance = useMemo(() => formatDate(eleve.date_naissance), [eleve.date_naissance]);
 
     const adminName = auth?.user?.name || 'Kouame Aka';
     const adminRole = auth?.roles?.[0]?.replace('_', ' ') || 'Super Admin';
-    const etablissementName = inscription_active?.classe?.etablissement?.nom ?? eleve.etablissement?.nom ?? emptyText;
+    const etablissementName = activeInscription?.classe?.etablissement?.nom ?? eleve.etablissement?.nom ?? emptyText;
 
     const infoRowsLeft = [
         { label: 'Nom complet', value: `${eleve.nom} ${eleve.prenoms}` },
@@ -119,12 +151,12 @@ export default function ElevesShow({ eleve, inscription_active, notes_par_trimes
 
     const infoRowsRight = [
         { label: 'Établissement', value: etablissementName },
-        { label: 'Année scolaire', value: inscription_active?.annee_scolaire?.libelle ?? emptyText },
-        { label: 'Classe', value: inscription_active?.classe?.nom ?? emptyText, isBadge: true },
-        { label: 'Niveau', value: inscription_active?.classe?.niveau?.libelle ?? emptyText, isBadge: true },
-        { label: 'Date inscription', value: formatDate(inscription_active?.date_inscription) },
-        { label: 'Type', value: formatStatus(inscription_active?.type) },
-        { label: 'Statut', value: formatStatus(inscription_active?.statut), isBadge: true },
+        { label: 'Année scolaire', value: activeInscription?.annee_scolaire?.libelle ?? emptyText },
+        { label: 'Classe', value: activeInscription?.classe?.nom ?? emptyText, isBadge: true },
+        { label: 'Niveau', value: activeInscription?.classe?.niveau?.libelle ?? emptyText, isBadge: true },
+        { label: 'Date inscription', value: formatDate(activeInscription?.date_inscription) },
+        { label: 'Type', value: formatStatus(activeInscription?.type) },
+        { label: 'Statut', value: formatStatus(activeInscription?.statut), isBadge: true },
         { label: 'Bourse', value: eleve.est_boursier ? 'Boursier' : 'Non-boursier' },
     ];
 
@@ -192,7 +224,7 @@ export default function ElevesShow({ eleve, inscription_active, notes_par_trimes
     const renderNotes = () => (
         <div className="space-y-5">
             {[1, 2, 3].map((trimestre) => {
-                const notes = notes_par_trimestre[trimestre as 1 | 2 | 3] ?? [];
+                const notes = notesByTrimestre[trimestre as 1 | 2 | 3] ?? [];
 
                 return (
                     <article className="rounded-2xl border border-[#f3f4f6] p-5" key={trimestre}>
