@@ -14,10 +14,12 @@ export interface Eleve {
     extrait_naissance_numero: string | null;
     statut: 'actif' | 'transfere' | 'exclu' | 'sorti';
     etablissement_id: number;
+    etablissement?: Etablissement;
     inscription_active?: Inscription;
     inscriptions?: Inscription[];
     parents?: ParentTuteur[];
     parentsTuteurs?: ParentTuteur[];
+    parents_tuteurs?: ParentTuteur[];
 }
 
 export interface ParentTuteur {
@@ -36,6 +38,11 @@ export interface ParentTuteur {
     pivot?: { est_principal: boolean; peut_recuperer: boolean };
 }
 
+export interface Etablissement {
+    id: number;
+    nom: string;
+}
+
 export interface Inscription {
     id: number;
     eleve_id: number;
@@ -45,6 +52,9 @@ export interface Inscription {
     type: string;
     statut: string;
     classe?: Classe;
+    paiements?: Paiement[];
+    absences?: Absence[];
+    notes?: Note[];
     annee_scolaire?: { id: number; libelle: string };
 }
 
@@ -55,6 +65,7 @@ export interface Classe {
     niveau?: Niveau;
     inscriptions_count?: number;
     enseignant_titulaire?: { id: number; nom_complet?: string; nom?: string };
+    etablissement?: Etablissement;
 }
 
 export interface Niveau {
@@ -92,7 +103,7 @@ export interface Paiement {
     reference_transaction: string | null;
     date_paiement: string;
     recu_numero: string;
-    statut: 'paye' | 'partiel' | 'impaye';
+    statut: 'paye' | 'partiel' | 'impaye' | 'annule';
     type_frais?: TypeFrais;
 }
 
