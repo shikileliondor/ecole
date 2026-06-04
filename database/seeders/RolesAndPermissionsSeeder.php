@@ -19,28 +19,22 @@ class RolesAndPermissionsSeeder extends Seeder
         DB::transaction(function (): void {
             app(PermissionRegistrar::class)->forgetCachedPermissions();
 
-            $permissions = [
-                'eleves.voir',
-                'eleves.creer',
-                'eleves.modifier',
-                'eleves.supprimer',
-            ];
+            $permissionNames = array_keys(config('ecole_permissions.permissions', []));
 
-            foreach ($permissions as $permissionName) {
+            foreach ($permissionNames as $permissionName) {
                 Permission::query()->firstOrCreate(['name' => $permissionName, 'guard_name' => 'web']);
             }
 
             $roles = [];
-            foreach (['super_admin', 'directeur', 'enseignant', 'caissier', 'secretaire', 'parent'] as $roleName) {
+            foreach (array_keys(config('ecole_permissions.role_defaults', [])) as $roleName) {
                 $roles[$roleName] = Role::query()->firstOrCreate(['name' => $roleName, 'guard_name' => 'web']);
             }
 
-            $roles['super_admin']->syncPermissions($permissions);
-            $roles['directeur']->syncPermissions(['eleves.voir', 'eleves.creer', 'eleves.modifier']);
-            $roles['secretaire']->syncPermissions(['eleves.voir', 'eleves.creer']);
-            $roles['enseignant']->syncPermissions(['eleves.voir']);
-            $roles['caissier']->syncPermissions(['eleves.voir']);
-            $roles['parent']->syncPermissions([]);
+            foreach (config('ecole_permissions.role_defaults', []) as $roleName => $defaultPermissions) {
+                $roles[$roleName]->syncPermissions(
+                    in_array('*', $defaultPermissions, true) ? $permissionNames : $defaultPermissions
+                );
+            }
 
             $superAdmin = User::query()->updateOrCreate(
                 ['email' => 'morelyann@10gmail.com'],

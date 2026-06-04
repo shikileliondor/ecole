@@ -58,7 +58,14 @@ type Props = {
     modesPaiement: Array<Item & { libelle: string; code?: string; ordre: number; est_actif: boolean }>;
     statutsInscription: Array<Item & { libelle: string; code?: string; ordre: number; est_actif: boolean }>;
     roles: Array<Item & { name: string; permissions: Array<{ name: string }> }>;
-    permissions: Array<Item & { name: string }>;
+    permissions: Array<Item & { name: string; label?: string; module?: string }>;
+    users: Array<Item & {
+        name: string;
+        email: string;
+        roles: Array<{ id: number; name: string }>;
+        permissions: string[];
+        overrides: Array<{ permission_name: string; effect: 'allow' | 'deny' }>;
+    }>;
     modelesImpression: Array<Item & { type_document: string; nom: string; description?: string; est_defaut: boolean }>;
     typesDocument: string[];
 };
@@ -250,7 +257,68 @@ export default function ParametresIndex(props: Props) {
     const typeFraisForm = useForm({ libelle: '', montant: 0, niveau_id: '', classe_id: '', frequence: 'unique', est_obligatoire: true });
     const statutForm = useForm({ libelle: '' });
     const permissionForm = useForm({ name: '' });
-    const roleForm = useForm({ name: '', permissions: [] as string[] });
+    const roleForm = useForm({ name: props.roles[0]?.name ?? '', permissions: props.roles[0]?.permissions.map((permission) => permission.name) ?? [] as string[] });
+    const [selectedRoleId, setSelectedRoleId] = useState<number | null>(props.roles[0]?.id ?? null);
+    const [selectedUserId, setSelectedUserId] = useState<number | null>(props.users[0]?.id ?? null);
+    const [permissionSearch, setPermissionSearch] = useState('');
+    const userPermissionForm = useForm({ role: props.users[0]?.roles[0]?.name ?? '', allows: [] as string[], denies: [] as string[] });
+
+    const groupedPermissions = useMemo(() => props.permissions.reduce<Record<string, typeof props.permissions>>((groups, permission) => {
+        const module = permission.module ?? 'Autres';
+        groups[module] = [...(groups[module] ?? []), permission];
+        return groups;
+    }, {}), [props.permissions]);
+
+    const filteredGroupedPermissions = useMemo(() => {
+        const search = permissionSearch.trim().toLowerCase();
+
+        if (!search) return groupedPermissions;
+
+        return Object.fromEntries(Object.entries(groupedPermissions)
+            .map(([module, permissions]) => [module, permissions.filter((permission) => `${permission.name} ${permission.label ?? ''}`.toLowerCase().includes(search))])
+            .filter(([, permissions]) => (permissions as typeof props.permissions).length > 0));
+    }, [groupedPermissions, permissionSearch]);
+
+    const selectedRole = props.roles.find((role) => role.id === selectedRoleId) ?? props.roles[0];
+    const selectedUser = props.users.find((user) => user.id === selectedUserId) ?? props.users[0];
+    const selectedUserRolePermissions = props.roles.find((role) => role.name === userPermissionForm.data.role)?.permissions.map((permission) => permission.name) ?? [];
+
+    const loadRole = (roleId: number) => {
+        const role = props.roles.find((item) => item.id === roleId);
+        setSelectedRoleId(roleId);
+        roleForm.setData({ name: role?.name ?? '', permissions: role?.permissions.map((permission) => permission.name) ?? [] });
+    };
+
+    const loadUser = (userId: number) => {
+        const user = props.users.find((item) => item.id === userId);
+        setSelectedUserId(userId);
+        userPermissionForm.setData({
+            role: user?.roles[0]?.name ?? '',
+            allows: user?.overrides.filter((override) => override.effect === 'allow').map((override) => override.permission_name) ?? [],
+            denies: user?.overrides.filter((override) => override.effect === 'deny').map((override) => override.permission_name) ?? [],
+        });
+    };
+
+    const toggleRolePermission = (permissionName: string, checked: boolean) => {
+        roleForm.setData('permissions', checked
+            ? Array.from(new Set([...roleForm.data.permissions, permissionName]))
+            : roleForm.data.permissions.filter((name) => name !== permissionName));
+    };
+
+    const toggleUserOverride = (permissionName: string, effect: 'allow' | 'deny', checked: boolean) => {
+        const otherEffect = effect === 'allow' ? 'denies' : 'allows';
+        const currentEffect = effect === 'allow' ? 'allows' : 'denies';
+
+        userPermissionForm.setData({
+            ...userPermissionForm.data,
+            [currentEffect]: checked
+                ? Array.from(new Set([...userPermissionForm.data[currentEffect], permissionName]))
+                : userPermissionForm.data[currentEffect].filter((name) => name !== permissionName),
+            [otherEffect]: checked
+                ? userPermissionForm.data[otherEffect].filter((name) => name !== permissionName)
+                : userPermissionForm.data[otherEffect],
+        });
+    };
     const modeleForm = useForm({ type_document: props.typesDocument[0] ?? 'bulletin', nom: '', description: '', template_html: '', est_defaut: false });
 
     const tabs = useMemo(
@@ -1180,82 +1248,178 @@ export default function ParametresIndex(props: Props) {
                 {/* ── UTILISATEURS ─────────────────────────────────────────── */}
                 {activeTab === 'utilisateurs' ? (
                     <div className="space-y-4">
-                        <Section title="Permissions" subtitle="Créez les permissions réutilisées par les rôles.">
-                            <form
-                                className="grid gap-3 md:grid-cols-3"
-                                onSubmit={(e) => { e.preventDefault(); permissionForm.post(route('parametres.permissions.store'), { preserveScroll: true, onSuccess: () => permissionForm.reset() }); }}
-                            >
-                                <div className="md:col-span-2">
-                                    <Label required>Nom de la permission</Label>
-                                    <Input placeholder="notes.create" value={permissionForm.data.name} onChange={(e) => permissionForm.setData('name', e.target.value)} />
+                        <Section title="Configuration des permissions" subtitle="Gérez les permissions système, les rôles métiers et les exceptions par utilisateur.">
+                            <div className="mb-4 grid gap-3 md:grid-cols-3">
+                                <form
+                                    className="md:col-span-2"
+                                    onSubmit={(e) => { e.preventDefault(); permissionForm.post(route('parametres.permissions.store'), { preserveScroll: true, onSuccess: () => permissionForm.reset() }); }}
+                                >
+                                    <Label>Ajouter une permission technique</Label>
+                                    <div className="flex gap-2">
+                                        <Input placeholder="module.action" value={permissionForm.data.name} onChange={(e) => permissionForm.setData('name', e.target.value)} />
+                                        <Button type="submit" disabled={permissionForm.processing} variant="outline">Ajouter</Button>
+                                    </div>
                                     <FieldError message={permissionForm.errors.name} />
+                                </form>
+                                <div>
+                                    <Label>Recherche</Label>
+                                    <Input placeholder="Filtrer les permissions..." value={permissionSearch} onChange={(e) => setPermissionSearch(e.target.value)} />
                                 </div>
-                                <div className="flex items-end">
-                                    <Button type="submit" disabled={permissionForm.processing} variant="outline" className="w-full">Ajouter la permission</Button>
+                            </div>
+
+                            <div className="grid gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
+                                <div className="rounded-xl border border-slate-200 bg-white p-2 dark:border-gray-700 dark:bg-gray-800">
+                                    <p className="px-2 pb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Rôles</p>
+                                    <div className="space-y-1">
+                                        {props.roles.map((role) => (
+                                            <button
+                                                key={role.id}
+                                                type="button"
+                                                onClick={() => loadRole(role.id)}
+                                                className={`w-full rounded-lg px-3 py-2 text-left text-sm transition ${selectedRole?.id === role.id ? 'bg-blue-600 text-white' : 'text-slate-700 hover:bg-slate-100 dark:text-gray-300 dark:hover:bg-gray-700'}`}
+                                            >
+                                                <span className="block font-medium capitalize">{role.name.replace('_', ' ')}</span>
+                                                <span className="text-xs opacity-75">{role.permissions.length} permission(s)</span>
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
-                            </form>
-                            <div className="mt-3">
-                                <Table headers={['Permission', 'Action']}>
-                                    {props.permissions.map((p) => (
-                                        <tr key={p.id}>
-                                            <td className="px-4 py-3 font-mono text-xs">{p.name}</td>
-                                            <td className="px-4 py-3">
-                                                <Button size="sm" variant="outline" onClick={() => router.delete(route('parametres.permissions.destroy', p.id))}>Supprimer</Button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </Table>
+
+                                <form
+                                    className="rounded-xl border border-slate-200 bg-white dark:border-gray-700 dark:bg-gray-800"
+                                    onSubmit={(e) => { e.preventDefault(); roleForm.post(route('parametres.roles.store'), { preserveScroll: true }); }}
+                                >
+                                    <div className="border-b border-slate-100 p-4 dark:border-gray-700">
+                                        <div className="grid gap-3 md:grid-cols-[1fr_auto_auto] md:items-end">
+                                            <div>
+                                                <Label required>Nom du rôle</Label>
+                                                <Input value={roleForm.data.name} onChange={(e) => roleForm.setData('name', e.target.value)} placeholder="Responsable pédagogique" />
+                                                <FieldError message={roleForm.errors.name} />
+                                            </div>
+                                            <Button type="button" variant="outline" onClick={() => roleForm.setData('permissions', props.permissions.map((permission) => permission.name))}>Tout sélectionner</Button>
+                                            <Button type="button" variant="outline" onClick={() => roleForm.setData('permissions', [])}>Tout retirer</Button>
+                                        </div>
+                                    </div>
+
+                                    <div className="max-h-[640px] space-y-4 overflow-y-auto p-4">
+                                        {Object.entries(filteredGroupedPermissions).map(([module, permissions]) => (
+                                            <div key={module} className="rounded-xl border border-slate-100 p-3 dark:border-gray-700">
+                                                <div className="mb-3 flex items-center justify-between gap-3">
+                                                    <h4 className="font-semibold text-slate-800 dark:text-gray-100">{module}</h4>
+                                                    <Button
+                                                        type="button"
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={() => roleForm.setData('permissions', Array.from(new Set([...roleForm.data.permissions, ...permissions.map((permission) => permission.name)])))}
+                                                    >
+                                                        Sélectionner le module
+                                                    </Button>
+                                                </div>
+                                                <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                                                    {permissions.map((permission) => (
+                                                        <label key={permission.id} className="flex cursor-pointer items-start gap-2 rounded-lg border border-slate-200 p-2 text-sm hover:bg-slate-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
+                                                            <Checkbox checked={roleForm.data.permissions.includes(permission.name)} onCheckedChange={(checked) => toggleRolePermission(permission.name, Boolean(checked))} />
+                                                            <span>
+                                                                <span className="block font-medium">{permission.label ?? permission.name}</span>
+                                                                <span className="block font-mono text-xs text-slate-400">{permission.name}</span>
+                                                            </span>
+                                                        </label>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <div className="flex items-center justify-between border-t border-slate-100 p-4 dark:border-gray-700">
+                                        <p className="text-sm text-slate-500">{roleForm.data.permissions.length} permission(s) sélectionnée(s)</p>
+                                        <div className="flex gap-2">
+                                            {selectedRole?.name !== 'super_admin' ? <Button type="button" variant="outline" onClick={() => selectedRole && router.delete(route('parametres.roles.destroy', selectedRole.id), { preserveScroll: true })}>Supprimer le rôle</Button> : null}
+                                            <Button type="submit" disabled={roleForm.processing}>Enregistrer les permissions du rôle</Button>
+                                        </div>
+                                    </div>
+                                </form>
                             </div>
                         </Section>
 
-                        <Section title="Rôles et profils d'accès" subtitle="Associez des permissions pour créer un profil métier.">
-                            <form
-                                className="space-y-4"
-                                onSubmit={(e) => { e.preventDefault(); roleForm.post(route('parametres.roles.store'), { preserveScroll: true, onSuccess: () => roleForm.reset() }); }}
-                            >
-                                <div>
-                                    <Label required>Nom du rôle</Label>
-                                    <Input placeholder="Responsable pédagogique" value={roleForm.data.name} onChange={(e) => roleForm.setData('name', e.target.value)} />
-                                    <FieldError message={roleForm.errors.name} />
+                        <Section title="Permissions des utilisateurs" subtitle="Appliquez un rôle puis ajoutez ou retirez des permissions spécifiques à un utilisateur.">
+                            <div className="grid gap-4 lg:grid-cols-[300px_minmax(0,1fr)]">
+                                <div className="rounded-xl border border-slate-200 bg-white p-2 dark:border-gray-700 dark:bg-gray-800">
+                                    <p className="px-2 pb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Utilisateurs</p>
+                                    <div className="max-h-[520px] space-y-1 overflow-y-auto">
+                                        {props.users.map((user) => (
+                                            <button
+                                                key={user.id}
+                                                type="button"
+                                                onClick={() => loadUser(user.id)}
+                                                className={`w-full rounded-lg px-3 py-2 text-left text-sm transition ${selectedUser?.id === user.id ? 'bg-blue-600 text-white' : 'text-slate-700 hover:bg-slate-100 dark:text-gray-300 dark:hover:bg-gray-700'}`}
+                                            >
+                                                <span className="block font-medium">{user.name}</span>
+                                                <span className="block truncate text-xs opacity-75">{user.email}</span>
+                                                <span className="mt-1 inline-block rounded-full bg-white/15 px-2 py-0.5 text-xs capitalize">{user.roles[0]?.name.replace('_', ' ') ?? 'sans rôle'}</span>
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
-                                {props.permissions.length > 0 ? (
-                                    <div>
-                                        <Label>Permissions associées</Label>
-                                        <div className="grid gap-2 md:grid-cols-2">
-                                            {props.permissions.map((p) => (
-                                                <label key={p.id} className="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 p-2 text-sm hover:bg-slate-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
-                                                    <Checkbox
-                                                        checked={roleForm.data.permissions.includes(p.name)}
-                                                        onCheckedChange={(checked) => {
-                                                            roleForm.setData('permissions', checked
-                                                                ? [...roleForm.data.permissions, p.name]
-                                                                : roleForm.data.permissions.filter((x) => x !== p.name));
-                                                        }}
-                                                    />
-                                                    {p.name}
-                                                </label>
+
+                                {selectedUser ? (
+                                    <form
+                                        className="rounded-xl border border-slate-200 bg-white dark:border-gray-700 dark:bg-gray-800"
+                                        onSubmit={(e) => { e.preventDefault(); userPermissionForm.put(route('parametres.users.permissions.sync', selectedUser.id), { preserveScroll: true }); }}
+                                    >
+                                        <div className="border-b border-slate-100 p-4 dark:border-gray-700">
+                                            <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
+                                                <div>
+                                                    <Label>Rôle principal</Label>
+                                                    <select className={SEL} value={userPermissionForm.data.role} onChange={(e) => userPermissionForm.setData({ ...userPermissionForm.data, role: e.target.value })}>
+                                                        <option value="">Sans rôle</option>
+                                                        {props.roles.map((role) => <option key={role.id} value={role.name}>{role.name.replace('_', ' ')}</option>)}
+                                                    </select>
+                                                </div>
+                                                <div className="text-sm text-slate-500 dark:text-gray-400">
+                                                    <p><strong>{selectedUser.permissions.length}</strong> permission(s) finale(s)</p>
+                                                    <p><strong>{userPermissionForm.data.allows.length}</strong> ajout(s), <strong>{userPermissionForm.data.denies.length}</strong> retrait(s)</p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="max-h-[640px] space-y-4 overflow-y-auto p-4">
+                                            {Object.entries(filteredGroupedPermissions).map(([module, permissions]) => (
+                                                <div key={module} className="rounded-xl border border-slate-100 p-3 dark:border-gray-700">
+                                                    <h4 className="mb-3 font-semibold text-slate-800 dark:text-gray-100">{module}</h4>
+                                                    <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                                                        {permissions.map((permission) => {
+                                                            const inherited = selectedUserRolePermissions.includes(permission.name);
+                                                            const allowed = userPermissionForm.data.allows.includes(permission.name);
+                                                            const denied = userPermissionForm.data.denies.includes(permission.name);
+
+                                                            return (
+                                                                <div key={permission.id} className="rounded-lg border border-slate-200 p-3 text-sm dark:border-gray-600">
+                                                                    <div className="mb-2">
+                                                                        <p className="font-medium text-slate-800 dark:text-gray-100">{permission.label ?? permission.name}</p>
+                                                                        <p className="font-mono text-xs text-slate-400">{permission.name}</p>
+                                                                    </div>
+                                                                    <div className="flex flex-wrap gap-2 text-xs">
+                                                                        <span className={`rounded-full px-2 py-1 ${inherited ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200' : 'bg-slate-100 text-slate-500 dark:bg-gray-700 dark:text-gray-300'}`}>{inherited ? 'Hérité du rôle' : 'Non hérité'}</span>
+                                                                        <label className="flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200">
+                                                                            <Checkbox checked={allowed} onCheckedChange={(checked) => toggleUserOverride(permission.name, 'allow', Boolean(checked))} /> Ajouter
+                                                                        </label>
+                                                                        <label className="flex items-center gap-1 rounded-full bg-red-50 px-2 py-1 text-red-700 dark:bg-red-900/40 dark:text-red-200">
+                                                                            <Checkbox checked={denied} onCheckedChange={(checked) => toggleUserOverride(permission.name, 'deny', Boolean(checked))} /> Retirer
+                                                                        </label>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
                                             ))}
                                         </div>
-                                    </div>
-                                ) : (
-                                    <p className="text-sm text-slate-400 dark:text-gray-500">Aucune permission disponible. Créez d'abord des permissions.</p>
-                                )}
-                                <div className="flex justify-end">
-                                    <Button type="submit" disabled={roleForm.processing}>Enregistrer le rôle</Button>
-                                </div>
-                            </form>
-                            <div className="mt-4">
-                                <Table headers={['Rôle', 'Permissions associées', 'Action']}>
-                                    {props.roles.map((role) => (
-                                        <tr key={role.id}>
-                                            <td className="px-4 py-3 font-medium">{role.name}</td>
-                                            <td className="px-4 py-3 text-xs text-slate-500 dark:text-gray-400">{role.permissions.map((p) => p.name).join(', ') || '—'}</td>
-                                            <td className="px-4 py-3">
-                                                <Button size="sm" variant="outline" onClick={() => router.delete(route('parametres.roles.destroy', role.id))}>Supprimer</Button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </Table>
+
+                                        <div className="flex justify-end border-t border-slate-100 p-4 dark:border-gray-700">
+                                            <Button type="submit" disabled={userPermissionForm.processing}>Enregistrer les permissions utilisateur</Button>
+                                        </div>
+                                    </form>
+                                ) : <p className="text-sm text-slate-500">Aucun utilisateur disponible.</p>}
                             </div>
                         </Section>
                     </div>

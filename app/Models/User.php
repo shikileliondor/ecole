@@ -10,15 +10,23 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Event;
+use Spatie\Permission\Contracts\Permission as PermissionContract;
+use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable, HasRoles;
+    use HasFactory, Notifiable;
+    use HasRoles {
+        getAllPermissions as protected spatieGetAllPermissions;
+        hasPermissionTo as protected spatieHasPermissionTo;
+    }
 
     public const TYPES = [
         'staff' => 'staff',
@@ -85,6 +93,67 @@ class User extends Authenticatable
     public function parentTuteur(): BelongsTo
     {
         return $this->belongsTo(ParentTuteur::class, 'parent_id');
+    }
+
+    /** Retourne les exceptions allow/deny configurées directement sur l'utilisateur. */
+    public function permissionOverrides(): HasMany
+    {
+        return $this->hasMany(UserPermissionOverride::class);
+    }
+
+    /** Vérifie une permission Spatie en appliquant d'abord les refus utilisateurs explicites. */
+    public function hasPermissionTo($permission, $guardName = null): bool
+    {
+        $permissionName = $permission instanceof PermissionContract ? $permission->name : (string) $permission;
+
+        if ($this->hasRole('super_admin')) {
+            return true;
+        }
+
+        $overrides = $this->relationLoaded('permissionOverrides')
+            ? $this->permissionOverrides
+            : $this->permissionOverrides()->get(['permission_name', 'effect']);
+
+        $override = $overrides->firstWhere('permission_name', $permissionName);
+
+        if ($override?->effect === UserPermissionOverride::EFFECT_DENY) {
+            return false;
+        }
+
+        if ($override?->effect === UserPermissionOverride::EFFECT_ALLOW) {
+            return true;
+        }
+
+        return $this->spatieHasPermissionTo($permission, $guardName);
+    }
+
+    /** Retourne les permissions finales: rôle + allows utilisateur - denies utilisateur. */
+    public function getAllPermissions(): Collection
+    {
+        if ($this->hasRole('super_admin')) {
+            return Permission::query()->get();
+        }
+
+        $permissions = $this->spatieGetAllPermissions()->keyBy('name');
+        $overrides = $this->relationLoaded('permissionOverrides')
+            ? $this->permissionOverrides
+            : $this->permissionOverrides()->get(['permission_name', 'effect']);
+
+        foreach ($overrides as $override) {
+            if ($override->effect === UserPermissionOverride::EFFECT_DENY) {
+                $permissions->forget($override->permission_name);
+                continue;
+            }
+
+            if ($override->effect === UserPermissionOverride::EFFECT_ALLOW) {
+                $permissionModel = Permission::query()->where('name', $override->permission_name)->first();
+                if ($permissionModel) {
+                    $permissions->put($permissionModel->name, $permissionModel);
+                }
+            }
+        }
+
+        return $permissions->values();
     }
 
     /** Filtre les utilisateurs actifs. */
