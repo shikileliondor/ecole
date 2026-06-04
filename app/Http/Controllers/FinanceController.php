@@ -118,7 +118,14 @@ class FinanceController extends Controller
             'responsable_id' => ['nullable', 'integer', 'exists:personnel,id'],
             'mode_paiement' => ['nullable', 'string', 'max:255'],
             'observation' => ['nullable', 'string'],
+            'justificatif' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:4096'],
         ]);
+
+        unset($payload['justificatif']);
+
+        if ($request->hasFile('justificatif')) {
+            $payload['justificatif_path'] = $request->file('justificatif')->store('depenses/justificatifs', 'public');
+        }
 
         Depense::query()->create([
             ...$payload,
@@ -140,7 +147,10 @@ class FinanceController extends Controller
             'responsable_id' => ['nullable', 'integer', 'exists:personnel,id'],
             'mode_paiement' => ['nullable', 'string', 'max:255'],
             'observation' => ['nullable', 'string'],
+            'justificatif' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:4096'],
         ]);
+
+        unset($payload['justificatif']);
 
         if ($depense->etablissement_id !== (int) $request->user()->etablissement_id) {
             abort(403);
@@ -148,6 +158,14 @@ class FinanceController extends Controller
 
         if ($depense->statut === 'annulee') {
             return back()->withErrors(['depense' => 'Une dépense annulée ne peut pas être modifiée.']);
+        }
+
+        if ($request->hasFile('justificatif')) {
+            if ($depense->justificatif_path) {
+                Storage::disk('public')->delete($depense->justificatif_path);
+            }
+
+            $payload['justificatif_path'] = $request->file('justificatif')->store('depenses/justificatifs', 'public');
         }
 
         $depense->update($payload);
@@ -159,6 +177,10 @@ class FinanceController extends Controller
     {
         if ($depense->etablissement_id !== (int) $request->user()->etablissement_id) {
             abort(403);
+        }
+
+        if ($depense->justificatif_path) {
+            Storage::disk('public')->delete($depense->justificatif_path);
         }
 
         $depense->delete();
