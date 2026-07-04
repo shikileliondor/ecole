@@ -33,8 +33,8 @@ class EleveController extends Controller
         $anneeScolaireId = (int) (AnneeScolaire::query()->where('etablissement_id', $etablissementId)->active()->value('id') ?? 0);
 
         return Inertia::render('Eleves/Index', [
-            'eleves' => $this->eleveService->getElevesAvecFiltres($filters, $etablissementId),
-            'classes' => Classe::query()->where('etablissement_id', $etablissementId)->with('niveau')->orderBy('nom')->get(),
+            'eleves' => $this->eleveService->getElevesAvecFiltres($filters, $etablissementId, $anneeScolaireId),
+            'classes' => Classe::query()->where('etablissement_id', $etablissementId)->when($anneeScolaireId > 0, fn ($q) => $q->where('annee_scolaire_id', $anneeScolaireId))->with('niveau')->orderBy('nom')->get(),
             'niveaux' => Niveau::query()->orderBy('ordre')->get(),
             'filters' => $filters,
             'stats' => $this->eleveService->getStatsEleves($etablissementId, $anneeScolaireId),
@@ -49,6 +49,7 @@ class EleveController extends Controller
         return Inertia::render('Eleves/Create', [
             'classes' => Classe::query()->where('etablissement_id', $etablissementId)->with('niveau')->withCount('inscriptions')->orderBy('nom')->get(),
             'niveaux' => Niveau::query()->orderBy('ordre')->get(),
+            'annees' => AnneeScolaire::query()->where('etablissement_id', $etablissementId)->orderByDesc('date_debut')->get(['id', 'libelle']),
             'annee_active' => $anneeActive,
         ]);
     }
@@ -82,8 +83,10 @@ class EleveController extends Controller
     public function show(int $id): Response
     {
         $etablissementId = (int) auth()->user()->etablissement_id;
+        $anneeScolaireId = (int) (AnneeScolaire::query()->where('etablissement_id', $etablissementId)->active()->value('id') ?? 0);
         $eleve = $this->eleveService->getFicheEleve($id, $etablissementId);
-        $inscriptionActive = $eleve->inscriptions->firstWhere('statut', Inscription::STATUTS['inscrit'])
+        $inscriptionActive = ($anneeScolaireId > 0 ? $eleve->inscriptions->firstWhere('annee_scolaire_id', $anneeScolaireId) : null)
+            ?? $eleve->inscriptions->firstWhere('statut', Inscription::STATUTS['inscrit'])
             ?? $eleve->inscriptions->first();
 
         return Inertia::render('Eleves/Show', [
@@ -127,21 +130,42 @@ class EleveController extends Controller
 
     public function exportPdf(Request $request)
     {
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(120);
+
         $etablissementId = (int) auth()->user()->etablissement_id;
+        $anneeScolaireId = (int) (AnneeScolaire::query()->where('etablissement_id', $etablissementId)->active()->value('id') ?? 0);
         $filters = $request->only(['search', 'classe_id', 'niveau_id', 'statut', 'sexe']);
         $classe = $request->filled('classe_id')
             ? Classe::query()->where('etablissement_id', $etablissementId)->find((int) $request->integer('classe_id'))
             : null;
-        $eleves = $this->eleveService->getListePourExport($filters, $etablissementId);
+        $eleves = $this->eleveService->getListePourExport($filters, $etablissementId, $anneeScolaireId);
+        $rows = $eleves->map(function ($eleve, int $index): array {
+            $parent = $eleve->parentsTuteurs->firstWhere('pivot.est_principal', true) ?? $eleve->parentsTuteurs->first();
+            $inscription = $eleve->inscriptions->first();
+
+            return [
+                'numero' => $index + 1,
+                'matricule' => (string) $eleve->matricule,
+                'nom_complet' => trim((string) $eleve->nom . ' ' . (string) $eleve->prenoms),
+                'sexe' => $eleve->sexe === 'M' ? 'Garçon' : 'Fille',
+                'date_naissance' => $eleve->date_naissance ? $eleve->date_naissance->format('d/m/Y') : '',
+                'parent' => trim((string) ($parent?->nom ?? '') . ' ' . (string) ($parent?->prenoms ?? '')),
+                'telephone' => (string) ($parent?->telephone_1 ?? ''),
+                'statut' => ucfirst((string) $eleve->statut),
+                'annee_scolaire' => (string) ($inscription?->anneeScolaire?->libelle ?? ''),
+            ];
+        });
         $etablissement = auth()->user()?->etablissement;
         $logoPath = $this->getPdfLogoPath($etablissement?->logo_pdf ?? $etablissement?->logo);
         $pdf = Pdf::loadView('eleves.export-pdf', [
-            'eleves' => $eleves,
+            'eleves' => $rows,
             'classe' => $classe,
             'date_edition' => now(),
             'filters' => $filters,
             'etablissement' => $etablissement,
             'logoPath' => $logoPath,
+            'anneeScolaire' => $rows->first()['annee_scolaire'] ?? null,
         ])->setPaper('a4', 'landscape');
 
         return $pdf->download('eleves-' . ($classe?->nom ? str($classe->nom)->slug() : 'toutes-classes') . '-' . now()->format('Y-m-d') . '.pdf');
@@ -161,11 +185,12 @@ class EleveController extends Controller
     public function exportWord(Request $request)
     {
         $etablissementId = (int) auth()->user()->etablissement_id;
+        $anneeScolaireId = (int) (AnneeScolaire::query()->where('etablissement_id', $etablissementId)->active()->value('id') ?? 0);
         $filters = $request->only(['search', 'classe_id', 'niveau_id', 'statut', 'sexe']);
         $classe = $request->filled('classe_id')
             ? Classe::query()->where('etablissement_id', $etablissementId)->find((int) $request->integer('classe_id'))
             : null;
-        $eleves = $this->eleveService->getListePourExport($filters, $etablissementId);
+        $eleves = $this->eleveService->getListePourExport($filters, $etablissementId, $anneeScolaireId);
         $filename = 'eleves-' . ($classe?->nom ? str($classe->nom)->slug() : 'toutes-classes') . '-' . now()->format('Y-m-d') . '.doc';
 
         return response()
@@ -177,11 +202,12 @@ class EleveController extends Controller
     public function exportExcel(Request $request): StreamedResponse
     {
         $etablissementId = (int) auth()->user()->etablissement_id;
+        $anneeScolaireId = (int) (AnneeScolaire::query()->where('etablissement_id', $etablissementId)->active()->value('id') ?? 0);
         $filters = $request->only(['search', 'classe_id', 'niveau_id', 'statut', 'sexe']);
         $classe = $request->filled('classe_id')
             ? Classe::query()->where('etablissement_id', $etablissementId)->find((int) $request->integer('classe_id'))
             : null;
-        $eleves = $this->eleveService->getListePourExport($filters, $etablissementId);
+        $eleves = $this->eleveService->getListePourExport($filters, $etablissementId, $anneeScolaireId);
         $filename = 'eleves-' . ($classe?->nom ? str($classe->nom)->slug() : 'toutes-classes') . '-' . now()->format('Y-m-d') . '.csv';
 
         return response()->streamDownload(function () use ($eleves): void {

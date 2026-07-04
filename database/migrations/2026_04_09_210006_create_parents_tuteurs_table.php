@@ -15,7 +15,8 @@ return new class extends Migration
             $table->id();
             $table->string('nom');
             $table->string('prenoms');
-            $table->enum('lien', ['pere', 'mere', 'tuteur', 'grand_parent', 'oncle_tante']);
+            $table->enum('lien', ['pere', 'mere', 'tuteur', 'grand_parent', 'oncle_tante', 'autre']);
+            $table->string('lien_precision')->nullable();
             $table->string('profession')->nullable();
             $table->string('telephone_1');
             $table->string('telephone_2')->nullable();

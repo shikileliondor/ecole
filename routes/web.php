@@ -99,6 +99,7 @@ Route::middleware(['auth'])->prefix('parametres')->name('parametres.')->group(fu
     Route::post('/roles', [ParametreController::class, 'storeRole'])->middleware('permission:permissions.roles.gerer')->name('roles.store');
     Route::delete('/roles/{role}', [ParametreController::class, 'destroyRole'])->middleware('permission:permissions.roles.gerer')->name('roles.destroy');
     Route::post('/permissions', [ParametreController::class, 'storePermission'])->middleware('permission:permissions.creer')->name('permissions.store');
+    Route::post('/permissions/sync', [ParametreController::class, 'syncPermissions'])->middleware('permission:permissions.creer')->name('permissions.sync');
     Route::delete('/permissions/{permission}', [ParametreController::class, 'destroyPermission'])->middleware('permission:permissions.supprimer')->name('permissions.destroy');
     Route::post('/users', [ParametreController::class, 'storeUser'])->middleware('permission:permissions.utilisateurs.creer|permissions.utilisateurs.gerer')->name('users.store');
     Route::put('/users/{user}/permissions', [ParametreController::class, 'syncUserPermissions'])->middleware('permission:permissions.utilisateurs.permissions.gerer|permissions.utilisateurs.gerer')->name('users.permissions.sync');
@@ -114,6 +115,7 @@ Route::middleware(['auth'])->prefix('notes-bulletins')->name('notes-bulletins.')
     Route::post('/compositions/{composition}/notes', [NoteBulletinController::class, 'storeNotes'])->middleware('permission:notes.gerer')->name('compositions.notes.store');
     Route::post('/compositions/{composition}/notes-eleves', [NoteBulletinController::class, 'storeEleveNotes'])->middleware('permission:notes.gerer')->name('compositions.notes-eleves.store');
     Route::get('/compositions/{composition}/export', [NoteBulletinController::class, 'exportComposition'])->middleware('permission:notes.exporter')->name('compositions.export');
+    Route::get('/compositions/{composition}/bulletin/pdf', [NoteBulletinController::class, 'bulletinPdf'])->middleware('permission:notes.exporter')->name('compositions.bulletin.pdf');
 });
 
 
@@ -167,8 +169,14 @@ Route::middleware(['auth'])->prefix('finances')->name('finances.')->group(functi
     Route::post('/depenses', [FinanceController::class, 'storeDepense'])->middleware('permission:finances.depenses.gerer')->name('depenses.store');
     Route::put('/depenses/{depense}', [FinanceController::class, 'updateDepense'])->middleware('permission:finances.depenses.gerer')->name('depenses.update');
     Route::delete('/depenses/{depense}', [FinanceController::class, 'destroyDepense'])->middleware('permission:finances.depenses.gerer')->name('depenses.destroy');
-    Route::get('/salaires', fn () => Inertia::render('Finances/Salaires'))->middleware('permission:finances.salaires.voir')->name('salaires');
+    Route::get('/salaires', [FinanceController::class, 'salaires'])->middleware('permission:finances.salaires.voir')->name('salaires');
+    Route::post('/salaires/generer', [FinanceController::class, 'genererSalaires'])->middleware('permission:finances.salaires.voir')->name('salaires.generer');
+    Route::post('/salaires', [FinanceController::class, 'storeSalaire'])->middleware('permission:finances.salaires.voir')->name('salaires.store');
+    Route::put('/salaires/{salaire}', [FinanceController::class, 'updateSalaire'])->middleware('permission:finances.salaires.voir')->name('salaires.update');
+    Route::post('/salaires/{salaire}/payer', [FinanceController::class, 'payerSalaire'])->middleware('permission:finances.salaires.voir')->name('salaires.payer');
+    Route::delete('/salaires/{salaire}', [FinanceController::class, 'destroySalaire'])->middleware('permission:finances.salaires.voir')->name('salaires.destroy');
     Route::get('/rapports', [\App\Http\Controllers\RapportController::class, 'index'])->middleware('permission:finances.rapports.voir')->name('rapports.index');
+    Route::get('/rapports/export/pdf', [\App\Http\Controllers\RapportController::class, 'exportPdf'])->middleware('permission:finances.rapports.voir')->name('rapports.export.pdf');
     Route::get('/rapports-financiers', fn () => Inertia::render('Finances/Rapports'))->middleware('permission:finances.rapports.voir')->name('rapports.financiers');
 });
 
@@ -192,10 +200,10 @@ Route::middleware(['auth'])->prefix('communication')->name('communication.')->gr
 });
 
 Route::middleware('auth')->prefix('notifications')->name('notifications.')->group(function (): void {
-    Route::post('/{id}/read', [NotificationController::class, 'markAsRead'])->middleware('permission:notifications.gerer')->name('read');
-    Route::post('/read-all', [NotificationController::class, 'markAllAsRead'])->middleware('permission:notifications.gerer')->name('read-all');
-    Route::delete('/clear-read', [NotificationController::class, 'clearRead'])->middleware('permission:notifications.gerer')->name('clear-read');
-    Route::delete('/{id}', [NotificationController::class, 'destroy'])->middleware('permission:notifications.gerer')->name('destroy');
+    Route::post('/{id}/read', [NotificationController::class, 'markAsRead'])->name('read');
+    Route::post('/read-all', [NotificationController::class, 'markAllAsRead'])->name('read-all');
+    Route::delete('/clear-read', [NotificationController::class, 'clearRead'])->name('clear-read');
+    Route::delete('/{id}', [NotificationController::class, 'destroy'])->name('destroy');
 });
 
 Route::middleware('auth')->group(function () {

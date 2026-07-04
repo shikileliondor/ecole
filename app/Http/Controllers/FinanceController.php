@@ -188,17 +188,157 @@ class FinanceController extends Controller
         return back()->with('success', 'Dépense supprimée.');
     }
 
+    public function storeSalaire(Request $request): RedirectResponse
+    {
+        $etablissementId = (int) $request->user()->etablissement_id;
+
+        $data = $request->validate([
+            'personnel_id'      => ['required', 'integer', 'exists:personnel,id'],
+            'annee_scolaire_id' => ['required', 'integer', 'exists:annees_scolaires,id'],
+            'mois'              => ['required', 'integer', 'min:1', 'max:12'],
+            'salaire_base'      => ['required', 'integer', 'min:0'],
+            'primes'            => ['nullable', 'integer', 'min:0'],
+            'deductions'        => ['nullable', 'integer', 'min:0'],
+            'mode_paiement'     => ['required', 'string', 'in:especes,virement,orange_money,wave,mtn_momo'],
+        ]);
+
+        abort_unless(
+            Personnel::query()->where('id', $data['personnel_id'])->where('etablissement_id', $etablissementId)->exists(),
+            403
+        );
+
+        Salaire::query()->updateOrCreate(
+            ['personnel_id' => $data['personnel_id'], 'annee_scolaire_id' => $data['annee_scolaire_id'], 'mois' => $data['mois']],
+            ['salaire_base' => $data['salaire_base'], 'primes' => $data['primes'] ?? 0, 'deductions' => $data['deductions'] ?? 0,
+             'mode_paiement' => $data['mode_paiement'], 'net_a_payer' => 0]
+        );
+
+        return back()->with('success', 'Salaire enregistré.');
+    }
+
+    public function updateSalaire(Request $request, Salaire $salaire): RedirectResponse
+    {
+        $etablissementId = (int) $request->user()->etablissement_id;
+        abort_unless($salaire->personnel?->etablissement_id === $etablissementId, 403);
+        abort_if($salaire->statut === 'paye', 403, 'Un salaire payé ne peut pas être modifié.');
+
+        $data = $request->validate([
+            'salaire_base'  => ['required', 'integer', 'min:0'],
+            'primes'        => ['nullable', 'integer', 'min:0'],
+            'deductions'    => ['nullable', 'integer', 'min:0'],
+            'mode_paiement' => ['required', 'string', 'in:especes,virement,orange_money,wave,mtn_momo'],
+        ]);
+
+        $salaire->update([
+            'salaire_base'  => $data['salaire_base'],
+            'primes'        => $data['primes'] ?? 0,
+            'deductions'    => $data['deductions'] ?? 0,
+            'mode_paiement' => $data['mode_paiement'],
+        ]);
+
+        return back()->with('success', 'Salaire mis à jour.');
+    }
+
+    public function payerSalaire(Request $request, Salaire $salaire): RedirectResponse
+    {
+        $etablissementId = (int) $request->user()->etablissement_id;
+        abort_unless($salaire->personnel?->etablissement_id === $etablissementId, 403);
+        abort_if($salaire->statut === 'paye', 403, 'Salaire déjà payé.');
+
+        $data = $request->validate([
+            'date_paiement' => ['required', 'date'],
+            'mode_paiement' => ['required', 'string', 'in:especes,virement,orange_money,wave,mtn_momo'],
+        ]);
+
+        $salaire->update([
+            'statut'        => 'paye',
+            'date_paiement' => $data['date_paiement'],
+            'mode_paiement' => $data['mode_paiement'],
+            'valide_par'    => $request->user()->id,
+        ]);
+
+        return back()->with('success', 'Salaire marqué comme payé.');
+    }
+
+    public function destroySalaire(Request $request, Salaire $salaire): RedirectResponse
+    {
+        $etablissementId = (int) $request->user()->etablissement_id;
+        abort_unless($salaire->personnel?->etablissement_id === $etablissementId, 403);
+        abort_if($salaire->statut === 'paye', 403, 'Un salaire payé ne peut pas être supprimé.');
+
+        $salaire->delete();
+
+        return back()->with('success', 'Salaire supprimé.');
+    }
+
+    public function genererSalaires(Request $request): RedirectResponse
+    {
+        $etablissementId = (int) $request->user()->etablissement_id;
+
+        $data = $request->validate([
+            'annee_scolaire_id' => ['required', 'integer', 'exists:annees_scolaires,id'],
+            'mois'              => ['required', 'integer', 'min:1', 'max:12'],
+            'mode_paiement'     => ['required', 'string', 'in:especes,virement,orange_money,wave,mtn_momo'],
+        ]);
+
+        $personnel = Personnel::query()
+            ->where('etablissement_id', $etablissementId)
+            ->where('statut', 'actif')
+            ->whereNotNull('salaire_base')
+            ->where('salaire_base', '>', 0)
+            ->get(['id', 'salaire_base']);
+
+        $crees = 0;
+        foreach ($personnel as $p) {
+            $exists = Salaire::query()
+                ->where('personnel_id', $p->id)
+                ->where('annee_scolaire_id', $data['annee_scolaire_id'])
+                ->where('mois', $data['mois'])
+                ->exists();
+
+            if (! $exists) {
+                Salaire::query()->create([
+                    'personnel_id'      => $p->id,
+                    'annee_scolaire_id' => $data['annee_scolaire_id'],
+                    'mois'              => $data['mois'],
+                    'salaire_base'      => $p->salaire_base,
+                    'primes'            => 0,
+                    'deductions'        => 0,
+                    'net_a_payer'       => 0,
+                    'mode_paiement'     => $data['mode_paiement'],
+                    'statut'            => 'en_attente',
+                ]);
+                $crees++;
+            }
+        }
+
+        $msg = $crees > 0
+            ? "{$crees} fiche(s) de salaire générée(s) pour ce mois."
+            : 'Toutes les fiches existent déjà pour ce mois.';
+
+        return back()->with('success', $msg);
+    }
+
     private function buildFinanceDataset(Request $request): array
     {
         $etablissementId = (int) $request->user()->etablissement_id;
-        $paiements = Paiement::query()->whereHas('inscription.classe', fn ($q) => $q->where('etablissement_id', $etablissementId))->with(['inscription.eleve', 'inscription.classe', 'typeFrais', 'encaissePar'])->latest('date_paiement')->get();
-        $inscriptions = Inscription::query()->whereHas('classe', fn ($q) => $q->where('etablissement_id', $etablissementId))->with(['eleve', 'classe', 'paiements', 'anneeScolaire'])->get();
+        $anneeActive = AnneeScolaire::query()->where('etablissement_id', $etablissementId)->active()->first();
+        $anneeId = $request->integer('annee_id') ?: $anneeActive?->id;
+
+        $paiements = Paiement::query()
+            ->whereHas('inscription.classe', fn ($q) => $q->where('etablissement_id', $etablissementId))
+            ->when($anneeId, fn ($q) => $q->whereHas('inscription', fn ($q2) => $q2->where('annee_scolaire_id', $anneeId)))
+            ->with(['inscription.eleve', 'inscription.classe', 'typeFrais', 'encaissePar'])->latest('date_paiement')->get();
+        $inscriptions = Inscription::query()
+            ->whereHas('classe', fn ($q) => $q->where('etablissement_id', $etablissementId))
+            ->when($anneeId, fn ($q) => $q->where('annee_scolaire_id', $anneeId))
+            ->with(['eleve', 'classe', 'paiements', 'anneeScolaire'])->get();
         $classes = Classe::query()->where('etablissement_id', $etablissementId)->orderBy('nom')->get(['id', 'nom']);
         $annees = AnneeScolaire::query()->where('etablissement_id', $etablissementId)->orderByDesc('date_debut')->get(['id', 'libelle']);
-        $typesFrais = TypeFrais::query()->where('etablissement_id', $etablissementId)->orderBy('ordre')->get(['id', 'libelle', 'montant', 'classe_id', 'annee_scolaire_id']);
+        $typesFrais = TypeFrais::query()->where('etablissement_id', $etablissementId)->when($anneeId, fn ($q) => $q->where('annee_scolaire_id', $anneeId))->orderBy('ordre')->get(['id', 'libelle', 'montant', 'classe_id', 'annee_scolaire_id']);
         $depenses = Depense::query()->where('etablissement_id', $etablissementId)->with('responsable:id,nom,prenoms')->latest('date_depense')->get();
         $personnel = Personnel::query()->where('etablissement_id', $etablissementId)->orderBy('nom')->get(['id', 'nom', 'prenoms', 'type', 'salaire_base']);
-        $salaires = Salaire::query()->whereHas('personnel', fn ($q) => $q->where('etablissement_id', $etablissementId))->with('personnel:id,nom,prenoms,type')->latest('updated_at')->get();
+        $salaires = Salaire::query()->whereHas('personnel', fn ($q) => $q->where('etablissement_id', $etablissementId))->when($anneeId, fn ($q) => $q->where('annee_scolaire_id', $anneeId))->with('personnel:id,nom,prenoms,type')->latest('updated_at')->get();
 
         $totalAttendu = (int) $paiements->sum('montant_attendu');
         $totalEncaisse = (int) $paiements->whereNotIn('statut', ['impaye', 'annule'])->sum('montant_paye');

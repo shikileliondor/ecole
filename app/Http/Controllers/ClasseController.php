@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Models\AnneeScolaire;
 use App\Models\Classe;
 use App\Models\Inscription;
 use App\Models\ParametreConfig;
@@ -16,6 +17,7 @@ class ClasseController extends Controller
     public function index(Request $request): Response
     {
         $etablissementId = (int) auth()->user()->etablissement_id;
+        $anneeActive = AnneeScolaire::query()->where('etablissement_id', $etablissementId)->active()->first();
         $filters = [
             'search' => trim((string) $request->string('search')->value()),
             'statut' => trim((string) $request->string('statut')->value()),
@@ -30,6 +32,7 @@ class ClasseController extends Controller
 
         $classesQuery = Classe::query()
             ->where('etablissement_id', $etablissementId)
+            ->when($anneeActive, fn ($q) => $q->where('annee_scolaire_id', $anneeActive->id))
             ->with(['niveau:id,libelle', 'anneeScolaire:id,libelle', 'enseignantTitulaire:id,nom,prenoms'])
             ->withCount([
                 'inscriptions as effectif' => fn ($query) => $query->where('statut', Inscription::STATUTS['inscrit']),
@@ -70,7 +73,7 @@ class ClasseController extends Controller
 
         $selectedClasse = $classesItems->firstWhere('id', $selectedId) ?? $classesItems->first();
 
-        $detail = $selectedClasse ? $this->buildClasseDetail($selectedClasse->id, $etablissementId) : null;
+        $detail = $selectedClasse ? $this->buildClasseDetail($selectedClasse->id, $etablissementId, $anneeActive?->id) : null;
 
         return Inertia::render('Classes/Index', [
             'classes' => $classes,
@@ -84,7 +87,7 @@ class ClasseController extends Controller
         ]);
     }
 
-    private function buildClasseDetail(int $classeId, int $etablissementId): array
+    private function buildClasseDetail(int $classeId, int $etablissementId, ?int $anneeActiveId = null): array
     {
         $classe = Classe::query()
             ->where('etablissement_id', $etablissementId)
@@ -94,6 +97,7 @@ class ClasseController extends Controller
         $inscriptions = Inscription::query()
             ->where('classe_id', $classe->id)
             ->where('statut', Inscription::STATUTS['inscrit'])
+            ->when($anneeActiveId, fn ($q) => $q->where('annee_scolaire_id', $anneeActiveId))
             ->with('eleve:id,nom,prenoms,sexe')
             ->withAvg('notes as moyenne_generale', 'note')
             ->get();

@@ -4,14 +4,17 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Models\AnneeScolaire;
 use App\Models\Classe;
 use App\Models\Composition;
 use App\Models\CompositionNote;
+use App\Models\Etablissement;
 use App\Models\Inscription;
 use App\Models\Matiere;
 use App\Models\Note;
 use App\Models\ParametreConfig;
 use App\Models\PeriodeAcademique;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -23,6 +26,8 @@ class NoteBulletinController extends Controller
     public function index(): Response
     {
         $etablissementId = (int) auth()->user()->etablissement_id;
+        $anneeActive = AnneeScolaire::query()->where('etablissement_id', $etablissementId)->active()->first();
+
         $config = ParametreConfig::query()
             ->where('etablissement_id', $etablissementId)
             ->where('onglet', 'evaluations')
@@ -30,6 +35,7 @@ class NoteBulletinController extends Controller
 
         $compositions = Composition::query()
             ->where('etablissement_id', $etablissementId)
+            ->when($anneeActive, fn ($q) => $q->whereHas('periodeAcademique', fn ($pq) => $pq->where('annee_scolaire_id', $anneeActive->id)))
             ->with([
                 'periodeAcademique:id,libelle,ordre,annee_scolaire_id',
                 'notes.classe:id,nom',
@@ -41,6 +47,7 @@ class NoteBulletinController extends Controller
         $inscriptions = Inscription::query()
             ->whereHas('classe', fn ($query) => $query->where('etablissement_id', $etablissementId))
             ->where('statut', Inscription::STATUTS['inscrit'])
+            ->when($anneeActive, fn ($q) => $q->where('annee_scolaire_id', $anneeActive->id))
             ->with(['eleve:id,nom,prenoms', 'classe:id,nom'])
             ->orderBy('numero_ordre')
             ->orderBy('id')
@@ -61,7 +68,7 @@ class NoteBulletinController extends Controller
 
         return Inertia::render('NotesBulletins/Index', [
             'periodes' => PeriodeAcademique::query()
-                ->whereHas('anneeScolaire', fn ($query) => $query->where('etablissement_id', $etablissementId))
+                ->whereHas('anneeScolaire', fn ($query) => $query->where('etablissement_id', $etablissementId)->when($anneeActive, fn ($aq) => $aq->where('id', $anneeActive->id)))
                 ->orderBy('ordre')
                 ->get(['id', 'libelle', 'annee_scolaire_id']),
             'classes' => Classe::query()->where('etablissement_id', $etablissementId)->orderBy('nom')->get(['id', 'nom']),
@@ -172,6 +179,123 @@ class NoteBulletinController extends Controller
             fputcsv($output, ['Décision', $composition->type === 'passage' ? ($moyenne >= (float) $composition->seuil_validation ? 'Passe' : 'Redouble') : 'Simple']);
             fclose($output);
         }, $filename, ['Content-Type' => 'text/csv']);
+    }
+
+    public function bulletinPdf(Request $request, Composition $composition)
+    {
+        $etablissementId = (int) auth()->user()->etablissement_id;
+        abort_unless($composition->etablissement_id === $etablissementId, 403);
+
+        $classeId = $request->integer('classe_id');
+        $classe   = Classe::query()
+            ->where('id', $classeId)
+            ->where('etablissement_id', $etablissementId)
+            ->with('niveau')
+            ->firstOrFail();
+
+        $composition->load('periodeAcademique:id,libelle,ordre,annee_scolaire_id');
+        $trimestre = max(1, (int) ($composition->periodeAcademique?->ordre ?? 1));
+
+        $matieres = Matiere::query()->ordonnesBulletin()->get(['id', 'libelle', 'coefficient']);
+
+        $inscriptions = Inscription::query()
+            ->where('classe_id', $classeId)
+            ->where('statut', Inscription::STATUTS['inscrit'])
+            ->with([
+                'eleve:id,nom,prenoms,matricule,sexe',
+                'notes' => fn ($q) => $q
+                    ->where('trimestre', $trimestre)
+                    ->where('type_note', Note::TYPES_NOTES['composition'])
+                    ->select(['id', 'inscription_id', 'matiere_id', 'note']),
+            ])
+            ->orderBy('numero_ordre')
+            ->get();
+
+        // Calcul des résultats par élève
+        $resultats = $inscriptions->map(function (Inscription $inscription) use ($composition, $matieres): array {
+            $notesByMatiere = $inscription->notes->keyBy('matiere_id');
+            $notesParMatiere = [];
+            $totalPondere = 0.0;
+            $totalCoef    = 0.0;
+
+            foreach ($matieres as $matiere) {
+                $note = $notesByMatiere[$matiere->id] ?? null;
+                $notesParMatiere[$matiere->id] = $note ? (float) $note->note : null;
+
+                if ($note !== null) {
+                    $coef = (float) ($matiere->coefficient ?? 1);
+                    if ($composition->regle_moyenne === 'ponderee_coefficient') {
+                        $totalPondere += (float) $note->note * $coef;
+                        $totalCoef    += $coef;
+                    } else {
+                        $totalPondere += (float) $note->note;
+                        $totalCoef    += 1;
+                    }
+                }
+            }
+
+            $moyenne = $totalCoef > 0 ? round($totalPondere / $totalCoef, 2) : null;
+
+            return [
+                'eleve'          => $inscription->eleve,
+                'notesParMatiere'=> $notesParMatiere,
+                'moyenne'        => $moyenne,
+                'mention'        => $moyenne !== null ? match (true) {
+                    $moyenne >= 16 => 'TB',
+                    $moyenne >= 14 => 'B',
+                    $moyenne >= 12 => 'AB',
+                    $moyenne >= 10 => 'Passable',
+                    default        => 'Insuf.',
+                } : '—',
+                'rang'           => null,
+            ];
+        });
+
+        // Classement
+        $seuil = (float) $composition->seuil_validation;
+        $avecMoyenne = $resultats->filter(fn ($r) => $r['moyenne'] !== null)->sortByDesc('moyenne')->values();
+        $rang = 0; $pos = 0; $prevMoy = null;
+        $rangMap = [];
+        foreach ($avecMoyenne as $r) {
+            $pos++;
+            if ($prevMoy === null || $r['moyenne'] < $prevMoy) {
+                $rang = $pos;
+            }
+            $rangMap[$r['eleve']->id] = $rang;
+            $prevMoy = $r['moyenne'];
+        }
+        $resultats = $resultats->map(fn ($r) => [...$r, 'rang' => $rangMap[$r['eleve']?->id] ?? '—']);
+
+        // Stats classe
+        $moyennes       = $resultats->filter(fn ($r) => $r['moyenne'] !== null)->pluck('moyenne');
+        $moyenneClasse  = $moyennes->count() > 0 ? round((float) $moyennes->avg(), 2) : null;
+        $admis          = $moyennes->filter(fn ($m) => $m >= $seuil)->count();
+
+        $pdf = Pdf::loadView('notes-bulletins.bulletin-classe-pdf', [
+            'etablissement'  => Etablissement::query()->find($etablissementId),
+            'composition'    => $composition,
+            'classe'         => $classe,
+            'matieres'       => $matieres,
+            'resultats'      => $resultats,
+            'stats'          => [
+                'total'          => $resultats->count(),
+                'avec_notes'     => $moyennes->count(),
+                'moyenne_classe' => $moyenneClasse,
+                'admis'          => $admis,
+                'en_echec'       => $moyennes->count() - $admis,
+                'taux_reussite'  => $moyennes->count() > 0 ? round($admis / $moyennes->count() * 100, 1) : 0,
+            ],
+            'date_edition'   => now(),
+        ])->setPaper('a4', 'landscape');
+
+        $filename = sprintf(
+            'bulletin-%s-%s-%s.pdf',
+            str_replace(' ', '-', $composition->libelle),
+            str_replace(' ', '-', $classe->nom),
+            now()->format('Y-m-d')
+        );
+
+        return $pdf->download($filename);
     }
 
     public function storeEleveNotes(Request $request, Composition $composition): RedirectResponse

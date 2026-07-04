@@ -1,4 +1,4 @@
-import { router, usePage } from '@inertiajs/react';
+import { router } from '@inertiajs/react';
 import {
     AlertCircle,
     Banknote,
@@ -13,7 +13,6 @@ import {
     X,
 } from 'lucide-react';
 import { useEffect, useRef } from 'react';
-import { Button } from '@/Components/ui/button';
 
 export interface NotificationItem {
     id: string;
@@ -30,7 +29,6 @@ interface Props {
     onClose: () => void;
     items: NotificationItem[];
     unreadCount: number;
-    onCountChange: (count: number) => void;
 }
 
 const TYPE_CONFIG: Record<string, { icon: React.ElementType; color: string; bg: string }> = {
@@ -54,19 +52,9 @@ function relativeTime(iso: string): string {
     return new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
 }
 
-function callJson(url: string, method: 'POST' | 'DELETE'): Promise<{ unread_count?: number }> {
-    return fetch(url, {
-        method,
-        headers: {
-            'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content ?? '',
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-        },
-        credentials: 'same-origin',
-    }).then((r) => r.json());
-}
+const INERTIA_OPTS = { only: ['notifications'], preserveState: true, preserveScroll: true } as const;
 
-export default function NotificationPanel({ open, onClose, items, unreadCount, onCountChange }: Props) {
+export default function NotificationPanel({ open, onClose, items, unreadCount }: Props) {
     const panelRef = useRef<HTMLDivElement>(null);
 
     // Fermer sur clic extérieur
@@ -89,32 +77,24 @@ export default function NotificationPanel({ open, onClose, items, unreadCount, o
         return () => document.removeEventListener('keydown', handler);
     }, [open, onClose]);
 
-    const markOne = async (id: string, link: string | null) => {
-        const res = await callJson(route('notifications.read', id), 'POST');
-        onCountChange(res.unread_count ?? 0);
-        router.reload({ only: ['notifications'] });
-        if (link) {
-            onClose();
-            router.visit(link);
-        }
+    const markOne = (id: string, link: string | null) => {
+        router.post(route('notifications.read', id), {}, {
+            ...INERTIA_OPTS,
+            onSuccess: () => { if (link) { onClose(); router.visit(link); } },
+        });
     };
 
-    const markAll = async () => {
-        await callJson(route('notifications.read-all'), 'POST');
-        onCountChange(0);
-        router.reload({ only: ['notifications'] });
+    const markAll = () => {
+        router.post(route('notifications.read-all'), {}, INERTIA_OPTS);
     };
 
-    const deleteOne = async (id: string, e: React.MouseEvent) => {
+    const deleteOne = (id: string, e: React.MouseEvent) => {
         e.stopPropagation();
-        const res = await callJson(route('notifications.destroy', id), 'DELETE');
-        onCountChange(res.unread_count ?? 0);
-        router.reload({ only: ['notifications'] });
+        router.delete(route('notifications.destroy', id), INERTIA_OPTS);
     };
 
-    const clearRead = async () => {
-        await callJson(route('notifications.clear-read'), 'DELETE');
-        router.reload({ only: ['notifications'] });
+    const clearRead = () => {
+        router.delete(route('notifications.clear-read'), INERTIA_OPTS);
     };
 
     return (
@@ -178,8 +158,7 @@ export default function NotificationPanel({ open, onClose, items, unreadCount, o
                                 return (
                                     <li
                                         key={notif.id}
-                                        onClick={() => markOne(notif.id, notif.link)}
-                                        className={`group relative flex cursor-pointer gap-3 px-4 py-3 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/60 ${isUnread ? 'bg-blue-50/50 dark:bg-blue-950/30' : ''}`}
+                                        className={`relative flex gap-3 px-4 py-3 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/60 ${isUnread ? 'bg-blue-50/50 dark:bg-blue-950/30' : ''}`}
                                     >
                                         {/* Indicateur non lu */}
                                         {isUnread ? (
@@ -191,8 +170,12 @@ export default function NotificationPanel({ open, onClose, items, unreadCount, o
                                             <Icon size={16} className={cfg.color} />
                                         </div>
 
-                                        {/* Contenu */}
-                                        <div className="min-w-0 flex-1">
+                                        {/* Contenu cliquable */}
+                                        <button
+                                            type="button"
+                                            onClick={() => markOne(notif.id, notif.link)}
+                                            className="min-w-0 flex-1 text-left"
+                                        >
                                             <p className={`truncate text-sm ${isUnread ? 'font-semibold text-gray-800 dark:text-gray-100' : 'font-medium text-gray-700 dark:text-gray-300'}`}>
                                                 {notif.title}
                                             </p>
@@ -202,25 +185,27 @@ export default function NotificationPanel({ open, onClose, items, unreadCount, o
                                             <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
                                                 {relativeTime(notif.created_at)}
                                             </p>
-                                        </div>
+                                        </button>
 
-                                        {/* Actions au hover */}
-                                        <div className="flex shrink-0 flex-col items-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                                        {/* Actions — toujours visibles */}
+                                        <div className="flex shrink-0 flex-col items-end justify-center gap-1">
                                             {isUnread ? (
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); markOne(notif.id, null); }}
-                                                    className="rounded p-1 text-gray-400 hover:bg-green-50 hover:text-green-600"
+                                                    className="flex h-7 w-7 items-center justify-center rounded-full text-gray-400 hover:bg-green-100 hover:text-green-600 dark:hover:bg-green-900/40 dark:hover:text-green-400"
                                                     title="Marquer comme lu"
                                                 >
-                                                    <Check size={13} />
+                                                    <Check size={14} />
                                                 </button>
-                                            ) : null}
+                                            ) : (
+                                                <div className="h-7 w-7" />
+                                            )}
                                             <button
                                                 onClick={(e) => deleteOne(notif.id, e)}
-                                                className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-500"
+                                                className="flex h-7 w-7 items-center justify-center rounded-full text-gray-400 hover:bg-red-100 hover:text-red-500 dark:hover:bg-red-900/40 dark:hover:text-red-400"
                                                 title="Supprimer"
                                             >
-                                                <Trash2 size={13} />
+                                                <Trash2 size={14} />
                                             </button>
                                         </div>
                                     </li>

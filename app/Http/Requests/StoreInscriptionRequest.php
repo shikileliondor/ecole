@@ -41,10 +41,13 @@ class StoreInscriptionRequest extends FormRequest
             'email_tuteur' => ['nullable', 'email', 'max:150'],
             'adresse_tuteur' => ['nullable', 'string', 'max:150'],
             'lien_parente' => ['required_unless:mode_tuteur,attach', Rule::in(array_values(ParentTuteur::LIENS))],
+            'lien_parente_autre' => ['nullable', 'required_if:lien_parente,autre', 'string', 'max:100'],
 
             'nom_urgence' => ['required', 'string', 'max:100'],
+            'prenoms_urgence' => ['required', 'string', 'max:150'],
             'telephone_urgence' => ['required', 'string', 'regex:/^0[0-9]{9}$/'],
-            'lien_urgence' => ['required', 'string', 'max:100'],
+            'lien_urgence' => ['required', Rule::in(array_values(ParentTuteur::LIENS))],
+            'lien_urgence_autre' => ['nullable', 'required_if:lien_urgence,autre', 'string', 'max:100'],
             'adresse_urgence' => ['nullable', 'string', 'max:150'],
 
             'annee_scolaire_id' => ['required', 'exists:annees_scolaires,id'],

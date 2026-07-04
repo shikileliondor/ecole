@@ -1,4 +1,4 @@
-import AppLayout from '@/Layouts/AppLayout';
+﻿import AppLayout from '@/Layouts/AppLayout';
 import { router, useForm, usePage } from '@inertiajs/react';
 import { Paperclip, Search, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
@@ -42,6 +42,7 @@ export default function FinancesPaiements() {
     const [studentQuery, setStudentQuery] = useState('');
 
     const [f, setF] = useState({ q: '', classe: '', type: '', mode: '', status: '', period: 'all', page: 1 });
+    const [showSuggestions, setShowSuggestions] = useState(false);
     const pageSize = 12;
 
     const form = useForm({ ...emptyPayment, mode_paiement: data.modesPaiement[0] || 'especes' });
@@ -97,6 +98,7 @@ export default function FinancesPaiements() {
         setIsEdit(false);
         setEditingId(null);
         setStudentQuery('');
+        setShowSuggestions(false);
         form.reset();
         form.setData({ ...emptyPayment, mode_paiement: data.modesPaiement[0] || 'especes' });
         form.clearErrors();
@@ -168,7 +170,7 @@ export default function FinancesPaiements() {
 
     return <AppLayout title='Paiements / Encaissements'><div className='space-y-4 bg-[#F8FAFC] p-3 md:p-5'>
         {toast && <div className='fixed right-4 top-4 z-[60] rounded-lg bg-emerald-600 px-4 py-2 text-sm text-white shadow-lg'>{toast}</div>}
-        <div className='flex items-center justify-between'><div><h1 className='text-2xl font-bold text-[#0F172A]'>Paiements / Encaissements</h1><p className='text-sm text-[#64748B]'>Enregistrez les paiements des élèves et consultez l’historique des encaissements.</p></div><button onClick={openCreate} className='h-10 rounded-xl bg-blue-600 px-4 text-white hover:bg-blue-700'>Nouveau paiement</button></div>
+        <div className='flex items-center justify-between'><div><h1 className='text-2xl font-bold text-[#0F172A]'>Paiements / Encaissements</h1><p className='text-sm text-[#64748B]'>Enregistrez les paiements des élèves et consultez l'historique des encaissements.</p></div><button onClick={openCreate} className='h-10 rounded-xl bg-blue-600 px-4 text-white hover:bg-blue-700'>Nouveau paiement</button></div>
         <div className='grid gap-3 md:grid-cols-4'>{[['Total encaissé', data.metrics.totalEncaisse], ['Encaissements du mois', data.metrics.paiementsDuMois], ['Nombre de paiements', data.metrics.nombrePaiements], ['Paiements annulés', data.metrics.paiementsAnnules]].map(([l, v]) => <div key={String(l)} className='rounded-2xl border border-slate-200 bg-white p-4 shadow-sm'><p className='text-sm text-slate-500'>{l}</p><p className='text-xl font-semibold text-[#0F172A]'>{typeof v === 'number' ? formatCurrency(v) : v}</p></div>)}</div>
         <div className='rounded-2xl border border-slate-200 bg-white p-4 shadow-sm grid gap-2 md:grid-cols-6'><input className='rounded-xl border p-2 text-sm' placeholder='Recherche élève' value={f.q} onChange={e => setF({ ...f, q: e.target.value, page: 1 })} /><select className='rounded-xl border p-2 text-sm' value={f.classe} onChange={e => setF({ ...f, classe: e.target.value, page: 1 })}><option value=''>Classe</option>{data.classes.map(c => <option key={c.id} value={c.nom}>{c.nom}</option>)}</select><select className='rounded-xl border p-2 text-sm' value={f.type} onChange={e => setF({ ...f, type: e.target.value, page: 1 })}><option value=''>Type de frais</option>{data.typesFrais.map(t => <option key={t.id} value={t.libelle}>{t.libelle}</option>)}</select><select className='rounded-xl border p-2 text-sm' value={f.mode} onChange={e => setF({ ...f, mode: e.target.value, page: 1 })}><option value=''>Mode</option>{data.modesPaiement.map(m => <option key={m} value={m}>{m}</option>)}</select><select className='rounded-xl border p-2 text-sm' value={f.status} onChange={e => setF({ ...f, status: e.target.value, page: 1 })}><option value=''>Statut</option><option value='paye'>payé</option><option value='partiel'>partiel</option><option value='annule'>annulé</option><option value='impaye'>en attente</option></select><button className='rounded-xl border p-2 text-sm' onClick={() => setF({ q: '', classe: '', type: '', mode: '', status: '', period: 'all', page: 1 })}>Réinitialiser</button></div>
         <div className='rounded-2xl border border-slate-200 bg-white shadow-sm overflow-auto'><table className='min-w-full text-sm'><thead className='bg-slate-50 text-slate-600'><tr><th className='p-3 text-left'>Date</th><th>Élève</th><th>Classe</th><th>Type de frais</th><th>Montant payé</th><th>Mode</th><th>Référence</th><th>Justificatif</th><th>Statut</th><th>Actions</th></tr></thead><tbody>{rows.map(r => <tr key={r.id} className='border-t hover:bg-slate-50'><td className='p-3'>{formatDate(r.date)}</td><td>{r.eleve}</td><td>{r.classe}</td><td>{r.type_frais}</td><td>{formatCurrency(r.montant)}</td><td><span className={`rounded-full px-2 py-1 text-xs ${modeBadge(r.mode)}`}>{r.mode}</span></td><td>{r.reference || 'Non renseigné'}</td><td>{r.justificatif_url ? <a className='text-blue-600 hover:underline' href={r.justificatif_url} target='_blank' rel='noreferrer'>Voir</a> : '—'}</td><td><span className={`rounded-full px-2 py-1 text-xs ${statusBadge(r.statut)}`}>{r.statut}</span></td><td><div className='flex gap-2'><button className='text-blue-600' onClick={() => setReceipt(r)}>Voir reçu</button><button className='text-slate-700 disabled:text-slate-300' disabled={r.statut === 'annule'} onClick={() => openEdit(r)}>Modifier</button><button className='text-red-600 disabled:text-slate-300' disabled={r.statut === 'annule'} onClick={() => setCancelTarget(r)}>Annuler</button></div></td></tr>)}{rows.length === 0 && <tr><td className='p-6 text-center text-slate-500' colSpan={10}>{total === 0 ? 'Aucune donnée disponible' : 'Aucun résultat pour ces filtres.'}</td></tr>}</tbody></table></div>
@@ -178,9 +180,44 @@ export default function FinancesPaiements() {
             <div className='mt-5 flex-1 space-y-5 overflow-y-auto pr-1'>
                 <section className='space-y-2'><h4 className='text-sm font-semibold text-slate-800'>Élève concerné</h4>
                     <label className='text-xs text-slate-500'>Élève</label>
-                    <div className='relative'><Search className='absolute left-3 top-3.5 h-4 w-4 text-slate-400' /><input disabled={isEdit} value={studentQuery} onChange={(e) => setStudentQuery(e.target.value)} placeholder='Tapez le nom ou le matricule de l’élève' className='h-10 w-full rounded-lg border border-slate-200 pl-9 pr-3 text-sm disabled:bg-slate-100' /></div>
-                    {!isEdit && studentQuery.trim() && !selectedEleve && <p className='text-xs text-slate-500'>{filteredEleves.length > 1 ? `${filteredEleves.length} élèves correspondent : continuez à saisir pour sélectionner automatiquement.` : 'Aucun élève trouvé pour cette recherche.'}</p>}
-                    {selectedEleve ? <div className='rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs text-slate-600'><p className='font-semibold text-emerald-800'>Élève sélectionné automatiquement</p><p className='mt-1 font-semibold text-slate-800'>{selectedEleve.nom}</p><p>Classe : {selectedEleve.classe || 'Non renseignée'}</p><p>Matricule : {selectedEleve.matricule || 'Non renseigné'}</p><p>Année scolaire : {selectedEleve.annee_scolaire || 'Non renseignée'}</p><p>Statut financier : {(selectedEleve as any).statut_financier || 'Non renseigné'}</p></div> : <p className='text-xs text-slate-500'>Tapez le nom ou le matricule complet de l’élève pour afficher ses frais.</p>}
+                    <div className='relative'>
+                        <Search className='absolute left-3 top-3.5 h-4 w-4 text-slate-400' />
+                        <input
+                            disabled={isEdit}
+                            value={studentQuery}
+                            onChange={(e) => { setStudentQuery(e.target.value); setShowSuggestions(true); }}
+                            onFocus={() => setShowSuggestions(true)}
+                            onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                            placeholder='Tapez le nom ou le matricule…'
+                            className='h-10 w-full rounded-lg border border-slate-200 pl-9 pr-3 text-sm disabled:bg-slate-100'
+                        />
+                        {!isEdit && showSuggestions && studentQuery.trim() && !selectedEleve && filteredEleves.length > 0 && (
+                            <div className='absolute left-0 right-0 top-11 z-50 max-h-52 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg'>
+                                {filteredEleves.slice(0, 8).map((e: any) => (
+                                    <button
+                                        key={e.inscription_id}
+                                        type='button'
+                                        onMouseDown={() => { setStudentQuery(e.nom); setShowSuggestions(false); }}
+                                        className='flex w-full items-start gap-3 px-3 py-2.5 text-left hover:bg-slate-50 border-b border-slate-100 last:border-0'
+                                    >
+                                        <div className='flex-1 min-w-0'>
+                                            <p className='truncate font-medium text-slate-900 text-sm'>{e.nom}</p>
+                                            <p className='text-xs text-slate-400'>{e.classe || '—'} · {e.matricule || '—'}</p>
+                                        </div>
+                                    </button>
+                                ))}
+                                {filteredEleves.length > 8 && (
+                                    <p className='px-3 py-2 text-xs text-slate-400 bg-slate-50'>+{filteredEleves.length - 8} autres — affinez la recherche</p>
+                                )}
+                            </div>
+                        )}
+                        {!isEdit && showSuggestions && studentQuery.trim() && !selectedEleve && filteredEleves.length === 0 && (
+                            <div className='absolute left-0 right-0 top-11 z-50 rounded-lg border border-slate-200 bg-white shadow-lg px-3 py-3'>
+                                <p className='text-xs text-slate-400'>Aucun élève trouvé pour «&nbsp;{studentQuery}&nbsp;»</p>
+                            </div>
+                        )}
+                    </div>
+                    {selectedEleve ? <div className='rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs text-slate-600'><p className='font-semibold text-emerald-800'>Élève sélectionné automatiquement</p><p className='mt-1 font-semibold text-slate-800'>{selectedEleve.nom}</p><p>Classe : {selectedEleve.classe || 'Non renseignée'}</p><p>Matricule : {selectedEleve.matricule || 'Non renseigné'}</p><p>Année scolaire : {selectedEleve.annee_scolaire || 'Non renseignée'}</p><p>Statut financier : {(selectedEleve as any).statut_financier || 'Non renseigné'}</p></div> : <p className='text-xs text-slate-500'>Tapez le nom ou le matricule complet de l'élève pour afficher ses frais.</p>}
                 </section>
 
                 <section className='space-y-2'><h4 className='text-sm font-semibold text-slate-800'>Frais à régler</h4>
@@ -204,6 +241,6 @@ export default function FinancesPaiements() {
             <div className='mt-5 flex gap-2 border-t border-slate-200 pt-3'><button className='h-10 flex-1 rounded-lg border border-slate-200 text-sm' onClick={() => { setOpen(false); setIsEdit(false); setEditingId(null); }}>Fermer</button><button className='h-10 flex-1 rounded-lg bg-blue-600 text-sm text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-400' disabled={form.processing || !form.data.montant_paye || (Number(form.data.montant_paye) > reste && reste > 0)} onClick={handleSavePayment}>{form.processing ? 'Enregistrement...' : isEdit ? 'Mettre à jour' : 'Enregistrer le paiement'}</button></div>
         </div></div></div>}
         {receipt && <div className='fixed inset-0 z-50 grid place-items-center bg-slate-900/55 p-4 backdrop-blur-[2px]'><div className='w-full max-w-xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl'><div className='bg-gradient-to-r from-slate-900 via-blue-900 to-indigo-900 px-6 py-5 text-white'><p className='text-xs font-semibold uppercase tracking-[0.24em] text-white/80'>Finance scolaire</p><h3 className='mt-1 text-2xl font-bold'>Reçu de paiement</h3><p className='mt-1 text-sm text-white/80'>Reçu généré le {receipt.date}</p></div><div className='space-y-4 px-6 py-5'><div className='grid gap-3 sm:grid-cols-2'>{[["Élève", receipt.eleve], ["Classe", receipt.classe], ["Type de frais", receipt.type_frais], ["Mode", receipt.mode], ["Référence", receipt.reference || 'Non renseigné'], ["Caissier", receipt.encaisse_par_nom || 'Non renseigné'], ["Date", receipt.date], ["Statut", receipt.statut]].map(([label, value]) => <div key={String(label)} className='rounded-2xl border border-slate-100 bg-slate-50/70 px-4 py-3'><p className='text-[11px] font-semibold uppercase tracking-wide text-slate-500'>{label}</p><p className='mt-1 text-sm font-medium text-slate-900'>{value}</p></div>)}</div><div className='rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-4'><p className='text-xs font-semibold uppercase tracking-wide text-emerald-700'>Montant payé</p><p className='mt-1 text-3xl font-extrabold text-emerald-700'>{formatCurrency(receipt.montant)}</p></div><div className='flex flex-wrap gap-2 border-t border-slate-200 pt-4'><button onClick={() => window.print()} className='h-11 rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-100'>Imprimer</button><button disabled className='h-11 rounded-xl border border-slate-200 bg-slate-100 px-4 text-sm font-semibold text-slate-400'>Télécharger PDF</button><button onClick={() => setReceipt(null)} className='ml-auto h-11 rounded-xl bg-slate-900 px-5 text-sm font-semibold text-white transition hover:bg-slate-700'>Fermer</button></div></div></div></div>}
-        {cancelTarget && <div className='fixed inset-0 z-50 grid place-items-center bg-black/30'><div className='w-full max-w-md rounded-2xl bg-white p-5'><p className='font-semibold'>Voulez-vous vraiment annuler ce paiement ? Cette action conservera une trace dans l’historique.</p><textarea className='mt-3 w-full rounded-xl border p-2' placeholder='Motif d’annulation' value={cancelForm.data.motif_annulation} onChange={e => cancelForm.setData('motif_annulation', e.target.value)} /><div className='mt-3 flex gap-2'><button onClick={() => setCancelTarget(null)} className='rounded-xl border px-3 py-2'>Fermer</button><button className='rounded-xl bg-red-600 px-3 py-2 text-white' onClick={() => cancelForm.post(route('finances.paiements.cancel', cancelTarget.id), { preserveScroll: true, onSuccess: () => { setCancelTarget(null); cancelForm.reset(); router.reload({ only: ['payments', 'metrics', 'impayes'] }); } })}>Confirmer l’annulation</button></div></div></div>}
+        {cancelTarget && <div className='fixed inset-0 z-50 grid place-items-center bg-black/30'><div className='w-full max-w-md rounded-2xl bg-white p-5'><p className='font-semibold'>Voulez-vous vraiment annuler ce paiement ? Cette action conservera une trace dans l'historique.</p><textarea className='mt-3 w-full rounded-xl border p-2' placeholder="Motif d'annulation" value={cancelForm.data.motif_annulation} onChange={e => cancelForm.setData('motif_annulation', e.target.value)} /><div className='mt-3 flex gap-2'><button onClick={() => setCancelTarget(null)} className='rounded-xl border px-3 py-2'>Fermer</button><button className='rounded-xl bg-red-600 px-3 py-2 text-white' onClick={() => cancelForm.post(route('finances.paiements.cancel', cancelTarget.id), { preserveScroll: true, onSuccess: () => { setCancelTarget(null); cancelForm.reset(); router.reload({ only: ['payments', 'metrics', 'impayes'] }); } })}>Confirmer l'annulation</button></div></div></div>}
     </div></AppLayout>;
 }

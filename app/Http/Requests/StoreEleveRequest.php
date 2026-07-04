@@ -41,6 +41,7 @@ class StoreEleveRequest extends FormRequest
             'est_boursier' => ['boolean'],
             'extrait_naissance_numero' => ['nullable', 'string', 'max:50'],
             'classe_id' => ['required', 'exists:classes,id'],
+            'annee_scolaire_id' => ['nullable', 'integer', 'exists:annees_scolaires,id'],
             'photo' => ['nullable', 'image', 'max:2048', 'mimes:jpg,jpeg,png'],
 
             'parent.nom' => ['required', 'string', 'max:100'],

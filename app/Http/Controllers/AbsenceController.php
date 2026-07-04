@@ -50,8 +50,8 @@ class AbsenceController extends Controller
             'classes'           => Classe::query()->where('etablissement_id', $etablissementId)->with('niveau')->orderBy('nom')->get(),
             'inscriptions'      => $classeId
                 ? Inscription::query()
-                    ->where('classe_id', $classeId)
-                    ->where('statut', Inscription::STATUTS['inscrit'])
+                    ->where('inscriptions.classe_id', $classeId)
+                    ->where('inscriptions.statut', Inscription::STATUTS['inscrit'])
                     ->with('eleve')
                     ->join('eleves', 'eleves.id', '=', 'inscriptions.eleve_id')
                     ->orderBy('eleves.nom')
@@ -245,7 +245,7 @@ class AbsenceController extends Controller
         $etablissement = Etablissement::query()->find($etablissementId);
         $anneeActive   = AnneeScolaire::query()->where('etablissement_id', $etablissementId)->active()->first();
         $classe        = $request->filled('classe_id')
-            ? Classe::query()->find((int) $request->integer('classe_id'))
+            ? Classe::query()->where('etablissement_id', $etablissementId)->find((int) $request->integer('classe_id'))
             : null;
 
         return [

@@ -303,6 +303,7 @@ export default function ParametresIndex(props: Props) {
     });
     const roleForm = useForm({ name: props.roles[0]?.name ?? '', permissions: props.roles[0]?.permissions.map((permission) => permission.name) ?? [] as string[] });
     const [selectedRoleId, setSelectedRoleId] = useState<number | null>(props.roles[0]?.id ?? null);
+    const [isCreatingRole, setIsCreatingRole] = useState(false);
     const [selectedUserId, setSelectedUserId] = useState<number | null>(props.users[0]?.id ?? null);
     const [permissionSearch, setPermissionSearch] = useState('');
     const userPermissionForm = useForm({ role: props.users[0]?.roles[0]?.name ?? '', allows: [] as string[], denies: [] as string[] });
@@ -330,7 +331,21 @@ export default function ParametresIndex(props: Props) {
     const loadRole = (roleId: number) => {
         const role = props.roles.find((item) => item.id === roleId);
         setSelectedRoleId(roleId);
+        setIsCreatingRole(false);
         roleForm.setData({ name: role?.name ?? '', permissions: role?.permissions.map((permission) => permission.name) ?? [] });
+    };
+
+    const startNewRole = () => {
+        setSelectedRoleId(null);
+        setIsCreatingRole(true);
+        roleForm.setData({ name: '', permissions: [] });
+    };
+
+    const cancelNewRole = () => {
+        setIsCreatingRole(false);
+        if (props.roles[0]) {
+            loadRole(props.roles[0].id);
+        }
     };
 
     const loadUser = (userId: number) => {
@@ -983,7 +998,7 @@ export default function ParametresIndex(props: Props) {
                                     </select>
                                 </div>
                                 <div className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 dark:border-gray-600">
-                                    <Checkbox checked={matiereForm.data.est_notee} onCheckedChange={(checked) => matiereForm.setData('est_notee', Boolean(checked))} id="est_notee" />
+                                    <Checkbox checked={matiereForm.data.est_notee} onChange={(e) =>matiereForm.setData('est_notee', e.target.checked)} id="est_notee" />
                                     <label htmlFor="est_notee" className="cursor-pointer text-sm text-slate-700 dark:text-gray-300">Matière notée</label>
                                 </div>
                                 <div className="md:col-span-4 flex justify-end gap-2">
@@ -1069,7 +1084,7 @@ export default function ParametresIndex(props: Props) {
                                     </div>
                                 </div>
                                 <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-gray-300">
-                                    <Checkbox checked={Boolean(inscriptionsConfigForm.data.donnees.boursier_par_defaut)} onCheckedChange={(checked) => inscriptionsConfigForm.setData('donnees', { ...inscriptionsConfigForm.data.donnees, boursier_par_defaut: Boolean(checked) })} />
+                                    <Checkbox checked={Boolean(inscriptionsConfigForm.data.donnees.boursier_par_defaut)} onChange={(e) =>inscriptionsConfigForm.setData('donnees', { ...inscriptionsConfigForm.data.donnees, boursier_par_defaut: e.target.checked })} />
                                     Cocher « Boursier » par défaut lors d'une inscription
                                 </label>
                                 <div className="flex justify-end">
@@ -1156,7 +1171,7 @@ export default function ParametresIndex(props: Props) {
                                 </div>
                                 <div className="flex items-end gap-3">
                                     <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-gray-300">
-                                        <Checkbox checked={typeFraisForm.data.est_obligatoire} onCheckedChange={(checked) => typeFraisForm.setData('est_obligatoire', Boolean(checked))} />
+                                        <Checkbox checked={typeFraisForm.data.est_obligatoire} onChange={(e) =>typeFraisForm.setData('est_obligatoire', e.target.checked)} />
                                         Obligatoire
                                     </label>
                                     <Button type="submit" disabled={typeFraisForm.processing} className="ml-auto">Ajouter</Button>
@@ -1198,7 +1213,7 @@ export default function ParametresIndex(props: Props) {
                                     <Input value={String(financeConfigForm.data.donnees.penalites_retard)} onChange={(e) => financeConfigForm.setData('donnees', { ...financeConfigForm.data.donnees, penalites_retard: e.target.value })} placeholder="2% après le 15 du mois" />
                                 </div>
                                 <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-gray-300 md:col-span-2">
-                                    <Checkbox checked={Boolean(financeConfigForm.data.donnees.remises_autorisees)} onCheckedChange={(checked) => financeConfigForm.setData('donnees', { ...financeConfigForm.data.donnees, remises_autorisees: Boolean(checked) })} />
+                                    <Checkbox checked={Boolean(financeConfigForm.data.donnees.remises_autorisees)} onChange={(e) =>financeConfigForm.setData('donnees', { ...financeConfigForm.data.donnees, remises_autorisees: e.target.checked })} />
                                     Autoriser les remises lors des paiements
                                 </label>
                                 <div className="md:col-span-2 flex justify-end">
@@ -1310,6 +1325,15 @@ export default function ParametresIndex(props: Props) {
                                     <div className="flex gap-2">
                                         <Input placeholder="module.action" value={permissionForm.data.name} onChange={(e) => permissionForm.setData('name', e.target.value)} />
                                         <Button type="submit" disabled={permissionForm.processing || !canCreatePermissions} variant="outline">Ajouter</Button>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            disabled={!canCreatePermissions}
+                                            onClick={() => router.post(route('parametres.permissions.sync'), {}, { preserveScroll: true })}
+                                            title="Crée toutes les permissions définies dans la configuration système"
+                                        >
+                                            Synchroniser toutes
+                                        </Button>
                                     </div>
                                     <FieldError message={permissionForm.errors.name} />
                                     {!canCreatePermissions ? <p className="mt-1 text-xs text-slate-500">Permission requise : permissions.creer</p> : null}
@@ -1321,32 +1345,78 @@ export default function ParametresIndex(props: Props) {
                             </div>
 
                             <div className="grid gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
-                                <div className="rounded-xl border border-slate-200 bg-white p-2 dark:border-gray-700 dark:bg-gray-800">
-                                    <p className="px-2 pb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Rôles</p>
-                                    <div className="space-y-1">
+                                {/* Panneau gauche — liste des rôles */}
+                                <div className="rounded-xl border border-slate-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+                                    <div className="flex items-center justify-between border-b border-slate-100 p-3 dark:border-gray-700">
+                                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Rôles existants</p>
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            disabled={!canManageRoles}
+                                            onClick={startNewRole}
+                                            className="h-7 px-2 text-xs"
+                                        >
+                                            + Nouveau rôle
+                                        </Button>
+                                    </div>
+                                    <div className="space-y-1 p-2">
                                         {props.roles.map((role) => (
                                             <button
                                                 key={role.id}
                                                 type="button"
                                                 onClick={() => loadRole(role.id)}
-                                                className={`w-full rounded-lg px-3 py-2 text-left text-sm transition ${selectedRole?.id === role.id ? 'bg-blue-600 text-white' : 'text-slate-700 hover:bg-slate-100 dark:text-gray-300 dark:hover:bg-gray-700'}`}
+                                                className={`w-full rounded-lg px-3 py-2 text-left text-sm transition ${!isCreatingRole && selectedRole?.id === role.id ? 'bg-blue-600 text-white' : 'text-slate-700 hover:bg-slate-100 dark:text-gray-300 dark:hover:bg-gray-700'}`}
                                             >
-                                                <span className="block font-medium capitalize">{role.name.replace('_', ' ')}</span>
+                                                <span className="block font-medium capitalize">{role.name.replace(/_/g, ' ')}</span>
                                                 <span className="text-xs opacity-75">{role.permissions.length} permission(s)</span>
                                             </button>
                                         ))}
+                                        {props.roles.length === 0 && (
+                                            <p className="px-3 py-4 text-center text-xs text-slate-400">Aucun rôle. Créez-en un.</p>
+                                        )}
                                     </div>
                                 </div>
 
+                                {/* Panneau droit — formulaire création / modification */}
                                 <form
                                     className="rounded-xl border border-slate-200 bg-white dark:border-gray-700 dark:bg-gray-800"
-                                    onSubmit={(e) => { e.preventDefault(); roleForm.post(route('parametres.roles.store'), { preserveScroll: true }); }}
+                                    onSubmit={(e) => {
+                                        e.preventDefault();
+                                        roleForm.post(route('parametres.roles.store'), {
+                                            preserveScroll: true,
+                                            onSuccess: () => { if (isCreatingRole) setIsCreatingRole(false); },
+                                        });
+                                    }}
                                 >
+                                    {/* En-tête */}
                                     <div className="border-b border-slate-100 p-4 dark:border-gray-700">
+                                        <div className="mb-3 flex items-center gap-2">
+                                            {isCreatingRole ? (
+                                                <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">Nouveau rôle</span>
+                                            ) : (
+                                                <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-700 capitalize">
+                                                    Modifier : {selectedRole?.name.replace(/_/g, ' ') ?? '—'}
+                                                </span>
+                                            )}
+                                        </div>
                                         <div className="grid gap-3 md:grid-cols-[1fr_auto_auto] md:items-end">
                                             <div>
                                                 <Label required>Nom du rôle</Label>
-                                                <Input value={roleForm.data.name} onChange={(e) => roleForm.setData('name', e.target.value)} placeholder="Responsable pédagogique" />
+                                                {isCreatingRole ? (
+                                                    <>
+                                                        <Input
+                                                            value={roleForm.data.name}
+                                                            onChange={(e) => roleForm.setData('name', e.target.value)}
+                                                            placeholder="Ex : responsable_pedagogique"
+                                                            autoFocus
+                                                        />
+                                                        <p className="mt-1 text-xs text-slate-400">Utilisez des minuscules et des underscores (ex : chargé_rh)</p>
+                                                    </>
+                                                ) : (
+                                                    <div className="flex h-10 items-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm font-medium text-slate-700 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200">
+                                                        {selectedRole?.name ?? '—'}
+                                                    </div>
+                                                )}
                                                 <FieldError message={roleForm.errors.name} />
                                             </div>
                                             <Button type="button" variant="outline" onClick={() => roleForm.setData('permissions', props.permissions.map((permission) => permission.name))}>Tout sélectionner</Button>
@@ -1354,6 +1424,7 @@ export default function ParametresIndex(props: Props) {
                                         </div>
                                     </div>
 
+                                    {/* Matrice des permissions */}
                                     <div className="max-h-[640px] space-y-4 overflow-y-auto p-4">
                                         {Object.entries(filteredGroupedPermissions).map(([module, permissions]) => (
                                             <div key={module} className="rounded-xl border border-slate-100 p-3 dark:border-gray-700">
@@ -1363,31 +1434,72 @@ export default function ParametresIndex(props: Props) {
                                                         type="button"
                                                         size="sm"
                                                         variant="outline"
-                                                        onClick={() => roleForm.setData('permissions', Array.from(new Set([...roleForm.data.permissions, ...permissions.map((permission) => permission.name)])))}
+                                                        onClick={() => roleForm.setData('permissions', Array.from(new Set([...roleForm.data.permissions, ...(permissions as typeof props.permissions).map((permission) => permission.name)])))}
                                                     >
                                                         Sélectionner le module
                                                     </Button>
                                                 </div>
-                                                <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-                                                    {permissions.map((permission) => (
-                                                        <label key={permission.id} className="flex cursor-pointer items-start gap-2 rounded-lg border border-slate-200 p-2 text-sm hover:bg-slate-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
-                                                            <Checkbox checked={roleForm.data.permissions.includes(permission.name)} onCheckedChange={(checked) => toggleRolePermission(permission.name, Boolean(checked))} />
-                                                            <span>
-                                                                <span className="block font-medium">{permission.label ?? permission.name}</span>
-                                                                <span className="block font-mono text-xs text-slate-400">{permission.name}</span>
-                                                            </span>
-                                                        </label>
-                                                    ))}
+                                                <div className="grid gap-1.5 md:grid-cols-2 xl:grid-cols-3">
+                                                    {(permissions as typeof props.permissions).map((permission) => {
+                                                        const isChecked = roleForm.data.permissions.includes(permission.name);
+                                                        return (
+                                                            <button
+                                                                key={permission.id}
+                                                                type="button"
+                                                                onClick={() => toggleRolePermission(permission.name, !isChecked)}
+                                                                className={`flex w-full items-start gap-2.5 rounded-lg border p-2.5 text-left text-sm transition-colors ${
+                                                                    isChecked
+                                                                        ? 'border-blue-300 bg-blue-50 dark:border-blue-700 dark:bg-blue-900/30'
+                                                                        : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50 dark:border-gray-600 dark:bg-gray-800 dark:hover:bg-gray-700'
+                                                                }`}
+                                                            >
+                                                                <span className={`mt-0.5 flex size-4 shrink-0 items-center justify-center rounded border transition-colors ${
+                                                                    isChecked
+                                                                        ? 'border-blue-600 bg-blue-600'
+                                                                        : 'border-slate-300 bg-white dark:border-gray-500 dark:bg-gray-700'
+                                                                }`}>
+                                                                    {isChecked && (
+                                                                        <svg className="size-3 text-white" viewBox="0 0 12 12" fill="none">
+                                                                            <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                                                        </svg>
+                                                                    )}
+                                                                </span>
+                                                                <span>
+                                                                    <span className={`block font-medium ${isChecked ? 'text-blue-900 dark:text-blue-100' : 'text-slate-800 dark:text-gray-200'}`}>
+                                                                        {permission.label ?? permission.name}
+                                                                    </span>
+                                                                    <span className="block font-mono text-xs text-slate-400">{permission.name}</span>
+                                                                </span>
+                                                            </button>
+                                                        );
+                                                    })}
                                                 </div>
                                             </div>
                                         ))}
+                                        {Object.keys(filteredGroupedPermissions).length === 0 && (
+                                            <p className="py-8 text-center text-sm text-slate-400">Aucune permission ne correspond à votre recherche.</p>
+                                        )}
                                     </div>
 
+                                    {/* Pied de formulaire */}
                                     <div className="flex items-center justify-between border-t border-slate-100 p-4 dark:border-gray-700">
                                         <p className="text-sm text-slate-500">{roleForm.data.permissions.length} permission(s) sélectionnée(s)</p>
                                         <div className="flex gap-2">
-                                            {selectedRole?.name !== 'super_admin' ? <Button type="button" variant="outline" disabled={!canManageRoles} onClick={() => selectedRole && router.delete(route('parametres.roles.destroy', selectedRole.id), { preserveScroll: true })}>Supprimer le rôle</Button> : null}
-                                            <Button type="submit" disabled={roleForm.processing || !canManageRoles}>Enregistrer les permissions du rôle</Button>
+                                            {isCreatingRole ? (
+                                                <Button type="button" variant="outline" onClick={cancelNewRole}>Annuler</Button>
+                                            ) : selectedRole?.name !== 'super_admin' ? (
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    disabled={!canManageRoles}
+                                                    onClick={() => selectedRole && router.delete(route('parametres.roles.destroy', selectedRole.id), { preserveScroll: true })}
+                                                >
+                                                    Supprimer ce rôle
+                                                </Button>
+                                            ) : null}
+                                            <Button type="submit" disabled={roleForm.processing || !canManageRoles}>
+                                                {isCreatingRole ? 'Créer le rôle' : 'Enregistrer les permissions'}
+                                            </Button>
                                         </div>
                                     </div>
                                 </form>
@@ -1515,12 +1627,22 @@ export default function ParametresIndex(props: Props) {
                                                                     </div>
                                                                     <div className="flex flex-wrap gap-2 text-xs">
                                                                         <span className={`rounded-full px-2 py-1 ${inherited ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200' : 'bg-slate-100 text-slate-500 dark:bg-gray-700 dark:text-gray-300'}`}>{inherited ? 'Hérité du rôle' : 'Non hérité'}</span>
-                                                                        <label className="flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200">
-                                                                            <Checkbox checked={allowed} onCheckedChange={(checked) => toggleUserOverride(permission.name, 'allow', Boolean(checked))} /> Ajouter
-                                                                        </label>
-                                                                        <label className="flex items-center gap-1 rounded-full bg-red-50 px-2 py-1 text-red-700 dark:bg-red-900/40 dark:text-red-200">
-                                                                            <Checkbox checked={denied} onCheckedChange={(checked) => toggleUserOverride(permission.name, 'deny', Boolean(checked))} /> Retirer
-                                                                        </label>
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => toggleUserOverride(permission.name, 'allow', !allowed)}
+                                                                            className={`flex items-center gap-1 rounded-full px-2 py-1 transition-colors ${allowed ? 'bg-emerald-600 text-white' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-900/40 dark:text-emerald-200'}`}
+                                                                        >
+                                                                            <svg className="size-3" viewBox="0 0 12 12" fill="none"><path d={allowed ? "M2 6l3 3 5-5" : "M6 2v8M2 6h8"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                                                            Ajouter
+                                                                        </button>
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => toggleUserOverride(permission.name, 'deny', !denied)}
+                                                                            className={`flex items-center gap-1 rounded-full px-2 py-1 transition-colors ${denied ? 'bg-red-600 text-white' : 'bg-red-50 text-red-700 hover:bg-red-100 dark:bg-red-900/40 dark:text-red-200'}`}
+                                                                        >
+                                                                            <svg className="size-3" viewBox="0 0 12 12" fill="none"><path d={denied ? "M2 6l3 3 5-5" : "M2 6h8"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                                                            Retirer
+                                                                        </button>
                                                                     </div>
                                                                 </div>
                                                             );
@@ -1599,7 +1721,7 @@ export default function ParametresIndex(props: Props) {
                                 </div>
                                 <div className="flex items-center gap-3 md:col-span-2">
                                     <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-700 dark:text-gray-300">
-                                        <Checkbox checked={modeleForm.data.est_defaut} onCheckedChange={(checked) => modeleForm.setData('est_defaut', Boolean(checked))} />
+                                        <Checkbox checked={modeleForm.data.est_defaut} onChange={(e) =>modeleForm.setData('est_defaut', e.target.checked)} />
                                         Définir comme modèle par défaut
                                     </label>
                                 </div>

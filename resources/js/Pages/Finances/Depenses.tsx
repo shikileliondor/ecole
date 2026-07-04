@@ -1,4 +1,4 @@
-import AppLayout from '@/Layouts/AppLayout';
+﻿import AppLayout from '@/Layouts/AppLayout';
 import { router, useForm, usePage } from '@inertiajs/react';
 import { Paperclip } from 'lucide-react';
 import { useMemo, useState } from 'react';
@@ -84,7 +84,7 @@ export default function FinancesDepenses() {
     };
 
     return <AppLayout title='Dépenses / Caisse'><div className='space-y-4 bg-[#F8FAFC] p-4'>
-        <div className='flex items-center justify-between'><div><h1 className='text-2xl font-bold text-[#0F172A]'>Dépenses / Caisse</h1><p className='text-sm text-[#64748B]'>Suivez les sorties d’argent, les justificatifs et le solde de caisse.</p></div><button onClick={openCreate} className='h-10 rounded-xl bg-blue-600 px-4 text-white hover:bg-blue-700'>Nouvelle dépense</button></div>
+        <div className='flex items-center justify-between'><div><h1 className='text-2xl font-bold text-[#0F172A]'>Dépenses / Caisse</h1><p className='text-sm text-[#64748B]'>Suivez les sorties d'argent, les justificatifs et le solde de caisse.</p></div><button onClick={openCreate} className='h-10 rounded-xl bg-blue-600 px-4 text-white hover:bg-blue-700'>Nouvelle dépense</button></div>
         <div className='grid gap-3 md:grid-cols-4'>{[['Dépenses du jour', totalJour], ['Dépenses du mois', totalMois], ['Nombre de dépenses', depenses.length], ['Solde caisse estimé', solde]].map(([l, v]) => <div key={String(l)} className='rounded-2xl border border-slate-200 bg-white p-4 shadow-sm'><p className='text-sm text-slate-500'>{l}</p><p className='text-xl font-semibold'>{typeof v === 'number' ? formatCurrency(v) : String(v)}</p></div>)}</div>
         <div className='rounded-2xl border border-slate-200 bg-white shadow-sm overflow-auto'><table className='min-w-full text-sm'><thead className='bg-slate-50'><tr><th className='p-3 text-left'>Date</th><th>Libellé</th><th>Catégorie</th><th>Montant</th><th>Mode</th><th>Responsable</th><th>Justificatif</th><th>Statut</th><th>Actions</th></tr></thead><tbody>{depenses.map((d: any) => <tr key={d.id} className='border-t'><td className='p-3'>{formatDate(d.date)}</td><td>{d.libelle}</td><td>{d.categorie || 'Non renseigné'}</td><td>{formatCurrency(d.montant)}</td><td>{d.mode_paiement || 'Non renseigné'}</td><td>{d.responsable || 'Non renseigné'}</td><td>{d.justificatif_url ? <a className='text-blue-600 hover:underline' href={d.justificatif_url} target='_blank' rel='noreferrer'>Voir</a> : '—'}</td><td>{d.statut}</td><td><div className='flex gap-2'><button className='text-slate-700 disabled:text-slate-300' disabled={d.statut === 'annulee'} onClick={() => openEdit(d)}>Modifier</button><button className='text-red-600 disabled:text-slate-300' disabled={d.statut === 'annulee'} onClick={() => setDeleteTarget(d)}>Supprimer</button></div></td></tr>)}{depenses.length === 0 && <tr><td colSpan={9} className='p-8 text-center text-slate-500'>Aucune donnée disponible</td></tr>}</tbody></table></div>
 

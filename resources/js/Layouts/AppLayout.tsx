@@ -1,6 +1,7 @@
 import { Link, usePage } from '@inertiajs/react';
-import { type PropsWithChildren, useMemo, useState } from 'react';
+import { type PropsWithChildren, useEffect, useMemo, useState } from 'react';
 import NotificationPanel, { type NotificationItem } from '@/Components/NotificationPanel';
+import FormErrorAlert from '@/Components/FormErrorAlert';
 import {
     AlertCircle,
     BarChart3,
@@ -79,6 +80,7 @@ type AuthProps = {
         items: NotificationItem[];
     };
     flash?: { success?: string; error?: string };
+    errors?: Record<string, unknown>;
 };
 
 function getNavGroups(unreadCount: number, permissions: string[] = []): NavGroup[] {
@@ -166,10 +168,11 @@ export default function AppLayout({
     children,
     title = 'Tableau de bord',
 }: PropsWithChildren<{ title?: string }>) {
-    const { auth, notifications: notifProps } = usePage<AuthProps>().props;
+    const { auth, notifications: notifProps, errors, flash } = usePage<AuthProps>().props;
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [notifOpen, setNotifOpen] = useState(false);
     const [unreadCount, setUnreadCount] = useState(notifProps?.unread_count ?? 0);
+    useEffect(() => { setUnreadCount(notifProps?.unread_count ?? 0); }, [notifProps?.unread_count]);
     const [isDarkMode, toggleDarkMode] = useDarkMode();
     const [openedMenus, setOpenedMenus] = useState<Record<string, boolean>>({
         Paramètres: window.location.pathname.startsWith('/parametres'),
@@ -395,6 +398,7 @@ export default function AppLayout({
 
     return (
         <>
+        <FormErrorAlert errors={errors} error={flash?.error} />
         <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-950">
                 <div className="hidden h-screen shrink-0 lg:block">{renderedSidebar}</div>
 
@@ -446,6 +450,8 @@ export default function AppLayout({
                                     variant="ghost"
                                     size="icon"
                                     onClick={toggleDarkMode}
+                                    aria-label={isDarkMode ? 'Activer le mode clair' : 'Activer le mode sombre'}
+                                    title={isDarkMode ? 'Mode clair' : 'Mode sombre'}
                                 >
                                     {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
                                 </Button>
@@ -522,7 +528,6 @@ export default function AppLayout({
             onClose={() => setNotifOpen(false)}
             items={notifProps?.items ?? []}
             unreadCount={unreadCount}
-            onCountChange={setUnreadCount}
         />
         </>
     );

@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path \"c:\\\\xampp\\\\htdocs\\\\morel-app\\\\resources\\\\views\" -Recurse -Include *.blade.php)",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(grep -E \"\\\\.\\(php|blade\\\\.php\\)$\")",
+      "Bash(grep -rn --include=\"*.tsx\" --include=\"*.ts\" -P \"\\(?<![\\\\\\\\\\\\\\\\]\\)'[a-zA-Z\\\\xC0-\\\\xFF][^'\\\\\"]*'[a-zA-Z\\\\xC0-\\\\xFF]\" resources/js/Pages/Finances/ resources/js/Pages/Rapports/)",
+      "Bash(grep -rn --include=\"*.tsx\" -P \"'[^'\\\\\"<>]{1,40}'[a-z\\\\xc0-\\\\xff]\" resources/js/Pages/)",
+      "Bash(npm run *)",
+      "Bash(php artisan *)",
+      "Bash(npx tsc *)",
+      "Bash(php -l app/Http/Controllers/ParametreController.php)",
+      "Bash(grep -n \"disabled\\\\|TODO\\\\|todo\\\\|coming soon\\\\|placeholder\\\\|window.prompt\\\\|//.*form\\\\|commenté\" c:/xampp/htdocs/morel-app/resources/js/Pages/EmploisDuTemps/Index.tsx)",
+      "Bash(grep -n \"disabled\\\\|TODO\\\\|window.prompt\\\\|//.*<\\\\|{/\\\\*\" c:/xampp/htdocs/morel-app/resources/js/Pages/Finances/Depenses.tsx)",
+      "Bash(grep -n \"window.prompt\\\\|disabled\\\\|TODO\\\\|//.*<form\\\\|storeComposition\\\\|compositions\" c:/xampp/htdocs/morel-app/resources/js/Pages/NotesBulletins/Index.tsx)",
+      "Bash(php -l app/Http/Controllers/FinanceController.php)",
+      "Read(//c/Users/morel/.claude/projects/c--xampp-htdocs-morel-app/memory/**)",
+      "Bash(php --version)",
+      "Bash(node -e \"const p = require\\('./node_modules/@inertiajs/react/package.json'\\); console.log\\(p.version\\)\")"
+    ]
+  }
+}

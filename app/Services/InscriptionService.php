@@ -111,6 +111,7 @@ class InscriptionService
                 'nom' => $data['nom_tuteur'],
                 'prenoms' => $data['prenoms_tuteur'],
                 'lien' => $data['lien_parente'],
+                'lien_precision' => $data['lien_parente'] === 'autre' ? $data['lien_parente_autre'] : null,
                 'telephone_1' => $data['telephone_tuteur'],
                 'email' => $data['email_tuteur'] ?? null,
                 'adresse_quartier' => $data['adresse_tuteur'] ?? null,
@@ -120,6 +121,7 @@ class InscriptionService
                 'nom' => $data['nom_tuteur'],
                 'prenoms' => $data['prenoms_tuteur'],
                 'lien' => $data['lien_parente'],
+                'lien_precision' => $data['lien_parente'] === 'autre' ? $data['lien_parente_autre'] : null,
                 'telephone_1' => $data['telephone_tuteur'],
             ]),
         };
@@ -134,8 +136,9 @@ class InscriptionService
 
         $contactUrgence = ParentTuteur::query()->create([
             'nom' => $data['nom_urgence'],
-            'prenoms' => $data['lien_urgence'],
-            'lien' => 'tuteur',
+            'prenoms' => $data['prenoms_urgence'],
+            'lien' => $data['lien_urgence'],
+            'lien_precision' => $data['lien_urgence'] === 'autre' ? $data['lien_urgence_autre'] : null,
             'telephone_1' => $data['telephone_urgence'],
             'adresse_quartier' => $data['adresse_urgence'] ?? null,
             'est_contact_urgence' => true,
@@ -158,7 +161,7 @@ class InscriptionService
 
             InscriptionDocument::query()->create([
                 'inscription_id' => $inscription->id,
-                'libelle' => $document['libelle'] ?? 'Document',
+                'libelle' => trim((string) ($document['libelle'] ?? '')) ?: 'Document',
                 'description' => $document['description'] ?? null,
                 'fichier_path' => $path,
             ]);

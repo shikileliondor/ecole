@@ -21,6 +21,7 @@ class ParentTuteur extends Model
         'tuteur' => 'tuteur',
         'grand_parent' => 'grand_parent',
         'oncle_tante' => 'oncle_tante',
+        'autre' => 'autre',
     ];
 
     protected $table = 'parents_tuteurs';
@@ -29,6 +30,7 @@ class ParentTuteur extends Model
         'nom',
         'prenoms',
         'lien',
+        'lien_precision',
         'profession',
         'telephone_1',
         'telephone_2',

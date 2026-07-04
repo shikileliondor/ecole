@@ -25,10 +25,16 @@ class InscriptionController extends Controller
     public function index(Request $request): Response
     {
         $etablissementId = (int) auth()->user()->etablissement_id;
+        $anneeActive = AnneeScolaire::query()->where('etablissement_id', $etablissementId)->active()->first();
+
+        $filters = $request->only(['search', 'classe_id', 'annee_scolaire_id', 'statut']);
+        if (empty($filters['annee_scolaire_id']) && $anneeActive) {
+            $filters['annee_scolaire_id'] = $anneeActive->id;
+        }
 
         return Inertia::render('Inscriptions/Index', [
-            'inscriptions' => $this->inscriptionService->index($request->only(['search', 'classe_id', 'annee_scolaire_id', 'statut']), $etablissementId),
-            'filters' => $request->only(['search', 'classe_id', 'annee_scolaire_id', 'statut']),
+            'inscriptions' => $this->inscriptionService->index($filters, $etablissementId),
+            'filters' => $filters,
             'classes' => Classe::query()->where('etablissement_id', $etablissementId)->orderBy('nom')->get(['id', 'nom']),
             'annees' => AnneeScolaire::query()->where('etablissement_id', $etablissementId)->orderByDesc('date_debut')->get(['id', 'libelle']),
         ]);

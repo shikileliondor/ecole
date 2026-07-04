@@ -7,6 +7,7 @@ import { Input } from '@/Components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/Components/ui/select';
 import { Switch } from '@/Components/ui/switch';
 import { Checkbox } from '@/Components/ui/checkbox';
+import FeedbackAlert from '@/Components/ui/feedback-alert';
 import type { Classe, Niveau } from '@/types/eleve';
 
 type Props = { classes: Classe[]; niveaux: Niveau[]; annee_active: { id: number; libelle: string } | null };
@@ -89,6 +90,7 @@ export default function ElevesCreate({ classes, niveaux, annee_active }: Props) 
 
                 {currentStep === 1 ? <div className="space-y-6 rounded-xl border border-gray-100 bg-white p-6">
                     <h2 className="font-medium text-gray-800">Identité</h2>
+                    {Object.keys(localErrors).length > 0 ? <FeedbackAlert type="error" title="Informations incomplètes" message="Veuillez corriger les champs obligatoires signalés avant de continuer." /> : null}
                     <div className="grid gap-4 md:grid-cols-2">
                         <div><Input value={data.nom} onChange={(e) => setData('nom', e.target.value.toUpperCase())} placeholder="Nom" />{localErrors.nom ? <p className="text-xs text-red-500">{localErrors.nom}</p> : null}</div>
                         <div><Input value={data.prenoms} onChange={(e) => setData('prenoms', e.target.value)} placeholder="Prénoms" />{localErrors.prenoms ? <p className="text-xs text-red-500">{localErrors.prenoms}</p> : null}</div>
@@ -97,9 +99,10 @@ export default function ElevesCreate({ classes, niveaux, annee_active }: Props) 
                         <button type="button" className={`rounded-lg border p-3 ${data.sexe === 'M' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`} onClick={() => setData('sexe', 'M')}>Garçon</button>
                         <button type="button" className={`rounded-lg border p-3 ${data.sexe === 'F' ? 'border-pink-500 bg-pink-50' : 'border-gray-200'}`} onClick={() => setData('sexe', 'F')}>Fille</button>
                     </div>
+                    {localErrors.sexe ? <p className="text-xs text-red-500">{localErrors.sexe}</p> : null}
                     <h2 className="font-medium text-gray-800">Naissance</h2>
                     <div className="grid gap-4 md:grid-cols-3">
-                        <div><Input type="date" value={data.date_naissance} onChange={(e) => setData('date_naissance', e.target.value)} />{age !== null ? <p className="text-xs text-gray-500">({age} ans)</p> : null}</div>
+                        <div><Input type="date" value={data.date_naissance} onChange={(e) => setData('date_naissance', e.target.value)} />{age !== null ? <p className="text-xs text-gray-500">({age} ans)</p> : null}{localErrors.date_naissance ? <p className="text-xs text-red-500">{localErrors.date_naissance}</p> : null}</div>
                         <Input value={data.lieu_naissance} onChange={(e) => setData('lieu_naissance', e.target.value)} placeholder="Lieu de naissance" />
                         <Input value={data.pays_naissance} onChange={(e) => setData('pays_naissance', e.target.value)} placeholder="Pays de naissance" />
                     </div>

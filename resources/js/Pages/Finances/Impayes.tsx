@@ -1,4 +1,4 @@
-import AppLayout from '@/Layouts/AppLayout';
+﻿import AppLayout from '@/Layouts/AppLayout';
 import { router, useForm, usePage } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
 import type { FinanceProps, ImpayeRow } from './types';
@@ -125,7 +125,7 @@ export default function FinancesImpayes() {
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           {[
             ['Total des impayés', formatCurrency(totalImpayes)],
-            ['Nombre d’élèves concernés', String(elevesConcernes)],
+            ["Nombre d'élèves concernés", String(elevesConcernes)],
             ['Classe la plus en retard', classePlusRetard ? `${classePlusRetard[0]} (${formatCurrency(classePlusRetard[1])})` : '—'],
             ['Reste moyen par élève', formatCurrency(elevesConcernes ? totalImpayes / elevesConcernes : 0)],
           ].map(([label, value]) => (

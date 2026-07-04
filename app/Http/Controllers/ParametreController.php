@@ -644,6 +644,27 @@ class ParametreController extends Controller
         return back()->with('success', 'Permission enregistrée.');
     }
 
+    public function syncPermissions(): RedirectResponse
+    {
+        $this->authorizePermission('permissions.creer');
+
+        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+
+        $created = 0;
+        foreach (array_keys(config('ecole_permissions.permissions', [])) as $name) {
+            $result = Permission::query()->firstOrCreate(['name' => $name, 'guard_name' => 'web']);
+            if ($result->wasRecentlyCreated) {
+                $created++;
+            }
+        }
+
+        $total = count(config('ecole_permissions.permissions', []));
+
+        return back()->with('success', $created > 0
+            ? "{$created} nouvelle(s) permission(s) créée(s). Total : {$total} permissions actives."
+            : "Toutes les {$total} permissions sont déjà à jour.");
+    }
+
     public function destroyPermission(Permission $permission): RedirectResponse
     {
         $this->authorizePermission('permissions.supprimer');

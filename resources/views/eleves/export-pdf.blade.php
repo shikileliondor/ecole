@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <title>Liste des élèves</title>
     <style>
-        body { font-family: DejaVu Sans, sans-serif; font-size: 12px; color: #1f2937; }
+        body { font-family: DejaVu Sans, sans-serif; font-size: 11px; color: #1f2937; }
         .header { width: 100%; margin-bottom: 14px; }
         .header-table { width: 100%; border-collapse: collapse; }
         .header-table td { vertical-align: top; }
@@ -14,8 +14,8 @@
         .school { font-size: 16px; font-weight: bold; }
         .muted { color: #64748b; font-size: 11px; }
         table.listing { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        .listing th { background: #1a56a0; color: #fff; text-align: left; font-size: 11px; padding: 8px; border: 1px solid #e2e8f0; }
-        .listing td { padding: 7px; border: 1px solid #e2e8f0; font-size: 11px; }
+        .listing th { background: #1a56a0; color: #fff; text-align: left; font-size: 10px; padding: 6px; border: 1px solid #e2e8f0; }
+        .listing td { padding: 5px; border: 1px solid #e2e8f0; font-size: 10px; }
         .listing tbody tr:nth-child(even) { background: #f8fafc; }
         .footer { margin-top: 20px; width: 100%; }
         .signature { text-align: right; margin-top: 35px; }
@@ -35,7 +35,10 @@
                 </td>
                 <td style="width: 34%;">
                     <div class="title">LISTE DES ÉLÈVES</div>
-                    <div class="subtitle">Classe : {{ $classe?->nom ?? 'Toutes classes' }} | Année scolaire : {{ $eleves->first()?->inscriptions->first()?->anneeScolaire?->libelle ?? '—' }}</div>
+                    <div class="subtitle">
+                        Classe : {{ $classe?->nom ?? 'Toutes classes' }} |
+                        Année scolaire : {{ $anneeScolaire ?: '—' }}
+                    </div>
                 </td>
                 <td style="width: 33%;" class="date-edition">Date d'édition : {{ $date_edition->format('d/m/Y H:i') }}</td>
             </tr>
@@ -49,28 +52,29 @@
                 <th>Matricule</th>
                 <th>Nom et Prénoms</th>
                 <th>Sexe</th>
-                <th>Date Naissance</th>
+                <th>Date naissance</th>
                 <th>Parent</th>
                 <th>Téléphone</th>
                 <th>Statut</th>
             </tr>
         </thead>
         <tbody>
-            @foreach($eleves as $index => $eleve)
-                @php
-                    $parent = $eleve->parentsTuteurs->firstWhere('pivot.est_principal', true) ?? $eleve->parentsTuteurs->first();
-                @endphp
+            @forelse($eleves as $eleve)
                 <tr>
-                    <td>{{ $index + 1 }}</td>
-                    <td>{{ $eleve->matricule }}</td>
-                    <td>{{ $eleve->nom }} {{ $eleve->prenoms }}</td>
-                    <td>{{ $eleve->sexe === 'M' ? 'Garçon' : 'Fille' }}</td>
-                    <td>{{ optional($eleve->date_naissance)->format('d/m/Y') ?? $eleve->date_naissance }}</td>
-                    <td>{{ $parent?->nom }} {{ $parent?->prenoms }}</td>
-                    <td>{{ $parent?->telephone_1 }}</td>
-                    <td>{{ ucfirst($eleve->statut) }}</td>
+                    <td>{{ $eleve['numero'] }}</td>
+                    <td>{{ $eleve['matricule'] }}</td>
+                    <td>{{ $eleve['nom_complet'] }}</td>
+                    <td>{{ $eleve['sexe'] }}</td>
+                    <td>{{ $eleve['date_naissance'] }}</td>
+                    <td>{{ $eleve['parent'] ?: '—' }}</td>
+                    <td>{{ $eleve['telephone'] ?: '—' }}</td>
+                    <td>{{ $eleve['statut'] }}</td>
                 </tr>
-            @endforeach
+            @empty
+                <tr>
+                    <td colspan="8" style="text-align: center; color: #64748b;">Aucun élève trouvé.</td>
+                </tr>
+            @endforelse
         </tbody>
     </table>
 

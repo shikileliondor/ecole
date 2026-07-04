@@ -1,4 +1,4 @@
-import AppLayout from '@/Layouts/AppLayout';
+﻿import AppLayout from '@/Layouts/AppLayout';
 import { router } from '@inertiajs/react';
 import { BarChart, Bar, PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
@@ -21,7 +21,7 @@ export default function RapportsIndex({ filters, filterOptions, kpis, data, expo
     const sections = [
         { title: 'Rapports scolaires', items: ['Effectif par classe', 'Effectif par niveau', 'Filles / garçons', 'Nouveaux inscrits', 'Réinscriptions', 'Liste des élèves par classe'] },
         { title: 'Rapports pédagogiques', items: ['Moyennes par classe', 'Classement par classe', 'Taux de réussite', 'Élèves excellents', 'Élèves faibles', 'Bulletins générés', 'Matières avec faibles résultats'] },
-        { title: 'Rapports d’absences', items: ['Absences élèves', 'Absences justifiées', 'Absences non justifiées', 'Élèves les plus absents', 'Absences par classe', 'Absences par période'] },
+        { title: "Rapports d'absences", items: ['Absences élèves', 'Absences justifiées', 'Absences non justifiées', 'Élèves les plus absents', 'Absences par classe', 'Absences par période'] },
         { title: 'Rapports ressources humaines', items: ['Liste du personnel', 'Personnel par poste', 'Enseignants actifs', 'Documents manquants', 'Absences du personnel'] },
     ];
 
@@ -30,7 +30,7 @@ export default function RapportsIndex({ filters, filterOptions, kpis, data, expo
             <div className="space-y-5 bg-slate-50 p-1 text-slate-900">
                 <div>
                     <h1 className="text-2xl font-semibold">Rapports</h1>
-                    <p className="text-sm text-slate-500">Analysez les statistiques scolaires, pédagogiques, les absences et les ressources humaines de l’établissement.</p>
+                    <p className="text-sm text-slate-500">Analysez les statistiques scolaires, pédagogiques, les absences et les ressources humaines de l'établissement.</p>
                 </div>
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-5">
                     {[
@@ -79,7 +79,18 @@ export default function RapportsIndex({ filters, filterOptions, kpis, data, expo
                 </div>
 
                 <div className="flex gap-2">
-                    <button disabled={!exports.pdf} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-500 disabled:opacity-60">Export PDF</button>
+                    {exports.pdf ? (
+                        <a
+                            href={route('finances.rapports.export.pdf', Object.fromEntries(Object.entries(filters).filter(([, v]) => v != null)))}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="rounded-xl border border-[#1a56a0] bg-[#1a56a0] px-4 py-2 text-sm text-white hover:bg-[#1548a0]"
+                        >
+                            Export PDF
+                        </a>
+                    ) : (
+                        <button disabled className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-500 opacity-60">Export PDF</button>
+                    )}
                     <button disabled={!exports.excel} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-500 disabled:opacity-60">Export Excel</button>
                     <button disabled={!exports.print} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-500 disabled:opacity-60">Impression</button>
                 </div>

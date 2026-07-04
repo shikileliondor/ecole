@@ -1,4 +1,4 @@
-import AppLayout from '@/Layouts/AppLayout';
+﻿import AppLayout from '@/Layouts/AppLayout';
 import { useMemo, useState } from 'react';
 import { usePage } from '@inertiajs/react';
 import {
@@ -29,7 +29,7 @@ import {
 import type { FinanceProps, ImpayeRow } from './types';
 
 const PERIODS = [
-    { value: 'today', label: "Aujourd’hui" },
+    { value: 'today', label: "Aujourd'hui" },
     { value: 'month', label: 'Ce mois' },
     { value: 'quarter', label: 'Ce trimestre' },
     { value: 'year', label: 'Cette année' },
@@ -162,7 +162,7 @@ export default function FinancesDashboard() {
                 <section className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:flex-row md:items-center md:justify-between">
                     <div>
                         <h1 className="text-2xl font-bold text-[#0F172A]">Tableau de bord finance</h1>
-                        <p className="text-sm text-[#64748B]">Vue d’ensemble des finances de l’établissement.</p>
+                        <p className="text-sm text-[#64748B]">Vue d'ensemble des finances de l'établissement.</p>
                     </div>
                     <div className="flex flex-wrap gap-2">
                         <select className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm" value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)}>
@@ -194,7 +194,7 @@ export default function FinancesDashboard() {
                 <section className="grid gap-4 xl:grid-cols-2">
                     <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                         <h3 className="mb-3 font-semibold text-[#0F172A]">Évolution des encaissements</h3>
-                        {encaissementsParMois.length ? <div className="h-72"><ResponsiveContainer><AreaChart data={encaissementsParMois}><CartesianGrid stroke="#E5E7EB" strokeDasharray="3 3" /><XAxis dataKey="mois" /><YAxis tickFormatter={(v) => `${Math.round(Number(v) / 1000)}k`} /><Tooltip formatter={(value: number) => formatCurrency(Number(value))} /><Area dataKey="montant" stroke="#0B63CE" fill="#0B63CE22" /></AreaChart></ResponsiveContainer></div> : <p className="py-16 text-center text-sm text-slate-500">Aucune donnée d’encaissement disponible.</p>}
+                        {encaissementsParMois.length ? <div className="h-72"><ResponsiveContainer><AreaChart data={encaissementsParMois}><CartesianGrid stroke="#E5E7EB" strokeDasharray="3 3" /><XAxis dataKey="mois" /><YAxis tickFormatter={(v) => `${Math.round(Number(v) / 1000)}k`} /><Tooltip formatter={(value: number) => formatCurrency(Number(value))} /><Area dataKey="montant" stroke="#0B63CE" fill="#0B63CE22" /></AreaChart></ResponsiveContainer></div> : <p className="py-16 text-center text-sm text-slate-500">Aucune donnée d'encaissement disponible.</p>}
                     </article>
                     <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                         <h3 className="mb-3 font-semibold text-[#0F172A]">Recouvrement par classe</h3>

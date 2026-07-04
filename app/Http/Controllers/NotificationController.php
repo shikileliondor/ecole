@@ -4,49 +4,36 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Notifications\DatabaseNotification;
 
 class NotificationController extends Controller
 {
-    /** Marque une notification comme lue et retourne le nouveau compteur. */
-    public function markAsRead(Request $request, string $id): JsonResponse
+    public function markAsRead(Request $request, string $id): RedirectResponse
     {
-        /** @var \App\Models\User $user */
-        $user = $request->user();
+        $request->user()->notifications()->findOrFail($id)->markAsRead();
 
-        $notification = $user->notifications()->findOrFail($id);
-        $notification->markAsRead();
-
-        return response()->json(['unread_count' => $user->unreadNotifications()->count()]);
+        return back();
     }
 
-    /** Marque toutes les notifications comme lues. */
-    public function markAllAsRead(Request $request): JsonResponse
+    public function markAllAsRead(Request $request): RedirectResponse
     {
         $request->user()->unreadNotifications->markAsRead();
 
-        return response()->json(['unread_count' => 0]);
+        return back();
     }
 
-    /** Supprime une notification. */
-    public function destroy(Request $request, string $id): JsonResponse
+    public function destroy(Request $request, string $id): RedirectResponse
     {
-        /** @var \App\Models\User $user */
-        $user = $request->user();
+        $request->user()->notifications()->findOrFail($id)->delete();
 
-        $user->notifications()->findOrFail($id)->delete();
-
-        return response()->json(['unread_count' => $user->unreadNotifications()->count()]);
+        return back();
     }
 
-    /** Supprime toutes les notifications lues. */
-    public function clearRead(Request $request): JsonResponse
+    public function clearRead(Request $request): RedirectResponse
     {
         $request->user()->readNotifications()->delete();
 
-        return response()->json(['ok' => true]);
+        return back();
     }
 }

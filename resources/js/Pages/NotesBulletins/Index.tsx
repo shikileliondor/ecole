@@ -168,13 +168,13 @@ export default function NotesBulletinsIndex({ periodes, classes, matieres, confi
         <AppLayout title="Notes & Bulletins">
             <Head title="Notes & Bulletins" />
 
-            <div className="space-y-6">
-                <section className="rounded-xl border border-slate-200 bg-white p-5">
-                    <h1 className="text-2xl font-bold text-slate-900">Notes & Bulletins</h1>
-                    <p className="mt-1 text-sm text-slate-600">Créez des compositions par période, puis sélectionnez classe, composition et matière pour saisir les notes par élève.</p>
+            <div className="space-y-6 text-slate-700 dark:text-slate-300">
+                <section className="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+                    <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Notes & Bulletins</h1>
+                    <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Créez des compositions par période, puis sélectionnez classe, composition et matière pour saisir les notes par élève.</p>
                 </section>
 {/* 
-                <section className="rounded-xl border border-slate-200 bg-white p-5">
+                <section className="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
                     <h2 className="text-lg font-semibold text-slate-900">Nouvelle composition</h2>
                     <form
                         className="mt-4 grid gap-3 md:grid-cols-2"
@@ -213,10 +213,10 @@ export default function NotesBulletinsIndex({ periodes, classes, matieres, confi
                     </form>
                 </section> */}
 
-                <section className="rounded-xl border border-slate-200 bg-white p-5">
+                <section className="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
                     <div className="grid gap-3 md:grid-cols-3">
-                        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Classe</p>
+                        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-950/60">
+                            <p className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Classe</p>
                             <Input
                                 list="classes-autoselect"
                                 className="mt-2"
@@ -234,8 +234,8 @@ export default function NotesBulletinsIndex({ periodes, classes, matieres, confi
                                 ))}
                             </datalist>
                         </div>
-                        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Composition</p>
+                        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-950/60">
+                            <p className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Composition</p>
                             <Input
                                 list="compositions-autoselect"
                                 className="mt-2"
@@ -253,7 +253,7 @@ export default function NotesBulletinsIndex({ periodes, classes, matieres, confi
                                 ))}
                             </datalist>
                         </div>
-                        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-950/60">
                             <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Matière</p>
                             <Input
                                 list="matieres-autoselect"
@@ -275,14 +275,24 @@ export default function NotesBulletinsIndex({ periodes, classes, matieres, confi
                     </div>
 
                     {activeCompositionId && activeClasseId ? (
-                        <a
-                            href={route('notes-bulletins.compositions.export', { composition: activeCompositionId, classe_id: activeClasseId })}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="mt-3 inline-flex items-center justify-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white"
-                        >
-                            Exporter CSV
-                        </a>
+                        <div className="mt-3 flex gap-2">
+                            <a
+                                href={route('notes-bulletins.compositions.export', { composition: activeCompositionId, classe_id: activeClasseId })}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center justify-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white"
+                            >
+                                Exporter CSV
+                            </a>
+                            <a
+                                href={route('notes-bulletins.compositions.bulletin.pdf', { composition: activeCompositionId, classe_id: activeClasseId })}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center justify-center rounded-md bg-[#1a56a0] px-4 py-2 text-sm font-medium text-white hover:bg-[#1548a0]"
+                            >
+                                Bulletin PDF
+                            </a>
+                        </div>
                     ) : null}
 
                     <form
@@ -293,9 +303,9 @@ export default function NotesBulletinsIndex({ periodes, classes, matieres, confi
                             notesElevesForm.post(route('notes-bulletins.compositions.notes-eleves.store', activeCompositionId));
                         }}
                     >
-                        <div className="overflow-hidden rounded-lg border border-slate-200">
+                        <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
                             <table className="min-w-full text-sm">
-                                <thead className="bg-slate-50 text-slate-700">
+                                <thead className="bg-slate-50 text-slate-700 dark:bg-slate-950/70 dark:text-slate-300">
                                     <tr>
                                         <th className="px-4 py-2 text-left">Élève</th>
                                         <th className="px-4 py-2 text-left">Note</th>
@@ -306,8 +316,8 @@ export default function NotesBulletinsIndex({ periodes, classes, matieres, confi
                                         const eleve = elevesByClasse.find((inscription) => inscription.id === entry.inscription_id)?.eleve;
                                         const eleveNomComplet = [eleve?.prenoms, eleve?.nom].filter(Boolean).join(' ').trim() || 'Élève introuvable';
                                         return (
-                                            <tr key={entry.inscription_id} className="border-t border-slate-100">
-                                                <td className="px-4 py-2 font-medium text-slate-800">{eleveNomComplet}</td>
+                                            <tr key={entry.inscription_id} className="border-t border-slate-100 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/50">
+                                                <td className="px-4 py-2 font-medium text-slate-800 dark:text-slate-200">{eleveNomComplet}</td>
                                                 <td className="px-4 py-2">
                                                     <Input
                                                         type="number"
@@ -332,10 +342,10 @@ export default function NotesBulletinsIndex({ periodes, classes, matieres, confi
                 </section>
 
                 {activeComposition && activeClasseId ? (
-                    <section className="rounded-xl border border-slate-200 bg-white p-5">
-                        <h3 className="text-lg font-semibold text-slate-900">Résumé calculé</h3>
-                        <p className="mt-2 text-sm text-slate-700">Moyenne générale: <strong>{moyenneGenerale.toFixed(2)} / {activeComposition.bareme}</strong></p>
-                        <p className="text-sm text-slate-700">Décision: <strong>{activeComposition.type === 'passage' ? (moyenneGenerale >= Number(activeComposition.seuil_validation) ? 'Passe' : 'Redouble') : 'Simple'}</strong></p>
+                    <section className="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+                        <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Résumé calculé</h3>
+                        <p className="mt-2 text-sm text-slate-700 dark:text-slate-300">Moyenne générale: <strong>{moyenneGenerale.toFixed(2)} / {activeComposition.bareme}</strong></p>
+                        <p className="text-sm text-slate-700 dark:text-slate-300">Décision: <strong>{activeComposition.type === 'passage' ? (moyenneGenerale >= Number(activeComposition.seuil_validation) ? 'Passe' : 'Redouble') : 'Simple'}</strong></p>
                     </section>
                 ) : null}
             </div>

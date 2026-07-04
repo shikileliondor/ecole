@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\DB;
 
 class EleveService
 {
-    public function getElevesAvecFiltres(array $filters, int $etablissementId): LengthAwarePaginator
+    public function getElevesAvecFiltres(array $filters, int $etablissementId, int $anneeScolaireId = 0): LengthAwarePaginator
     {
         return Eleve::query()
             ->where('etablissement_id', $etablissementId)
@@ -29,8 +29,8 @@ class EleveService
                         ->orWhere('matricule', 'like', "%{$search}%");
                 });
             })
-            ->when(! empty($filters['classe_id']), fn (Builder $builder): Builder => $builder->whereHas('inscriptions', fn (Builder $q): Builder => $q->where('classe_id', (int) $filters['classe_id'])))
-            ->when(! empty($filters['niveau_id']), fn (Builder $builder): Builder => $builder->whereHas('inscriptions.classe', fn (Builder $q): Builder => $q->where('niveau_id', (int) $filters['niveau_id'])))
+            ->when(! empty($filters['classe_id']), fn (Builder $builder): Builder => $builder->whereHas('inscriptions', fn (Builder $q): Builder => $q->where('classe_id', (int) $filters['classe_id'])->when($anneeScolaireId > 0, fn ($iq) => $iq->where('annee_scolaire_id', $anneeScolaireId))))
+            ->when(! empty($filters['niveau_id']), fn (Builder $builder): Builder => $builder->whereHas('inscriptions', fn (Builder $q): Builder => $q->whereHas('classe', fn (Builder $cq): Builder => $cq->where('niveau_id', (int) $filters['niveau_id']))->when($anneeScolaireId > 0, fn ($iq) => $iq->where('annee_scolaire_id', $anneeScolaireId))))
             ->when(! empty($filters['statut']), fn (Builder $builder): Builder => $builder->where('statut', (string) $filters['statut']))
             ->when(! empty($filters['sexe']), fn (Builder $builder): Builder => $builder->where('sexe', (string) $filters['sexe']))
             ->with([
@@ -103,8 +103,13 @@ class EleveService
     public function creerEleve(array $data, int $etablissementId): Eleve
     {
         return DB::transaction(function () use ($data, $etablissementId): Eleve {
-            $anneeActive = AnneeScolaire::query()->where('etablissement_id', $etablissementId)->active()->firstOrFail();
-            $eleveData = collect($data)->except(['classe_id', 'parent'])->toArray();
+            $anneeId = ! empty($data['annee_scolaire_id'])
+                ? (int) $data['annee_scolaire_id']
+                : (int) (AnneeScolaire::query()->where('etablissement_id', $etablissementId)->active()->value('id') ?? 0);
+
+            abort_if($anneeId === 0, 422, "Aucune année scolaire active. Veuillez en activer une ou sélectionner une année.");
+
+            $eleveData = collect($data)->except(['classe_id', 'annee_scolaire_id', 'parent'])->toArray();
             $eleveData['etablissement_id'] = $etablissementId;
 
             /** @var Eleve $eleve */
@@ -128,7 +133,7 @@ class EleveService
             Inscription::query()->create([
                 'eleve_id' => $eleve->id,
                 'classe_id' => (int) $data['classe_id'],
-                'annee_scolaire_id' => $anneeActive->id,
+                'annee_scolaire_id' => $anneeId,
                 'type' => $isCp ? Inscription::TYPES['nouvelle_inscription'] : Inscription::TYPES['reinscription'],
                 'date_inscription' => now()->toDateString(),
                 'statut' => Inscription::STATUTS['inscrit'],
@@ -182,7 +187,7 @@ class EleveService
         return (bool) Eleve::query()->where('etablissement_id', $etablissementId)->findOrFail($id)->delete();
     }
 
-    public function getListePourExport(array $filters, int $etablissementId): Collection
+    public function getListePourExport(array $filters, int $etablissementId, int $anneeScolaireId = 0): Collection
     {
         return Eleve::query()
             ->where('etablissement_id', $etablissementId)
@@ -190,8 +195,8 @@ class EleveService
                 $search = trim((string) $filters['search']);
                 $query->where('nom', 'like', "%{$search}%")->orWhere('prenoms', 'like', "%{$search}%")->orWhere('matricule', 'like', "%{$search}%");
             }))
-            ->when(! empty($filters['classe_id']), fn (Builder $builder): Builder => $builder->whereHas('inscriptions', fn (Builder $q): Builder => $q->where('classe_id', (int) $filters['classe_id'])))
-            ->when(! empty($filters['niveau_id']), fn (Builder $builder): Builder => $builder->whereHas('inscriptions.classe', fn (Builder $q): Builder => $q->where('niveau_id', (int) $filters['niveau_id'])))
+            ->when(! empty($filters['classe_id']), fn (Builder $builder): Builder => $builder->whereHas('inscriptions', fn (Builder $q): Builder => $q->where('classe_id', (int) $filters['classe_id'])->when($anneeScolaireId > 0, fn ($iq) => $iq->where('annee_scolaire_id', $anneeScolaireId))))
+            ->when(! empty($filters['niveau_id']), fn (Builder $builder): Builder => $builder->whereHas('inscriptions', fn (Builder $q): Builder => $q->whereHas('classe', fn (Builder $cq): Builder => $cq->where('niveau_id', (int) $filters['niveau_id']))->when($anneeScolaireId > 0, fn ($iq) => $iq->where('annee_scolaire_id', $anneeScolaireId))))
             ->when(! empty($filters['statut']), fn (Builder $builder): Builder => $builder->where('statut', (string) $filters['statut']))
             ->when(! empty($filters['sexe']), fn (Builder $builder): Builder => $builder->where('sexe', (string) $filters['sexe']))
             ->with(['inscriptions' => fn ($builder) => $builder->with(['classe.niveau', 'anneeScolaire']), 'parentsTuteurs'])
@@ -202,7 +207,7 @@ class EleveService
 
     public function uploadPhoto(UploadedFile $photo, string $matricule): string
     {
-        $filename = $matricule . '.' . $photo->getClientOriginalExtension();
+        $filename = $matricule . '.' . ($photo->guessExtension() ?? 'jpg');
         return $photo->storeAs('eleves/photos', $filename, 'public');
     }
 }
