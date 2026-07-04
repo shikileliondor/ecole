@@ -106,7 +106,9 @@ class InscriptionService
         $mode = $data['mode_tuteur'] ?? 'create';
 
         $parentPrincipal = match ($mode) {
-            'attach' => ParentTuteur::query()->findOrFail((int) $data['parent_tuteur_id']),
+            'attach' => ParentTuteur::query()
+                ->whereHas('eleves', fn ($query) => $query->where('etablissement_id', $eleve->etablissement_id))
+                ->findOrFail((int) $data['parent_tuteur_id']),
             'replace', 'create' => ParentTuteur::query()->create([
                 'nom' => $data['nom_tuteur'],
                 'prenoms' => $data['prenoms_tuteur'],

@@ -18,7 +18,7 @@ class UpdateInscriptionRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'classe_id' => ['required', 'exists:classes,id'],
+            'classe_id' => ['required', Rule::exists('classes', 'id')->where('etablissement_id', (int) $this->user()?->etablissement_id)],
             'date_inscription' => ['required', 'date'],
             'statut' => ['required', Rule::in(array_values(Inscription::STATUTS))],
             'boursier' => ['boolean'],

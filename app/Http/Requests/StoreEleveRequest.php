@@ -40,8 +40,8 @@ class StoreEleveRequest extends FormRequest
             'situation_familiale' => ['nullable', Rule::in(array_values(Eleve::SITUATIONS_FAMILIALES))],
             'est_boursier' => ['boolean'],
             'extrait_naissance_numero' => ['nullable', 'string', 'max:50'],
-            'classe_id' => ['required', 'exists:classes,id'],
-            'annee_scolaire_id' => ['nullable', 'integer', 'exists:annees_scolaires,id'],
+            'classe_id' => ['required', Rule::exists('classes', 'id')->where('etablissement_id', (int) $this->user()?->etablissement_id)],
+            'annee_scolaire_id' => ['nullable', 'integer', Rule::exists('annees_scolaires', 'id')->where('etablissement_id', (int) $this->user()?->etablissement_id)],
             'photo' => ['nullable', 'image', 'max:2048', 'mimes:jpg,jpeg,png'],
 
             'parent.nom' => ['required', 'string', 'max:100'],

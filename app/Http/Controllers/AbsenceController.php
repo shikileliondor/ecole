@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -24,18 +25,18 @@ class AbsenceController extends Controller
     public function index(Request $request): Response
     {
         $etablissementId = (int) auth()->user()->etablissement_id;
-        $filters = $request->only(['classe_id', 'date_debut', 'date_fin', 'est_justifiee']);
+        $filters = $this->validatedFilters($request, $etablissementId);
 
         $query = $this->buildQuery($request, $etablissementId);
         $statsQuery = clone $query;
 
         return Inertia::render('Absences/Index', [
             'absences' => $query->orderByDesc('date_absence')->paginate(30)->withQueryString(),
-            'classes'  => Classe::query()->where('etablissement_id', $etablissementId)->orderBy('nom')->get(),
-            'filters'  => $filters,
-            'stats'    => [
-                'total'          => $statsQuery->count(),
-                'justifiees'     => (clone $statsQuery)->where('est_justifiee', true)->count(),
+            'classes' => Classe::query()->where('etablissement_id', $etablissementId)->orderBy('nom')->get(),
+            'filters' => $filters,
+            'stats' => [
+                'total' => $statsQuery->count(),
+                'justifiees' => (clone $statsQuery)->where('est_justifiee', true)->count(),
                 'non_justifiees' => (clone $statsQuery)->where('est_justifiee', false)->count(),
             ],
         ]);
@@ -44,14 +45,18 @@ class AbsenceController extends Controller
     public function create(Request $request): Response
     {
         $etablissementId = (int) auth()->user()->etablissement_id;
-        $classeId = $request->integer('classe_id') ?: null;
+        $validated = $request->validate([
+            'classe_id' => ['nullable', 'integer', Rule::exists('classes', 'id')->where('etablissement_id', $etablissementId)],
+        ]);
+        $classeId = (int) ($validated['classe_id'] ?? 0) ?: null;
 
         return Inertia::render('Absences/Create', [
-            'classes'           => Classe::query()->where('etablissement_id', $etablissementId)->with('niveau')->orderBy('nom')->get(),
-            'inscriptions'      => $classeId
+            'classes' => Classe::query()->where('etablissement_id', $etablissementId)->with('niveau')->orderBy('nom')->get(),
+            'inscriptions' => $classeId
                 ? Inscription::query()
                     ->where('inscriptions.classe_id', $classeId)
                     ->where('inscriptions.statut', Inscription::STATUTS['inscrit'])
+                    ->whereHas('classe', fn ($q) => $q->where('etablissement_id', $etablissementId))
                     ->with('eleve')
                     ->join('eleves', 'eleves.id', '=', 'inscriptions.eleve_id')
                     ->orderBy('eleves.nom')
@@ -65,16 +70,24 @@ class AbsenceController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'inscription_id' => ['required', 'exists:inscriptions,id'],
-            'date_absence'   => ['required', 'date', 'before_or_equal:today'],
-            'type'           => ['required', 'in:matin,apres_midi,journee'],
-            'motif'          => ['required', 'in:maladie,sans_motif,deces_famille,autre'],
-            'est_justifiee'  => ['boolean'],
+            'inscription_id' => [
+                'required',
+                Rule::exists('inscriptions', 'id')->where(
+                    fn ($query) => $query->whereIn(
+                        'classe_id',
+                        Classe::query()->where('etablissement_id', (int) auth()->user()->etablissement_id)->select('id')
+                    )
+                ),
+            ],
+            'date_absence' => ['required', 'date', 'before_or_equal:today'],
+            'type' => ['required', 'in:matin,apres_midi,journee'],
+            'motif' => ['required', 'in:maladie,sans_motif,deces_famille,autre'],
+            'est_justifiee' => ['boolean'],
             'parent_notifie' => ['boolean'],
-            'justificatif'   => ['nullable', 'string', 'max:255'],
+            'justificatif' => ['nullable', 'string', 'max:255'],
         ], [
-            'inscription_id.required'      => 'Veuillez sélectionner un élève.',
-            'inscription_id.exists'        => 'Élève introuvable.',
+            'inscription_id.required' => 'Veuillez sélectionner un élève.',
+            'inscription_id.exists' => 'Élève introuvable.',
             'date_absence.before_or_equal' => "La date d'absence ne peut pas être dans le futur.",
         ]);
 
@@ -90,26 +103,26 @@ class AbsenceController extends Controller
 
         $absence = Absence::query()->create([
             ...$validated,
-            'est_justifiee'  => $request->boolean('est_justifiee'),
+            'est_justifiee' => $request->boolean('est_justifiee'),
             'parent_notifie' => $request->boolean('parent_notifie'),
-            'signale_par'    => auth()->id(),
+            'signale_par' => auth()->id(),
         ]);
 
         $absence->load('inscription.eleve', 'inscription.classe');
-        $eleve  = $absence->inscription?->eleve;
+        $eleve = $absence->inscription?->eleve;
         $classe = $absence->inscription?->classe;
-        $types  = ['matin' => 'Matin', 'apres_midi' => 'Après-midi', 'journee' => 'Journée'];
+        $types = ['matin' => 'Matin', 'apres_midi' => 'Après-midi', 'journee' => 'Journée'];
 
         AppNotification::notifyStaff(
             (int) auth()->user()->etablissement_id,
             new AppNotification(
                 notifType: 'absence',
-                title:     'Absence enregistrée',
-                message:   trim(($eleve?->nom ?? '') . ' ' . ($eleve?->prenoms ?? ''))
-                           . ' — ' . ($types[$absence->type] ?? $absence->type)
-                           . ' · ' . $absence->date_absence->format('d/m/Y'),
-                link:      $eleve ? '/eleves/' . $eleve->id : '/absences',
-                meta:      ['classe' => $classe?->nom],
+                title: 'Absence enregistrée',
+                message: trim(($eleve?->nom ?? '').' '.($eleve?->prenoms ?? ''))
+                           .' — '.($types[$absence->type] ?? $absence->type)
+                           .' · '.$absence->date_absence->format('d/m/Y'),
+                link: $eleve ? '/eleves/'.$eleve->id : '/absences',
+                meta: ['classe' => $classe?->nom],
             )
         );
 
@@ -118,16 +131,18 @@ class AbsenceController extends Controller
 
     public function update(Request $request, Absence $absence): RedirectResponse
     {
+        $this->authorizeTenantAccess($absence);
+
         $validated = $request->validate([
-            'est_justifiee'  => ['boolean'],
+            'est_justifiee' => ['boolean'],
             'parent_notifie' => ['boolean'],
-            'motif'          => ['required', 'in:maladie,sans_motif,deces_famille,autre'],
-            'justificatif'   => ['nullable', 'string', 'max:255'],
+            'motif' => ['required', 'in:maladie,sans_motif,deces_famille,autre'],
+            'justificatif' => ['nullable', 'string', 'max:255'],
         ]);
 
         $absence->update([
             ...$validated,
-            'est_justifiee'  => $request->boolean('est_justifiee'),
+            'est_justifiee' => $request->boolean('est_justifiee'),
             'parent_notifie' => $request->boolean('parent_notifie'),
         ]);
 
@@ -136,6 +151,8 @@ class AbsenceController extends Controller
 
     public function destroy(Absence $absence): RedirectResponse
     {
+        $this->authorizeTenantAccess($absence);
+
         $absence->delete();
 
         return back()->with('success', 'Absence supprimée.');
@@ -146,20 +163,20 @@ class AbsenceController extends Controller
     public function exportPdf(Request $request)
     {
         $etablissementId = (int) auth()->user()->etablissement_id;
-        $absences        = $this->buildQuery($request, $etablissementId)->orderByDesc('date_absence')->get();
-        $payload         = $this->exportPayload($request, $etablissementId, $absences);
+        $absences = $this->buildQuery($request, $etablissementId)->orderByDesc('date_absence')->get();
+        $payload = $this->exportPayload($request, $etablissementId, $absences);
 
         $pdf = Pdf::loadView('absences.export-pdf', $payload)
             ->setPaper('a4', 'landscape');
 
-        return $pdf->download('absences-' . now()->format('Y-m-d') . '.pdf');
+        return $pdf->download('absences-'.now()->format('Y-m-d').'.pdf');
     }
 
     public function exportExcel(Request $request): StreamedResponse
     {
         $etablissementId = (int) auth()->user()->etablissement_id;
-        $absences        = $this->buildQuery($request, $etablissementId)->orderByDesc('date_absence')->get();
-        $filename        = 'absences-' . now()->format('Y-m-d') . '.csv';
+        $absences = $this->buildQuery($request, $etablissementId)->orderByDesc('date_absence')->get();
+        $filename = 'absences-'.now()->format('Y-m-d').'.csv';
 
         return response()->streamDownload(function () use ($absences): void {
             $output = fopen('php://output', 'w');
@@ -167,25 +184,25 @@ class AbsenceController extends Controller
                 return;
             }
 
-            fputs($output, "\xEF\xBB\xBF");
+            fwrite($output, "\xEF\xBB\xBF");
             fputcsv($output, ['N°', 'Date', 'Élève', 'Matricule', 'Classe', 'Type', 'Motif', 'Justifiée', 'Parent notifié', 'Justificatif', 'Signalé par'], ';');
 
-            $types  = ['matin' => 'Matin', 'apres_midi' => 'Après-midi', 'journee' => 'Journée'];
+            $types = ['matin' => 'Matin', 'apres_midi' => 'Après-midi', 'journee' => 'Journée'];
             $motifs = ['maladie' => 'Maladie', 'sans_motif' => 'Sans motif', 'deces_famille' => 'Décès famille', 'autre' => 'Autre'];
 
             foreach ($absences as $i => $absence) {
                 fputcsv($output, [
                     $i + 1,
                     optional($absence->date_absence)->format('d/m/Y'),
-                    trim($absence->inscription?->eleve?->nom . ' ' . $absence->inscription?->eleve?->prenoms),
-                    $absence->inscription?->eleve?->matricule,
-                    $absence->inscription?->classe?->nom,
-                    $types[$absence->type]    ?? $absence->type,
-                    $motifs[$absence->motif]  ?? $absence->motif,
-                    $absence->est_justifiee   ? 'Oui' : 'Non',
-                    $absence->parent_notifie  ? 'Oui' : 'Non',
-                    $absence->justificatif    ?? '',
-                    $absence->signalePar?->name ?? '',
+                    $this->escapeCsvFormulaCell(trim($absence->inscription?->eleve?->nom.' '.$absence->inscription?->eleve?->prenoms)),
+                    $this->escapeCsvFormulaCell($absence->inscription?->eleve?->matricule),
+                    $this->escapeCsvFormulaCell($absence->inscription?->classe?->nom),
+                    $types[$absence->type] ?? $absence->type,
+                    $motifs[$absence->motif] ?? $absence->motif,
+                    $absence->est_justifiee ? 'Oui' : 'Non',
+                    $absence->parent_notifie ? 'Oui' : 'Non',
+                    $this->escapeCsvFormulaCell($absence->justificatif ?? ''),
+                    $this->escapeCsvFormulaCell($absence->signalePar?->name ?? ''),
                 ], ';');
             }
 
@@ -196,20 +213,21 @@ class AbsenceController extends Controller
     public function exportWord(Request $request)
     {
         $etablissementId = (int) auth()->user()->etablissement_id;
-        $absences        = $this->buildQuery($request, $etablissementId)->orderByDesc('date_absence')->get();
-        $payload         = $this->exportPayload($request, $etablissementId, $absences);
-        $filename        = 'absences-' . now()->format('Y-m-d') . '.doc';
+        $absences = $this->buildQuery($request, $etablissementId)->orderByDesc('date_absence')->get();
+        $payload = $this->exportPayload($request, $etablissementId, $absences);
+        $filename = 'absences-'.now()->format('Y-m-d').'.doc';
 
         return response()
             ->view('absences.export-word', $payload)
             ->header('Content-Type', 'application/msword; charset=UTF-8')
-            ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
+            ->header('Content-Disposition', 'attachment; filename="'.$filename.'"');
     }
 
     // ─── Helpers privés ─────────────────────────────────────────────────────
 
     private function buildQuery(Request $request, int $etablissementId): Builder
     {
+        $filters = $this->validatedFilters($request, $etablissementId);
         $anneeActive = AnneeScolaire::query()->where('etablissement_id', $etablissementId)->active()->first();
 
         $query = Absence::query()
@@ -220,20 +238,20 @@ class AbsenceController extends Controller
             $query->whereHas('inscription', fn ($q) => $q->where('annee_scolaire_id', $anneeActive->id));
         }
 
-        if ($request->filled('classe_id')) {
-            $query->whereHas('inscription', fn ($q) => $q->where('classe_id', (int) $request->integer('classe_id')));
+        if (! empty($filters['classe_id'])) {
+            $query->whereHas('inscription', fn ($q) => $q->where('classe_id', (int) $filters['classe_id']));
         }
 
-        if ($request->filled('date_debut')) {
-            $query->where('date_absence', '>=', $request->input('date_debut'));
+        if (! empty($filters['date_debut'])) {
+            $query->where('date_absence', '>=', $filters['date_debut']);
         }
 
-        if ($request->filled('date_fin')) {
-            $query->where('date_absence', '<=', $request->input('date_fin'));
+        if (! empty($filters['date_fin'])) {
+            $query->where('date_absence', '<=', $filters['date_fin']);
         }
 
-        if ($request->filled('est_justifiee')) {
-            $query->where('est_justifiee', filter_var($request->input('est_justifiee'), FILTER_VALIDATE_BOOLEAN));
+        if (array_key_exists('est_justifiee', $filters) && $filters['est_justifiee'] !== null) {
+            $query->where('est_justifiee', filter_var($filters['est_justifiee'], FILTER_VALIDATE_BOOLEAN));
         }
 
         return $query;
@@ -243,23 +261,52 @@ class AbsenceController extends Controller
     private function exportPayload(Request $request, int $etablissementId, Collection $absences): array
     {
         $etablissement = Etablissement::query()->find($etablissementId);
-        $anneeActive   = AnneeScolaire::query()->where('etablissement_id', $etablissementId)->active()->first();
-        $classe        = $request->filled('classe_id')
+        $anneeActive = AnneeScolaire::query()->where('etablissement_id', $etablissementId)->active()->first();
+        $classe = $request->filled('classe_id')
             ? Classe::query()->where('etablissement_id', $etablissementId)->find((int) $request->integer('classe_id'))
             : null;
 
         return [
-            'absences'      => $absences,
+            'absences' => $absences,
             'etablissement' => $etablissement,
-            'annee_active'  => $anneeActive,
-            'classe'        => $classe,
-            'filters'       => $request->only(['classe_id', 'date_debut', 'date_fin', 'est_justifiee']),
-            'stats'         => [
-                'total'          => $absences->count(),
-                'justifiees'     => $absences->where('est_justifiee', true)->count(),
+            'annee_active' => $anneeActive,
+            'classe' => $classe,
+            'filters' => $this->validatedFilters($request, $etablissementId),
+            'stats' => [
+                'total' => $absences->count(),
+                'justifiees' => $absences->where('est_justifiee', true)->count(),
                 'non_justifiees' => $absences->where('est_justifiee', false)->count(),
             ],
-            'date_edition'  => now(),
+            'date_edition' => now(),
         ];
+    }
+
+    private function validatedFilters(Request $request, int $etablissementId): array
+    {
+        return $request->validate([
+            'classe_id' => ['nullable', 'integer', Rule::exists('classes', 'id')->where('etablissement_id', $etablissementId)],
+            'date_debut' => ['nullable', 'date'],
+            'date_fin' => ['nullable', 'date', 'after_or_equal:date_debut'],
+            'est_justifiee' => ['nullable', 'boolean'],
+        ]);
+    }
+
+    private function authorizeTenantAccess(Absence $absence): void
+    {
+        $hasAccess = Absence::query()
+            ->whereKey($absence->id)
+            ->whereHas('inscription.classe', fn ($query) => $query->where('etablissement_id', (int) auth()->user()->etablissement_id))
+            ->exists();
+
+        abort_unless($hasAccess, 404);
+    }
+
+    private function escapeCsvFormulaCell(mixed $value): mixed
+    {
+        if (! is_string($value)) {
+            return $value;
+        }
+
+        return preg_match('/^[=+\-@]/', $value) === 1 ? "'".$value : $value;
     }
 }

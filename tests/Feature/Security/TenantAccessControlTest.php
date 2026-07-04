@@ -12,6 +12,8 @@ use App\Models\Inscription;
 use App\Models\Niveau;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 class TenantAccessControlTest extends TestCase
@@ -28,9 +30,9 @@ class TenantAccessControlTest extends TestCase
         $schoolA = $this->createEtablissement('Ecole A');
         $schoolB = $this->createEtablissement('Ecole B');
 
-        $userA = User::factory()->create(['etablissement_id' => $schoolA->id]);
+        $userA = $this->createUserWithPermissions($schoolA, ['inscriptions.voir']);
 
-        $niveauB = Niveau::query()->create(['libelle' => 'CP1', 'ordre' => 1, 'description' => '']);
+        $niveauB = Niveau::query()->create(['libelle' => 'CP1', 'ordre' => 1, 'cycle' => 'CP', 'description' => '']);
         $anneeB = AnneeScolaire::query()->create([
             'etablissement_id' => $schoolB->id,
             'libelle' => '2025-2026',
@@ -44,7 +46,7 @@ class TenantAccessControlTest extends TestCase
             'niveau_id' => $niveauB->id,
             'annee_scolaire_id' => $anneeB->id,
             'nom' => 'CP1 B',
-            'capacite' => 30,
+            'capacite_max' => 30,
             'statut' => 'active',
         ]);
         $eleveB = Eleve::factory()->create(['etablissement_id' => $schoolB->id]);
@@ -58,26 +60,26 @@ class TenantAccessControlTest extends TestCase
             'statut' => Inscription::STATUTS['inscrit'],
         ]);
 
-        $this->actingAs($userA)->get('/inscriptions/' . $inscriptionB->id)->assertNotFound();
+        $this->actingAs($userA)->get('/inscriptions/'.$inscriptionB->id)->assertNotFound();
     }
 
     public function test_sql_injection_payload_in_search_does_not_break_class_listing(): void
     {
         $school = $this->createEtablissement('Ecole Test');
-        $user = User::factory()->create(['etablissement_id' => $school->id]);
+        $user = $this->createUserWithPermissions($school, ['classes.voir']);
 
         $this->actingAs($user)
-            ->get('/classes?search=' . urlencode("' OR 1=1 --"))
+            ->get('/classes?search='.urlencode("' OR 1=1 --"))
             ->assertOk();
     }
 
     public function test_unallowed_ordering_is_rejected(): void
     {
         $school = $this->createEtablissement('Ecole Test');
-        $user = User::factory()->create(['etablissement_id' => $school->id]);
+        $user = $this->createUserWithPermissions($school, ['classes.voir']);
 
         $this->actingAs($user)
-            ->get('/classes?ordering=' . urlencode('nom;DROP TABLE users'))
+            ->get('/classes?ordering='.urlencode('nom;DROP TABLE users'))
             ->assertStatus(422);
     }
 
@@ -91,5 +93,23 @@ class TenantAccessControlTest extends TestCase
             'contact_telephone' => '0102030405',
             'statut' => 'actif',
         ]);
+    }
+
+    /**
+     * @param  array<int, string>  $permissions
+     */
+    private function createUserWithPermissions(Etablissement $etablissement, array $permissions): User
+    {
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        $user = User::factory()->create(['etablissement_id' => $etablissement->id]);
+
+        foreach ($permissions as $permission) {
+            Permission::query()->firstOrCreate(['name' => $permission, 'guard_name' => 'web']);
+        }
+
+        $user->givePermissionTo($permissions);
+
+        return $user;
     }
 }

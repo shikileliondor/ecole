@@ -8,6 +8,7 @@ use App\Models\Eleve;
 use App\Models\Inscription;
 use App\Models\ParentTuteur;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class StoreInscriptionRequest extends FormRequest
@@ -21,7 +22,7 @@ class StoreInscriptionRequest extends FormRequest
     {
         return [
             'type_inscription' => ['required', Rule::in(['nouvelle', 'reinscription'])],
-            'eleve_id' => ['nullable', 'required_if:type_inscription,reinscription', 'exists:eleves,id'],
+            'eleve_id' => ['nullable', 'required_if:type_inscription,reinscription', Rule::exists('eleves', 'id')->where('etablissement_id', (int) $this->user()?->etablissement_id)],
 
             'nom' => ['required_if:type_inscription,nouvelle', 'string', 'max:100'],
             'prenoms' => ['required_if:type_inscription,nouvelle', 'string', 'max:150'],
@@ -33,7 +34,19 @@ class StoreInscriptionRequest extends FormRequest
             'photo' => ['nullable', 'image', 'max:2048', 'mimes:jpg,jpeg,png'],
 
             'mode_tuteur' => ['nullable', Rule::in(['create', 'attach', 'replace'])],
-            'parent_tuteur_id' => ['nullable', 'required_if:mode_tuteur,attach', 'exists:parents_tuteurs,id'],
+            'parent_tuteur_id' => [
+                'nullable',
+                'required_if:mode_tuteur,attach',
+                Rule::exists('parents_tuteurs', 'id')->where(
+                    fn ($query) => $query->whereIn(
+                        'id',
+                        DB::table('eleve_parents')
+                            ->join('eleves', 'eleves.id', '=', 'eleve_parents.eleve_id')
+                            ->where('eleves.etablissement_id', (int) $this->user()?->etablissement_id)
+                            ->select('eleve_parents.parent_id')
+                    )
+                ),
+            ],
 
             'nom_tuteur' => ['required_unless:mode_tuteur,attach', 'string', 'max:100'],
             'prenoms_tuteur' => ['required_unless:mode_tuteur,attach', 'string', 'max:150'],
@@ -50,8 +63,8 @@ class StoreInscriptionRequest extends FormRequest
             'lien_urgence_autre' => ['nullable', 'required_if:lien_urgence,autre', 'string', 'max:100'],
             'adresse_urgence' => ['nullable', 'string', 'max:150'],
 
-            'annee_scolaire_id' => ['required', 'exists:annees_scolaires,id'],
-            'classe_id' => ['required', 'exists:classes,id'],
+            'annee_scolaire_id' => ['required', Rule::exists('annees_scolaires', 'id')->where('etablissement_id', (int) $this->user()?->etablissement_id)],
+            'classe_id' => ['required', Rule::exists('classes', 'id')->where('etablissement_id', (int) $this->user()?->etablissement_id)],
             'date_inscription' => ['required', 'date'],
             'statut' => ['required', Rule::in(array_values(Inscription::STATUTS))],
             'boursier' => ['boolean'],

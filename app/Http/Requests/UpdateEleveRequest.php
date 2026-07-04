@@ -40,7 +40,7 @@ class UpdateEleveRequest extends FormRequest
             'situation_familiale' => ['nullable', Rule::in(array_values(Eleve::SITUATIONS_FAMILIALES))],
             'est_boursier' => ['boolean'],
             'extrait_naissance_numero' => ['nullable', 'string', 'max:50'],
-            'classe_id' => ['nullable', 'exists:classes,id'],
+            'classe_id' => ['nullable', Rule::exists('classes', 'id')->where('etablissement_id', (int) $this->user()?->etablissement_id)],
             'photo' => ['nullable', 'image', 'max:2048', 'mimes:jpg,jpeg,png'],
 
             'parent.nom' => ['nullable', 'string', 'max:100'],

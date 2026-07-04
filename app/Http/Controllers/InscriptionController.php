@@ -15,6 +15,7 @@ use App\Models\ParentTuteur;
 use App\Services\InscriptionService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -27,7 +28,12 @@ class InscriptionController extends Controller
         $etablissementId = (int) auth()->user()->etablissement_id;
         $anneeActive = AnneeScolaire::query()->where('etablissement_id', $etablissementId)->active()->first();
 
-        $filters = $request->only(['search', 'classe_id', 'annee_scolaire_id', 'statut']);
+        $filters = $request->validate([
+            'search' => ['nullable', 'string', 'max:100'],
+            'classe_id' => ['nullable', 'integer', Rule::exists('classes', 'id')->where('etablissement_id', $etablissementId)],
+            'annee_scolaire_id' => ['nullable', 'integer', Rule::exists('annees_scolaires', 'id')->where('etablissement_id', $etablissementId)],
+            'statut' => ['nullable', Rule::in(array_values(Inscription::STATUTS))],
+        ]);
         if (empty($filters['annee_scolaire_id']) && $anneeActive) {
             $filters['annee_scolaire_id'] = $anneeActive->id;
         }

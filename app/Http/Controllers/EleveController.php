@@ -8,6 +8,7 @@ use App\Http\Requests\StoreEleveRequest;
 use App\Http\Requests\UpdateEleveRequest;
 use App\Models\AnneeScolaire;
 use App\Models\Classe;
+use App\Models\Eleve;
 use App\Models\Inscription;
 use App\Models\Niveau;
 use App\Notifications\AppNotification;
@@ -15,10 +16,11 @@ use App\Services\EleveService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
-use Illuminate\Support\Facades\Log;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class EleveController extends Controller
 {
@@ -29,7 +31,7 @@ class EleveController extends Controller
     public function index(Request $request): Response
     {
         $etablissementId = (int) auth()->user()->etablissement_id;
-        $filters = $request->only(['search', 'classe_id', 'niveau_id', 'statut', 'sexe']);
+        $filters = $this->validatedFilters($request, $etablissementId);
         $anneeScolaireId = (int) (AnneeScolaire::query()->where('etablissement_id', $etablissementId)->active()->value('id') ?? 0);
 
         return Inertia::render('Eleves/Index', [
@@ -66,16 +68,17 @@ class EleveController extends Controller
                 (int) auth()->user()->etablissement_id,
                 new AppNotification(
                     notifType: 'inscription',
-                    title:     'Nouvel élève inscrit',
-                    message:   trim($eleve->nom . ' ' . $eleve->prenoms)
-                               . ($classe ? ' — ' . $classe->nom : ''),
-                    link:      '/eleves/' . $eleve->id,
+                    title: 'Nouvel élève inscrit',
+                    message: trim($eleve->nom.' '.$eleve->prenoms)
+                               .($classe ? ' — '.$classe->nom : ''),
+                    link: '/eleves/'.$eleve->id,
                 )
             );
 
             return redirect()->route('eleves.show', $eleve->id)->with('success', 'Élève inscrit avec succès');
         } catch (\Throwable $e) {
             Log::error('Erreur lors de la création d\'un élève', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+
             return redirect()->back()->withInput()->with('error', 'Une erreur est survenue lors de l\'inscription.');
         }
     }
@@ -102,6 +105,7 @@ class EleveController extends Controller
     public function edit(int $id): Response
     {
         $etablissementId = (int) auth()->user()->etablissement_id;
+
         return Inertia::render('Eleves/Edit', [
             'eleve' => $this->eleveService->getFicheEleve($id, $etablissementId),
             'classes' => Classe::query()->where('etablissement_id', $etablissementId)->with('niveau')->orderBy('nom')->get(),
@@ -112,12 +116,14 @@ class EleveController extends Controller
     public function update(UpdateEleveRequest $request, int $id): RedirectResponse
     {
         $eleve = $this->eleveService->mettreAJourEleve($id, $request->validated() + ['photo' => $request->file('photo')], (int) auth()->user()->etablissement_id);
+
         return redirect()->route('eleves.show', $eleve->id)->with('success', 'Informations de l\'élève mises à jour avec succès');
     }
 
     public function destroy(int $id): RedirectResponse
     {
         $this->eleveService->supprimerEleve($id, (int) auth()->user()->etablissement_id);
+
         return redirect()->route('eleves.index')->with('success', 'Élève supprimé');
     }
 
@@ -125,6 +131,7 @@ class EleveController extends Controller
     {
         $validated = $request->validate(['ecole_destination' => ['required', 'string', 'max:255']]);
         $this->eleveService->transfererEleve($id, $validated['ecole_destination'], (int) auth()->user()->etablissement_id);
+
         return redirect()->route('eleves.index')->with('success', 'Élève transféré avec succès');
     }
 
@@ -135,7 +142,7 @@ class EleveController extends Controller
 
         $etablissementId = (int) auth()->user()->etablissement_id;
         $anneeScolaireId = (int) (AnneeScolaire::query()->where('etablissement_id', $etablissementId)->active()->value('id') ?? 0);
-        $filters = $request->only(['search', 'classe_id', 'niveau_id', 'statut', 'sexe']);
+        $filters = $this->validatedFilters($request, $etablissementId);
         $classe = $request->filled('classe_id')
             ? Classe::query()->where('etablissement_id', $etablissementId)->find((int) $request->integer('classe_id'))
             : null;
@@ -147,10 +154,10 @@ class EleveController extends Controller
             return [
                 'numero' => $index + 1,
                 'matricule' => (string) $eleve->matricule,
-                'nom_complet' => trim((string) $eleve->nom . ' ' . (string) $eleve->prenoms),
+                'nom_complet' => trim((string) $eleve->nom.' '.(string) $eleve->prenoms),
                 'sexe' => $eleve->sexe === 'M' ? 'Garçon' : 'Fille',
                 'date_naissance' => $eleve->date_naissance ? $eleve->date_naissance->format('d/m/Y') : '',
-                'parent' => trim((string) ($parent?->nom ?? '') . ' ' . (string) ($parent?->prenoms ?? '')),
+                'parent' => trim((string) ($parent?->nom ?? '').' '.(string) ($parent?->prenoms ?? '')),
                 'telephone' => (string) ($parent?->telephone_1 ?? ''),
                 'statut' => ucfirst((string) $eleve->statut),
                 'annee_scolaire' => (string) ($inscription?->anneeScolaire?->libelle ?? ''),
@@ -168,7 +175,7 @@ class EleveController extends Controller
             'anneeScolaire' => $rows->first()['annee_scolaire'] ?? null,
         ])->setPaper('a4', 'landscape');
 
-        return $pdf->download('eleves-' . ($classe?->nom ? str($classe->nom)->slug() : 'toutes-classes') . '-' . now()->format('Y-m-d') . '.pdf');
+        return $pdf->download('eleves-'.($classe?->nom ? str($classe->nom)->slug() : 'toutes-classes').'-'.now()->format('Y-m-d').'.pdf');
     }
 
     private function getPdfLogoPath(?string $logo): ?string
@@ -177,7 +184,7 @@ class EleveController extends Controller
             return null;
         }
 
-        $logoPath = public_path('storage/' . ltrim($logo, '/'));
+        $logoPath = public_path('storage/'.ltrim($logo, '/'));
 
         return is_file($logoPath) ? $logoPath : null;
     }
@@ -186,29 +193,29 @@ class EleveController extends Controller
     {
         $etablissementId = (int) auth()->user()->etablissement_id;
         $anneeScolaireId = (int) (AnneeScolaire::query()->where('etablissement_id', $etablissementId)->active()->value('id') ?? 0);
-        $filters = $request->only(['search', 'classe_id', 'niveau_id', 'statut', 'sexe']);
+        $filters = $this->validatedFilters($request, $etablissementId);
         $classe = $request->filled('classe_id')
             ? Classe::query()->where('etablissement_id', $etablissementId)->find((int) $request->integer('classe_id'))
             : null;
         $eleves = $this->eleveService->getListePourExport($filters, $etablissementId, $anneeScolaireId);
-        $filename = 'eleves-' . ($classe?->nom ? str($classe->nom)->slug() : 'toutes-classes') . '-' . now()->format('Y-m-d') . '.doc';
+        $filename = 'eleves-'.($classe?->nom ? str($classe->nom)->slug() : 'toutes-classes').'-'.now()->format('Y-m-d').'.doc';
 
         return response()
             ->view('eleves.export-word', ['eleves' => $eleves, 'classe' => $classe, 'date_edition' => now()])
             ->header('Content-Type', 'application/msword; charset=UTF-8')
-            ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
+            ->header('Content-Disposition', 'attachment; filename="'.$filename.'"');
     }
 
     public function exportExcel(Request $request): StreamedResponse
     {
         $etablissementId = (int) auth()->user()->etablissement_id;
         $anneeScolaireId = (int) (AnneeScolaire::query()->where('etablissement_id', $etablissementId)->active()->value('id') ?? 0);
-        $filters = $request->only(['search', 'classe_id', 'niveau_id', 'statut', 'sexe']);
+        $filters = $this->validatedFilters($request, $etablissementId);
         $classe = $request->filled('classe_id')
             ? Classe::query()->where('etablissement_id', $etablissementId)->find((int) $request->integer('classe_id'))
             : null;
         $eleves = $this->eleveService->getListePourExport($filters, $etablissementId, $anneeScolaireId);
-        $filename = 'eleves-' . ($classe?->nom ? str($classe->nom)->slug() : 'toutes-classes') . '-' . now()->format('Y-m-d') . '.csv';
+        $filename = 'eleves-'.($classe?->nom ? str($classe->nom)->slug() : 'toutes-classes').'-'.now()->format('Y-m-d').'.csv';
 
         return response()->streamDownload(function () use ($eleves): void {
             $output = fopen('php://output', 'w');
@@ -216,19 +223,19 @@ class EleveController extends Controller
                 return;
             }
 
-            fputs($output, "\xEF\xBB\xBF");
+            fwrite($output, "\xEF\xBB\xBF");
             fputcsv($output, ['N°', 'Matricule', 'Nom et prénoms', 'Sexe', 'Date naissance', 'Parent', 'Téléphone', 'Statut'], ';');
 
             foreach ($eleves as $index => $eleve) {
                 $parent = $eleve->parentsTuteurs->firstWhere('pivot.est_principal', true) ?? $eleve->parentsTuteurs->first();
                 fputcsv($output, [
                     $index + 1,
-                    $eleve->matricule,
-                    trim($eleve->nom . ' ' . $eleve->prenoms),
+                    $this->escapeCsvFormulaCell($eleve->matricule),
+                    $this->escapeCsvFormulaCell(trim($eleve->nom.' '.$eleve->prenoms)),
                     $eleve->sexe === 'M' ? 'Garçon' : 'Fille',
                     optional($eleve->date_naissance)->format('d/m/Y') ?? $eleve->date_naissance,
-                    trim(($parent?->nom ?? '') . ' ' . ($parent?->prenoms ?? '')),
-                    $parent?->telephone_1,
+                    $this->escapeCsvFormulaCell(trim(($parent?->nom ?? '').' '.($parent?->prenoms ?? ''))),
+                    $this->escapeCsvFormulaCell($parent?->telephone_1),
                     ucfirst((string) $eleve->statut),
                 ], ';');
             }
@@ -237,5 +244,25 @@ class EleveController extends Controller
         }, $filename, [
             'Content-Type' => 'text/csv; charset=UTF-8',
         ]);
+    }
+
+    private function validatedFilters(Request $request, int $etablissementId): array
+    {
+        return $request->validate([
+            'search' => ['nullable', 'string', 'max:100'],
+            'classe_id' => ['nullable', 'integer', Rule::exists('classes', 'id')->where('etablissement_id', $etablissementId)],
+            'niveau_id' => ['nullable', 'integer', Rule::exists('niveaux', 'id')],
+            'statut' => ['nullable', Rule::in(array_values(Eleve::STATUTS))],
+            'sexe' => ['nullable', Rule::in(array_values(Eleve::SEXES))],
+        ]);
+    }
+
+    private function escapeCsvFormulaCell(mixed $value): mixed
+    {
+        if (! is_string($value)) {
+            return $value;
+        }
+
+        return preg_match('/^[=+\-@]/', $value) === 1 ? "'".$value : $value;
     }
 }
